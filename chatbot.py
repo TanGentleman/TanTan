@@ -166,11 +166,18 @@ def interactive_chat(slow_status, max_tokens):
     
     full_log += f'Engine set to: {engine}, {max_tokens} Max Tokens\n'
     text_prompt = ''
+    replace_input = False
+    replace_input_text = ''
     while True:
         #Ask for input
-        if prompt_from_file:
-            prompt = text_prompt
-            prompt_from_file = False
+        if replace_input:
+            if prompt_from_file:
+                prompt = text_prompt
+                prompt_from_file = False
+            else:
+                prompt = replace_input_text
+            replace_input = False
+
         else:
             prompt = input('Enter a prompt: ')
         start = time.time()
@@ -264,14 +271,18 @@ def interactive_chat(slow_status, max_tokens):
                     file.write(response)
             except:
                 print('Response not generated. See above error.')
-                assert(False)
+                replace_input = True
+                replace_input_text = 'quit'
+                continue
         else:
             if debug: print('beep')
             try:
                 response = generate_text(history + prompt, engine, max_tokens)[0]['text']
             except:
                 print('Response not generated. See above error.')
-                assert(False)
+                replace_input = True
+                replace_input_text = 'quit'
+                continue
             if debug: print('beep')
             if response:
                 if debug: print('beep')
