@@ -1,11 +1,11 @@
 import openai
-from secrets import openai_key
+from mysecrets import openai_key
 import sys
 import datetime
 import time
 from os import path
 
-filepath = 'Documents/Chatbot'
+filepath = 'Documents/Github/Api_Mastery'
 
 max_tokens = 150
 max_codex = 1000
@@ -53,11 +53,11 @@ def generate_text(prompt, engine, max_tokens):
     return response['choices']
 
 def write_to_log_file(convo, correlates):
-    with open(f'{filepath}/v1_logfile_5.txt', 'a') as file:
+    with open(f'{filepath}/v2_logfile_1.txt', 'a') as file:
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d')
         file.write(f'Timestamp: {timestamp}\n{convo}\n ==== End of Entry ====\n')
         print('Saved log file.')
-    with open(f'{filepath}/v1_correlation_log.txt', 'a') as file:
+    with open(f'{filepath}/v2_correlation_log.txt', 'a') as file:
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d')
         file.write(f'Timestamp: {timestamp}\n{correlates}\n ==== End of Entry ====\n')
         print('Saved log file.')
@@ -288,11 +288,10 @@ def interactive_chat(slow_status, max_tokens):
                 if debug: print('beep')
                 time_taken = time.time()-start
                 #add a delimiter to distinguish from user text
-                response_delimiter = f'(*{round(time_taken, 1)}*)'
+                response_delimiter = f'(*{round(time_taken, 1)}s)'
                 cached_history = history
                 history += prompt + response + '\n'
-                full_log += '(*)' + prompt + '\n' + response_delimiter + response + '\n'
-
+                full_log += f'({response_count+1}.)' + prompt + '\n' + response_delimiter + response + '\n'
                 prompt_token_count += token_count(prompt)
                 response_token_count += token_count(response)
                 print(f'Response {response_count+1}: {response}\n\n')
