@@ -3,7 +3,7 @@ import requests
 import re
 from hashlib import sha256
 import sys
-filepath = "Documents/ScrapeAndSpredd"
+filepath = "Documents/Github/Api_Mastery/ScrapeAndSpredd"
 assert(os.path.isdir(filepath))
 
 def read_content():
