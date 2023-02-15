@@ -5,7 +5,7 @@ import datetime
 import time
 from os import path
 
-filepath = 'Documents/Github/Api_Mastery'
+filepath = 'Documents/Github/Api_Mastery/Chatbot'
 
 max_tokens = 150
 max_codex = 1000
@@ -215,19 +215,20 @@ def interactive_chat(slow_status, max_tokens):
             print(msg)
             full_log += msg
         elif prompt == 'log':
-            history = cached_history
+            
             if logging_on:
                 msg = '<Logging disabled> Conversation will not be stored.\n'
                 print(msg)
                 logging_on = False
             else:
-                '<Logging enabled> Conversation WILL be stored.\n'
+                msg = '<Logging enabled> Conversation WILL be stored.\n'
                 print(msg)
                 logging_on = True
         elif prompt == 'read':
             if path.isfile(f'{filepath}/text_prompt.txt'):
                 text_prompt = read_text_prompt()
                 prompt_from_file = True
+                replace_input = True
                 continue
             else:
                 print('You have not written a text_prompt.txt file for me to read. I gotchu.')
@@ -269,6 +270,7 @@ def interactive_chat(slow_status, max_tokens):
                 print(response)
                 with open(f'{filepath}/codex_response.txt', 'w') as file:
                     file.write(response)
+                    print('Saved codex_response.txt')
             except:
                 print('Response not generated. See above error.')
                 replace_input = True
@@ -307,7 +309,7 @@ def interactive_chat(slow_status, max_tokens):
 
 def main():
     
-    slow_status = False
+    slow_status = True
 
     # slow_status = False defaults to davinci - True defaults to curie + disables davinci
     logs = interactive_chat(slow_status, max_tokens)
