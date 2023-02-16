@@ -1,18 +1,20 @@
 import openai
-from mysecrets import openai_key
 import sys
 import datetime
 import time
 from os import path
+import config as c
+openai_key = c.get_openai_api_key()
 
-filepath = 'Documents/Github/Api_Mastery/Chatbot'
+filepath = c.filepath
 full_logfile = 'v3_logfile.txt'
 response_time_logfile = 'v3_response_time_log.txt'
 
 
 default_max_tokens = 100
 max_codex = 1000
-max_token_limit = 1000
+max_token_limit = 500
+max_session_total_tokens = 1500
 max_tokens = default_max_tokens
 slow_status = False
 
@@ -25,20 +27,20 @@ def token_count(s:str):
     return len(s.strip().split(' '))
 
 def check_truncation_and_toks(response, completion_tokens, prompt_tokens, total_tokens):
-    usage_vals = ["completion_tokens", "prompt_tokens", "total_tokens"]
+    usage_vals = ['completion_tokens', 'prompt_tokens', 'total_tokens']
     for i in range(len(usage_vals)):
         try:
-            tok_val = response["usage"][usage_vals[i]]
+            tok_val = response['usage'][usage_vals[i]]
             if i == 0: completion_tokens = tok_val
             elif i == 1: prompt_tokens = tok_val
             elif i == 2: total_tokens = tok_val
         except:
-            print(f"Token value not found for {usage_vals[i]}")
-    response = response["choices"][0]
+            print(f'Token value not found for {usage_vals[i]}')
+    response = response['choices'][0]
 
-    if response["finish_reason"] == 'length':
-        print("*Warning: message may be truncated. Adjust max tokens as needed.")
-    return response["text"], completion_tokens, prompt_tokens, total_tokens
+    if response['finish_reason'] == 'length':
+        print('*Warning: message may be truncated. Adjust max tokens as needed.')
+    return response['text'], completion_tokens, prompt_tokens, total_tokens
 
 def response_worked(response_input_vars):
     (previous_history, response_time_log, debug, full_log, history, prompt, response, response_count, start_time, total_tokens) = response_input_vars
@@ -49,7 +51,7 @@ def response_worked(response_input_vars):
     previous_history = history
     history += prompt + response + '\n'
     if token_count(history) > 500:
-        print(f"Conversation token count is growing large [{token_count(history)}]. Please reset my memory as needed.")
+        print(f'Conversation token count is growing large [{token_count(history)}]. Please reset my memory as needed.')
     full_log += f'({response_count+1}.)' + prompt + '\n' + response_delimiter + response + '\n'
     print(f'Response {response_count+1}: {response}\n\n')
     response_count += 1
@@ -214,7 +216,7 @@ def interactive_chat(slow_status, max_tokens):
         engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
     config_info = f'Engine set to: {engine}, {max_tokens} Max Tokens\n'
     full_log += config_info
-    if debug: print(config_info)
+    print(config_info)
     text_prompt = ''
     replace_input = False
     replace_input_text = ''
@@ -256,7 +258,7 @@ def interactive_chat(slow_status, max_tokens):
         elif prompt == 'help':
             print('Available commands: help, quit, status, config, history, forget, del')
         elif prompt == 'history':
-            print(f'history shown below:\n{(history)}')
+            print(f'HISTORY shown below:\n\n{(history)}')
         elif prompt == 'forget':
             history = ''
             msg = '<History has been erased. Please continue the conversation fresh :)>\n'
@@ -331,7 +333,7 @@ def interactive_chat(slow_status, max_tokens):
                     response_output_vars = response_worked(response_input_vars)
                     (previous_history, response_time_log, full_log, history, response_count) = response_output_vars
                 else:
-                    print("Blocked or truncated")
+                    print('Blocked or truncated')
                     full_log += '*x*'
                     continue
 
@@ -361,9 +363,11 @@ def interactive_chat(slow_status, max_tokens):
                     response_output_vars = response_worked(response_input_vars)
                     (previous_history, response_time_log, full_log, history, response_count) = response_output_vars
                     session_total_tokens += total_tokens
+                    if session_total_tokens > max_session_total_tokens:
+                        print('CONVERSATION TOO LONG')
                     continue
             else:
-                print("Blocked or truncated")
+                print('Blocked or truncated')
                 full_log += '*x*'
                 continue
 def main():
@@ -382,5 +386,3 @@ def main():
     
 if __name__ == '__main__':
     main()
-
-

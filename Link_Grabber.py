@@ -1,11 +1,10 @@
 def main():
     import requests
     import sys
-    import mysecrets
     import config as c
     from os import mkdir
     mode = 'image_only'
-    filepath = 'Documents/Github/Api_Mastery/ScrapeAndSpredd'
+    filepath = c.filepath + '/' + c.folder_name
     token_needed = False
     max_count = 150 # Will be overridden by config value if no CLI arguments
     args = sys.argv
@@ -126,7 +125,7 @@ def main():
         return sort_string
     
     sort_string = get_sort_string(sort_type, time_period)
-    headers = mysecrets.getHeaders(token_needed)
+    headers = c.getHeaders(token_needed)
     # You're all set!
     
 
@@ -179,7 +178,7 @@ def main():
                     else:
                         counts['other'] += 1
 
-                print(counts)
+                if debug: print(counts)
                 # Loop through each post
                 for post in posts:
                     if mode == 'image_only':
@@ -206,7 +205,7 @@ def main():
             elif res.status_code == 401:
                 print('Token expired - gimme a sec')
                 token_needed = True
-                newHeaders = mysecrets.getHeaders(token_needed)
+                newHeaders = c.getHeaders(token_needed)
                 return link_grab(newHeaders, limit_qty, search, sort)
             else:
                 return f'The Reddit API is not connected ({res.status_code})'
@@ -220,7 +219,7 @@ def main():
             if url in seen:
                 continue
             seen.add(url)
-            line = f'{title}*;;*{url}'
+            line = f'{title}{c.DELIMITER}{url}'
             print(line)
             output_string += line + '\n' 
             count+=1

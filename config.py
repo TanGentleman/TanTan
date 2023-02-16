@@ -1,19 +1,25 @@
-# config settings for Link_grabber
+filepath = 'Documents/Github/Api_Mastery/Chatbot'
 
-#### debug
-token_needed = False
+### REDDIT CONFIG
+
+DELIMITER = '*;;*' # I recommend not touching this one. Everything's on you if you do.
+token_needed = False # set to true before running for first time
 debug = False
+max_count = 150 # Increase with care
 
-
-### config
-
-limit_qty = 7
-user_input = 'r/catswithjobs'
+folder_name = 'MY_FOLDER_NAME'
+limit_qty = 5
+user_input = 'r/WhatsWrongWithYourDog'
 
 #sort_types = ['new', 'top']
 #time_periods = ['all', 'year', 'month', 'week', 'day', 'hour']
 sort_type = 'new'
-time_period = 'year'
+time_period = 'week'
 
+# Do not touch. 
+import mysecrets
+def get_openai_api_key():
+    return mysecrets.openai_key
 
-max_count = 150
+getHeaders = mysecrets.getHeaders
+getToken = mysecrets.getToken
