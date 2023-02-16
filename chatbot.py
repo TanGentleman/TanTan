@@ -6,11 +6,58 @@ import time
 from os import path
 
 filepath = 'Documents/Github/Api_Mastery/Chatbot'
+full_logfile = 'v3_logfile.txt'
+response_time_logfile = 'v3_response_time_log.txt'
 
-max_tokens = 150
+
+default_max_tokens = 100
 max_codex = 1000
+max_token_limit = 1000
+max_tokens = default_max_tokens
+slow_status = False
 
+def quit_chat(replace_input, replace_input_text):
+    replace_input = True
+    replace_input_text = 'quit'
+    return replace_input, replace_input_text
 
+def token_count(s:str):
+    return len(s.strip().split(' '))
+
+def check_truncation_and_toks(response, completion_tokens, prompt_tokens, total_tokens):
+    usage_vals = ["completion_tokens", "prompt_tokens", "total_tokens"]
+    for i in range(len(usage_vals)):
+        try:
+            tok_val = response["usage"][usage_vals[i]]
+            if i == 0: completion_tokens = tok_val
+            elif i == 1: prompt_tokens = tok_val
+            elif i == 2: total_tokens = tok_val
+        except:
+            print(f"Token value not found for {usage_vals[i]}")
+    response = response["choices"][0]
+
+    if response["finish_reason"] == 'length':
+        print("*Warning: message may be truncated. Adjust max tokens as needed.")
+    return response["text"], completion_tokens, prompt_tokens, total_tokens
+
+def response_worked(response_input_vars):
+    (previous_history, response_time_log, debug, full_log, history, prompt, response, response_count, start_time, total_tokens) = response_input_vars
+    if debug: print('beep, response worked')
+    time_taken = time.time()-start_time
+    #add a delimiter to distinguish from user text
+    response_delimiter = f'(*{round(time_taken, 1)}s)'
+    previous_history = history
+    history += prompt + response + '\n'
+    if token_count(history) > 500:
+        print(f"Conversation token count is growing large [{token_count(history)}]. Please reset my memory as needed.")
+    full_log += f'({response_count+1}.)' + prompt + '\n' + response_delimiter + response + '\n'
+    print(f'Response {response_count+1}: {response}\n\n')
+    response_count += 1
+    print(f'response time: {round(time_taken, 1)} seconds')
+    response_time_log.append((time_taken, total_tokens))
+    response_output_vars = (previous_history, response_time_log, full_log, history, response_count)
+    return response_output_vars
+        
 def read_codex_prompt():
     try:
         contents_path = f'{filepath}/codex_prompt.txt'
@@ -30,9 +77,8 @@ def read_text_prompt():
         print('No text_prompt.txt in this directory found')
 
 
-def token_count(s:str):
-    return len(s.strip().split(' '))
-def generate_text(prompt, engine, max_tokens):
+
+def generate_text(debug, prompt, engine, max_tokens):
     # Set the API key
     openai.api_key = openai_key
     
@@ -46,20 +92,28 @@ def generate_text(prompt, engine, max_tokens):
         temperature=0.3
         )
     except openai.error.OpenAIError as e:
+        status = e.http_status
+        error_dict = e.error
+        
         print(e.http_status)
         print(e.error)
+        print(type(status), type(error_dict))
+        if status == 400:
+            if error_dict['type'] == 'invalid_request_error':
+                message = error_dict['message']
+                print(f'Keeper: {message}')
         return
-    
-    return response['choices']
+    if debug: print(response)
+    return response
 
-def write_to_log_file(convo, correlates):
-    with open(f'{filepath}/v2_logfile_1.txt', 'a') as file:
+def write_to_log_file(convo, response_times):
+    with open(f'{filepath}/{full_logfile}', 'a') as file:
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d')
         file.write(f'Timestamp: {timestamp}\n{convo}\n ==== End of Entry ====\n')
         print('Saved log file.')
-    with open(f'{filepath}/v2_correlation_log.txt', 'a') as file:
+    with open(f'{filepath}/{response_time_logfile}', 'a') as file:
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d')
-        file.write(f'Timestamp: {timestamp}\n{correlates}\n ==== End of Entry ====\n')
+        file.write(f'Timestamp: {timestamp}\n{response_times}\n ==== End of Entry ====\n')
         print('Saved log file.')
 
 def parse_args():
@@ -108,8 +162,24 @@ def engine_choice(engine_prompt, status):
         print('invalid')
         raise(ValueError)
 
+def set_max_tokens(max_tokens):
+    legal_answer = False
+    while legal_answer == False:
+        token_prompt = input('Max Token count: ')
+        if input in ['', ' ']:
+            token_prompt = default_max_tokens
+        try:
+            token_prompt = int(token_prompt)
+            if (token_prompt > 0) and (token_prompt <= max_token_limit):
+                max_tokens = token_prompt
+                legal_answer = True
+            else:
+                print(f'Try a value between 1 and {max_token_limit} for now')
+        except:
+            print(f'Not recognized max token value. Try an integer from 1 to {max_token_limit}.')
+    return max_tokens
 
-def config(ask_engine, ask_token, slow_status, engine, max_tokens):
+def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
     if ask_engine:
         legal_answer = False
         while legal_answer == False:
@@ -121,35 +191,14 @@ def config(ask_engine, ask_token, slow_status, engine, max_tokens):
             except:
                 print('Not recognized. Try again.')
     if ask_token:
-        legal_answer = False
-        while legal_answer == False:
-            token_prompt = ''
-            try:
-                token_prompt = input('Max Token count: ')
-                token_prompt = int(token_prompt)
-                if (token_prompt > 0) and (token_prompt <= 200):
-                    max_tokens = token_prompt
-                    legal_answer = True
-                else:
-                    print('Try a value between 1 and 200 for now')
-            except:
-                print('Not recognized max token value. Try 1-200.')
+        max_tokens = set_max_tokens(max_tokens)
     return engine, max_tokens
 
-def print_token_info (token_info): 
-    (prompt_token_count, response_token_count, history_token_count) = token_info
-    print (f'prompt_tokens: {prompt_token_count}, response_tokens: {response_token_count}, history tokens: {history_token_count}')
-
 def interactive_chat(slow_status, max_tokens):
-    prompt_token_count = 0
-    response_token_count = 0
-    history_token_count = 0
-    token_info = (prompt_token_count, response_token_count, history_token_count)
-    history = ''
-    cached_history = ''
-    full_log = '' # Includes delimiters and time taken for response
+    (completion_tokens, prompt_tokens, total_tokens, session_total_tokens) = (0, 0, 0, 0)
+    (history, previous_history, full_log) = ('', '', '')
     response_count = 0
-    correlation_log = []
+    response_time_log = []
     debug = False
     logging_on = True
     prompt_from_file = False
@@ -158,16 +207,18 @@ def interactive_chat(slow_status, max_tokens):
     else:
         engine = 'text-davinci-003'
         
-    config_arg = parse_args()
-    if config_arg: 
-        (ask_engine, ask_token, debug) = config_arg
+    config_args = parse_args()
+    if config_args: 
+        (ask_engine, ask_token, debug) = config_args
         if debug: print('beep')
-        engine, max_tokens = config(ask_engine, ask_token, slow_status, engine, max_tokens)
-    
-    full_log += f'Engine set to: {engine}, {max_tokens} Max Tokens\n'
+        engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
+    config_info = f'Engine set to: {engine}, {max_tokens} Max Tokens\n'
+    full_log += config_info
+    if debug: print(config_info)
     text_prompt = ''
     replace_input = False
     replace_input_text = ''
+
     while True:
         #Ask for input
         if replace_input:
@@ -180,26 +231,28 @@ def interactive_chat(slow_status, max_tokens):
 
         else:
             prompt = input('Enter a prompt: ')
-        start = time.time()
-        #Escape string (Gives summary too)
-        token_info = (prompt_token_count, response_token_count, token_count(history))
+        start_time = time.time()
+
+        #if it works
 
         # ESCAPE COMMAND
         if prompt == 'quit':
-            print_token_info(token_info)
-            full_log += f'prompt_tokens: {prompt_token_count}, response_tokens: {response_token_count}, history tokens: {token_count(history)}'
-            return full_log, correlation_log, logging_on
+            print(f'tokens used: {session_total_tokens}')
+            full_log += f'tokens used: {session_total_tokens}'
+            return full_log, response_time_log, logging_on
 
         elif prompt in ['', ' ']:
             print('Type a lil somethin at least')
         elif prompt == 'stats':
-            print_token_info (token_info)
-            print(f'engine: {engine}, max_tokens = {max_tokens}')
-        elif prompt == 'config':
-            engine, max_tokens = config(True, True, slow_status, engine, max_tokens)
-            msg = f'Engine set to: {engine}, {max_tokens} Max Tokens\n'
-            print(msg)
-            full_log += msg
+            print(f'engine: {engine}, max_tokens = {max_tokens}, tokens used: {session_total_tokens}')
+        elif prompt in ['config', 'config -d']:
+            engine, max_tokens = configurate(True, True, slow_status, engine, max_tokens)
+            msg = f'Engine set to: {engine}, {max_tokens} Max Tokens'
+            if '-d' in prompt:
+                debug = not(debug)
+                msg = msg + f', debug set to {debug}'
+            print(msg + '\n')
+            full_log += msg + '\n'
         elif prompt == 'help':
             print('Available commands: help, quit, status, config, history, forget, del')
         elif prompt == 'history':
@@ -210,7 +263,7 @@ def interactive_chat(slow_status, max_tokens):
             print(msg)
             full_log += msg
         elif prompt == 'del':
-            history = cached_history
+            history = previous_history
             msg = '<I have deleted the last exchange from my memory>\n'
             print(msg)
             full_log += msg
@@ -253,8 +306,11 @@ def interactive_chat(slow_status, max_tokens):
                 user_input = ''
                 user_input = input('Make sure you have a codex_prompt.txt file in the filepath! Set max codex tokens: ')
                 try:
+                    if user_input == 'quit':
+                        replace_input, replace_input_text = quit_chat()
+                        continue
                     user_input = int(user_input)
-                    if (0 < user_input) and (user_input <= 1000):
+                    if (0 < user_input) and (user_input <= max_codex):
                         codex_tokens = user_input
                         valid_answer = True
                     else:
@@ -264,63 +320,64 @@ def interactive_chat(slow_status, max_tokens):
 
             try:
                 codex_prompt = read_codex_prompt()
-                
-                response = generate_text(codex_prompt, engine, codex_tokens)[0]['text']
-                full_log += response
-                print(response)
+                try:
+                    response = generate_text(debug, codex_prompt, engine, codex_tokens)
+                except:
+                    print('Response not generated. See above error. Try again?')
+                    continue
+                response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response, completion_tokens, prompt_tokens, total_tokens)
+                if response:
+                    response_input_vars = (previous_history, response_time_log, debug, full_log, history, prompt, response, response_count, start_time, total_tokens)
+                    response_output_vars = response_worked(response_input_vars)
+                    (previous_history, response_time_log, full_log, history, response_count) = response_output_vars
+                else:
+                    print("Blocked or truncated")
+                    full_log += '*x*'
+                    continue
+
                 with open(f'{filepath}/codex_response.txt', 'w') as file:
                     file.write(response)
                     print('Saved codex_response.txt')
-            except:
-                print('Response not generated. See above error.')
-                replace_input = True
-                replace_input_text = 'quit'
+                session_total_tokens += total_tokens
                 continue
+            except:
+                print('Response not generated. See above error. Try again?')
+                continue
+
+        elif prompt in ['tok', 'token']:
+            max_tokens = set_max_tokens(max_tokens)
         else:
+            # All valid non-command inputs to the bot go through here.
             if debug: print('beep')
             try:
-                response = generate_text(history + prompt, engine, max_tokens)[0]['text']
+                response = generate_text(debug, history + prompt, engine, max_tokens)
             except:
-                print('Response not generated. See above error.')
-                replace_input = True
-                replace_input_text = 'quit'
+                print('Response not generated. See above error. Try again?')
                 continue
+            response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response, completion_tokens, prompt_tokens, total_tokens)
             if debug: print('beep')
             if response:
-                if debug: print('beep')
-                time_taken = time.time()-start
-                #add a delimiter to distinguish from user text
-                response_delimiter = f'(*{round(time_taken, 1)}s)'
-                cached_history = history
-                history += prompt + response + '\n'
-                full_log += f'({response_count+1}.)' + prompt + '\n' + response_delimiter + response + '\n'
-                prompt_token_count += token_count(prompt)
-                response_token_count += token_count(response)
-                print(f'Response {response_count+1}: {response}\n\n')
-                response_count += 1
-                print(f'response time: {round(time_taken, 1)} seconds')
-                correlation_log.append((time_taken, response_token_count))
-                continue
+                    response_input_vars = (previous_history, response_time_log, debug, full_log, history, prompt, response, response_count, start_time, total_tokens)
+                    response_output_vars = response_worked(response_input_vars)
+                    (previous_history, response_time_log, full_log, history, response_count) = response_output_vars
+                    session_total_tokens += total_tokens
+                    continue
             else:
+                print("Blocked or truncated")
                 full_log += '*x*'
-                print('*x*')
-                if debug: print('beep')
                 continue
-
 def main():
-    
-    slow_status = True
-
+    max_tokens = default_max_tokens
     # slow_status = False defaults to davinci - True defaults to curie + disables davinci
     logs = interactive_chat(slow_status, max_tokens)
     if logs:
-        (convo, correlates, logging_on) = logs
+        (convo, response_times, logging_on) = logs
         if logging_on:
-            write_to_log_file(convo, correlates)
+            write_to_log_file(convo, response_times)
         else:
             print('This conversation was not logged. Have a nice day.')
     else:
-        print('Error. Cannot set convo and correlates logfiles.')
+        print('Error. Cannot set conversation and response time logfiles.')
         return
     
 if __name__ == '__main__':
