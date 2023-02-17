@@ -13,7 +13,7 @@ response_time_logfile = 'v4_response_time_log.txt'
 default_engine = 'text-curie-001'
 default_slow_engine = 'text-curie-001'
 default_max_tokens = 100
-max_codex = 1000
+max_codex = 5000
 max_token_limit = 500
 max_session_total_tokens = 1500
 max_tokens = default_max_tokens
@@ -28,7 +28,8 @@ def quit_chat(replace_input, replace_input_text):
 def token_count(s:str):
     return len(s.strip().split(' '))
 
-def check_truncation_and_toks(response, completion_tokens, prompt_tokens, total_tokens):
+def check_truncation_and_toks(response):
+    completion_tokens, prompt_tokens, total_tokens = (0,0,0)
     usage_vals = ['completion_tokens', 'prompt_tokens', 'total_tokens']
     for i in range(len(usage_vals)):
         try:
@@ -127,14 +128,12 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
     ask_engine = False
     ask_token = False
     arg_count = len(args)
-    if '-d' in args:
+    if '-d' in args: # toggle debug mode 
         debug = not(debug)
-        msg = f'debug set to {debug}'
+        msg = f'debug set to {debug}' # print out new value of debug
         print(msg)    
-        if 'd' == args[0]:
-            if arg_count == 1:
-                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
-                return engine, max_tokens, debug
+        if arg_count == 1:
+            return engine, max_tokens, debug
     for i in range(arg_count):
         if args[i] == 'config':
             try:
@@ -144,14 +143,29 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
                     engine = test_engine
                     try:
                         test_toks = int(args[i+2])
-                        if (test_toks > 0) and (test_toks <= max_token_limit):
+                        if engine == 'code-davinci-002':
+                            temp_tok_limit = max_codex
+                        else:
+                            temp_tok_limit = max_token_limit
+
+                        if (test_toks > 0) and (test_toks <= temp_tok_limit):
                             max_tokens = test_toks
                             return engine, max_tokens, debug
                         else:
-                            print(f'Max tokens value must be under {max_token_limit}.')
+                            print(f'Max tokens value must be under {temp_tok_limit}.')
+                            ask_engine = False
+                            ask_token = True
+                            engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
                             break
+                    except IndexError:
+                        ask_engine = False
+                        ask_token = True
+                        engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
                     except ValueError:
                         print('Integers only!')
+                        break
+                    except:
+                        print('what got me here? Trace this')
                         break
                 except NameError:
                     ask_engine = True
@@ -176,22 +190,23 @@ def engine_choice(engine_prompt, status):
     elif 'babbage'.startswith(engine_prompt):
         engine = 'text-babbage-001'
         return engine
+    
     elif 'curie'.startswith(engine_prompt):
         engine = 'text-curie-001'
         return engine
-    elif 'davinci'.startswith(engine_prompt):
-        if status == 'slow': 
-            print('Unavailable, choose a different engine.')
-            raise(NameError)
-        else:
-            engine = 'text-davinci-003'
-            return engine
     elif 'codex'.startswith(engine_prompt):
         if status == 'slow': 
             print('Unavailable, choose a different engine.')
             raise(NameError)
         else:
             engine = 'code-davinci-002'
+            return engine
+    elif 'davinci'.startswith(engine_prompt):
+        if status == 'slow': 
+            print('Unavailable, choose a different engine.')
+            raise(NameError)
+        else:
+            engine = 'text-davinci-003'
             return engine
     else:
         print('invalid')
@@ -231,8 +246,8 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
     return engine, max_tokens
 
 def interactive_chat(slow_status, engine, max_tokens, debug):
-    (completion_tokens, prompt_tokens, total_tokens, session_total_tokens) = (0, 0, 0, 0)
-    (history, previous_history, full_log) = ('', '', '')
+    completion_tokens, prompt_tokens, total_tokens, session_total_tokens = (0, 0, 0, 0)
+    history, previous_history, full_log = ('', '', '')
     response_count = 0
     response_time_log = []
     logging_on = True
@@ -263,8 +278,11 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
 
         # ESCAPE COMMAND
         if prompt == 'quit':
-            print(f'tokens used: {session_total_tokens}')
-            full_log += f'tokens used: {session_total_tokens}'
+            if session_total_tokens < 1:
+                logging_on = False
+                print('This was not logged.')
+            else:
+                full_log += f'tokens used: {session_total_tokens}'
             return full_log, response_time_log, logging_on
 
         elif prompt in ['', ' ']:
@@ -280,7 +298,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             print(msg + '\n')
             full_log += msg + '\n'
         elif prompt == 'help':
-            print('Available commands: help, quit, status, config, history, forget, del')
+            print('Available commands: codex, (’config', 'config -d’), del, forget, help, history, log, read, stats (tok, token)')
         elif prompt == 'history':
             print(f'HISTORY shown below:\n\n{(history)}')
         elif prompt == 'forget':
@@ -351,7 +369,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 except:
                     print('Response not generated. See above error. Try again?')
                     continue
-                response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response, completion_tokens, prompt_tokens, total_tokens)
+                response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response)
                 if response:
                     response_input_vars = (previous_history, response_time_log, debug, full_log, history, prompt, response, response_count, start_time, total_tokens)
                     response_output_vars = response_worked(response_input_vars)
@@ -364,7 +382,10 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 with open(f'{filepath}/codex_response.txt', 'w') as file:
                     file.write(response)
                     print('Saved codex_response.txt')
+                    
                 session_total_tokens += total_tokens
+                if session_total_tokens > max_session_total_tokens:
+                    print('CONVERSATION TOO LONG')
                 continue
             except:
                 print('Response not generated. See above error. Try again?')
@@ -380,7 +401,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             except:
                 print('Response not generated. See above error. Try again?')
                 continue
-            response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response, completion_tokens, prompt_tokens, total_tokens)
+            response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response)
             if debug: print('beep')
             if response:
                     response_input_vars = (previous_history, response_time_log, debug, full_log, history, prompt, response, response_count, start_time, total_tokens)
