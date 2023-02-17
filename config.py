@@ -1,4 +1,4 @@
-filepath = 'Documents/Github/Api_Mastery/Chatbot'
+filepath = 'Documents/Github/Api_Magic/Chatbot'
 
 ### REDDIT CONFIG
 

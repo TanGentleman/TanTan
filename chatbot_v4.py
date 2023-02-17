@@ -10,13 +10,15 @@ filepath = c.filepath
 full_logfile = 'v4_logfile.txt'
 response_time_logfile = 'v4_response_time_log.txt'
 
-
+default_engine = 'text-curie-001'
+default_slow_engine = 'text-curie-001'
 default_max_tokens = 100
 max_codex = 1000
 max_token_limit = 500
 max_session_total_tokens = 1500
 max_tokens = default_max_tokens
 slow_status = False
+debug = False
 
 def quit_chat(replace_input, replace_input_text):
     replace_input = True
@@ -119,30 +121,60 @@ def write_to_log_file(convo, response_times):
         file.write(f'Timestamp: {timestamp}\n{response_times}\n ==== End of Entry ====\n')
         print('Saved log file.')
 
-def parse_args():
+def parse_args(args, slow_status, engine, max_tokens, debug):
+    if args == []:
+        return engine, max_tokens, debug
     ask_engine = False
     ask_token = False
-    debug = False
-    args = sys.argv
     arg_count = len(args)
-    if arg_count > 1:
-        for arg in args[1:]:
-            if arg == '-d':
-                debug = True
-            elif arg == 'config':
+    if '-d' in args:
+        debug = not(debug)
+        msg = f'debug set to {debug}'
+        print(msg)    
+        if 'd' == args[0]:
+            if arg_count == 1:
+                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
+                return engine, max_tokens, debug
+    for i in range(arg_count):
+        if args[i] == 'config':
+            try:
+                test_engine = args[i+1]
+                try:
+                    test_engine = engine_choice(test_engine, slow_status)
+                    engine = test_engine
+                    try:
+                        test_toks = int(args[i+2])
+                        if (test_toks > 0) and (test_toks <= max_token_limit):
+                            max_tokens = test_toks
+                            return engine, max_tokens, debug
+                        else:
+                            print(f'Max tokens value must be under {max_token_limit}.')
+                            break
+                    except ValueError:
+                        print('Integers only!')
+                        break
+                except NameError:
+                    ask_engine = True
+                    ask_token = True
+                    engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
+                    break
+            except IndexError:
                 ask_engine = True
                 ask_token = True
-                
-        if debug: print(f'{ask_engine}, {ask_token}, {debug}')
-        return ask_engine, ask_token, debug
+                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
+                break
+    return engine, max_tokens, debug
                 
 
 def engine_choice(engine_prompt, status):
     if len(engine_prompt) < 2:
         print('Please enter at least two characters')
-        raise(ValueError)
+        raise(NameError)
     if 'ada'.startswith(engine_prompt):
         engine = 'text-ada-001'
+        return engine
+    elif 'babbage'.startswith(engine_prompt):
+        engine = 'text-babbage-001'
         return engine
     elif 'curie'.startswith(engine_prompt):
         engine = 'text-curie-001'
@@ -150,20 +182,20 @@ def engine_choice(engine_prompt, status):
     elif 'davinci'.startswith(engine_prompt):
         if status == 'slow': 
             print('Unavailable, choose a different engine.')
-            raise(ValueError)
+            raise(NameError)
         else:
             engine = 'text-davinci-003'
             return engine
     elif 'codex'.startswith(engine_prompt):
         if status == 'slow': 
             print('Unavailable, choose a different engine.')
-            raise(ValueError)
+            raise(NameError)
         else:
             engine = 'code-davinci-002'
             return engine
     else:
         print('invalid')
-        raise(ValueError)
+        raise(NameError)
 
 def set_max_tokens(max_tokens):
     legal_answer = False
@@ -171,6 +203,7 @@ def set_max_tokens(max_tokens):
         token_prompt = input('Max Token count: ')
         if input in ['', ' ']:
             token_prompt = default_max_tokens
+            print(f'Max tokens [default]: {default_max_tokens}')
         try:
             token_prompt = int(token_prompt)
             if (token_prompt > 0) and (token_prompt <= max_token_limit):
@@ -197,24 +230,14 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
         max_tokens = set_max_tokens(max_tokens)
     return engine, max_tokens
 
-def interactive_chat(slow_status, max_tokens):
+def interactive_chat(slow_status, engine, max_tokens, debug):
     (completion_tokens, prompt_tokens, total_tokens, session_total_tokens) = (0, 0, 0, 0)
     (history, previous_history, full_log) = ('', '', '')
     response_count = 0
     response_time_log = []
-    debug = False
     logging_on = True
     prompt_from_file = False
-    if slow_status == True:
-        engine = 'text-curie-001'
-    else:
-        engine = 'text-davinci-003'
-        
-    config_args = parse_args()
-    if config_args: 
-        (ask_engine, ask_token, debug) = config_args
-        if debug: print('beep')
-        engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
+    engine, max_tokens, debug = parse_args(sys.argv[1:], slow_status, engine, max_tokens, debug)
     config_info = f'Engine set to: {engine}, {max_tokens} Max Tokens\n'
     full_log += config_info
     print(config_info)
@@ -373,8 +396,12 @@ def interactive_chat(slow_status, max_tokens):
                 continue
 def main():
     max_tokens = default_max_tokens
+    if slow_status == True:
+        engine = default_slow_engine
+    else:
+        engine = default_engine
     # slow_status = False defaults to davinci - True defaults to curie + disables davinci
-    logs = interactive_chat(slow_status, max_tokens)
+    logs = interactive_chat(slow_status, engine, max_tokens, debug)
     if logs:
         (convo, response_times, logging_on) = logs
         if logging_on:
