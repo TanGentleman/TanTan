@@ -13,8 +13,8 @@ response_time_logfile = 'v4_response_time_log.txt'
 default_engine = 'text-curie-001'
 default_slow_engine = 'text-curie-001'
 default_max_tokens = 100
-max_codex = 5000
-max_token_limit = 500
+max_codex = 3000
+max_token_limit = 2000
 max_session_total_tokens = 1500
 max_tokens = default_max_tokens
 slow_status = False
@@ -46,9 +46,8 @@ def check_truncation_and_toks(response):
     return response['text'], completion_tokens, prompt_tokens, total_tokens
 
 def response_worked(response_input_vars):
-    (previous_history, response_time_log, debug, full_log, history, prompt, response, response_count, start_time, total_tokens) = response_input_vars
+    (previous_history, debug, full_log, history, prompt, response, response_count, time_taken, total_tokens) = response_input_vars
     if debug: print('beep, response worked')
-    time_taken = time.time()-start_time
     #add a delimiter to distinguish from user text
     response_delimiter = f'(*{round(time_taken, 1)}s)'
     previous_history = history
@@ -59,8 +58,7 @@ def response_worked(response_input_vars):
     print(f'Response {response_count+1}: {response}\n\n')
     response_count += 1
     print(f'response time: {round(time_taken, 1)} seconds')
-    response_time_log.append((time_taken, total_tokens))
-    response_output_vars = (previous_history, response_time_log, full_log, history, response_count)
+    response_output_vars = (previous_history, full_log, history, response_count)
     return response_output_vars
         
 def read_codex_prompt():
@@ -94,46 +92,58 @@ def generate_text(debug, prompt, engine, max_tokens):
         prompt=prompt,
         max_tokens=max_tokens,
         n=1,
-        temperature=0.5,
-        frequency_penalty = 0.7
+        temperature=0.6,
+        frequency_penalty = 1.2
         )
     except openai.error.OpenAIError as e:
         status = e.http_status
         error_dict = e.error
         
-        print(e.http_status)
-        print(e.error)
+        print(status)
+        print(error_dict)
         print(type(status), type(error_dict))
         if status == 400:
             if error_dict['type'] == 'invalid_request_error':
                 message = error_dict['message']
-                print(f'Keeper: {message}')
+                print(f'invalid_request_error: {message}')
         return
     if debug: print(response)
     return response
 
 def write_to_log_file(convo, response_times):
-    with open(f'{filepath}/{full_logfile}', 'a') as file:
-        timestamp = datetime.datetime.now().strftime('%Y-%m-%d')
-        file.write(f'Timestamp: {timestamp}\n{convo}\n ==== End of Entry ====\n')
-        print('Saved log file.')
-    with open(f'{filepath}/{response_time_logfile}', 'a') as file:
-        timestamp = datetime.datetime.now().strftime('%Y-%m-%d')
-        file.write(f'Timestamp: {timestamp}\n{response_times}\n ==== End of Entry ====\n')
-        print('Saved log file.')
+    try:
+        with open(f'{filepath}/{full_logfile}', 'a') as file:
+            timestamp = datetime.datetime.now().strftime('%Y-%m-%d')
+            file.write(f'Timestamp: {timestamp}\n{convo}\n ==== End of Entry ====\n')
+            print('Saved conversation log file.')
+        with open(f'{filepath}/{response_time_logfile}', 'a') as file:
+            timestamp = datetime.datetime.now().strftime('%Y-%m-%d')
+            file.write(f'Timestamp: {timestamp}\n{response_times}\n ==== End of Entry ====\n')
+            print('Saved response time log file.')
+    except:
+        print('error. Unable to find path to logfile.')
 
 def parse_args(args, slow_status, engine, max_tokens, debug):
-    if args == []:
+
+    if args == []: # No arguments provided
+        ask_engine = False 
+        ask_token = False
+        engine, max_tokens = configurate(engine, max_tokens)
         return engine, max_tokens, debug
-    ask_engine = False
-    ask_token = False
+
     arg_count = len(args)
-    if '-d' in args: # toggle debug mode 
-        debug = not(debug)
-        msg = f'debug set to {debug}' # print out new value of debug
-        print(msg)    
-        if arg_count == 1:
-            return engine, max_tokens, debug
+
+    # '-d' argument given to toggle debug mode on/off 
+    if '-d' in args: 
+        debug = not(debug) # Toggle debugging state 
+        print('debug set to', str(debug))    
+
+    
+    if 'd' == args[0] and arg_count == 1: # Debugging is only argument provided
+        ask_engine = False
+        ask_token = False
+        engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
+
     for i in range(arg_count):
         if args[i] == 'config':
             try:
@@ -141,6 +151,7 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
                 try:
                     test_engine = engine_choice(test_engine, slow_status)
                     engine = test_engine
+                    ask_engine = False
                     try:
                         test_toks = int(args[i+2])
                         if engine == 'code-davinci-002':
@@ -149,33 +160,33 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
                             temp_tok_limit = max_token_limit
 
                         if (test_toks > 0) and (test_toks <= temp_tok_limit):
-                            max_tokens = test_toks
+                            ask_token = False
+                            engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
                             return engine, max_tokens, debug
                         else:
                             print(f'Max tokens value must be under {temp_tok_limit}.')
-                            ask_engine = False
                             ask_token = True
                             engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
                             break
                     except IndexError:
-                        ask_engine = False
                         ask_token = True
                         engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
                     except ValueError:
                         print('Integers only!')
+                        ask_token = True
+                        engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
                         break
                     except:
+                        #I DONT THINK I CAN GET HERE BUT IDK
                         print('what got me here? Trace this')
-                        break
+                        assert(False)
                 except NameError:
                     ask_engine = True
                     ask_token = True
-                    engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
                     break
             except IndexError:
                 ask_engine = True
                 ask_token = True
-                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
                 break
     return engine, max_tokens, debug
                 
@@ -371,21 +382,25 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                     continue
                 response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response)
                 if response:
-                    response_input_vars = (previous_history, response_time_log, debug, full_log, history, prompt, response, response_count, start_time, total_tokens)
+                    time_taken = time.time()-start_time
+                    response_input_vars = (previous_history, debug, full_log, history, prompt, response, response_count, total_tokens)
                     response_output_vars = response_worked(response_input_vars)
-                    (previous_history, response_time_log, full_log, history, response_count) = response_output_vars
+                    response_time_log.append((time_taken, total_tokens))
+                    (previous_history, full_log, history, response_count) = response_output_vars
                 else:
                     print('Blocked or truncated')
                     full_log += '*x*'
                     continue
-
-                with open(f'{filepath}/codex_response.txt', 'w') as file:
-                    file.write(response)
-                    print('Saved codex_response.txt')
+                try:
+                    with open(f'{filepath}/codex_response.txt', 'w') as file:
+                        file.write(response)
+                        print('Saved codex_response.txt')
+                except:
+                    print('Could not save codex_response.txt')
                     
                 session_total_tokens += total_tokens
                 if session_total_tokens > max_session_total_tokens:
-                    print('CONVERSATION TOO LONG')
+                    print('CONVO GETTIN LONG')
                 continue
             except:
                 print('Response not generated. See above error. Try again?')
@@ -404,10 +419,13 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response)
             if debug: print('beep')
             if response:
-                    response_input_vars = (previous_history, response_time_log, debug, full_log, history, prompt, response, response_count, start_time, total_tokens)
+                    time_taken = time.time()-start_time
+                    response_input_vars = (previous_history, debug, full_log, history, prompt, response, response_count, time_taken, total_tokens)
                     response_output_vars = response_worked(response_input_vars)
-                    (previous_history, response_time_log, full_log, history, response_count) = response_output_vars
+                    (previous_history, full_log, history, response_count) = response_output_vars
                     session_total_tokens += total_tokens
+
+                    response_time_log.append((time_taken, total_tokens))
                     if session_total_tokens > max_session_total_tokens:
                         print('CONVERSATION TOO LONG')
                     continue
