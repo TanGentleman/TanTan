@@ -3,21 +3,18 @@ import requests
 import re
 from hashlib import sha256
 import sys
-from config import filepath
-from config import DELIMITER
+import config as c
 
-DELIMITER = DELIMITER
-filepath = f'{filepath}/ScrapeAndSpredd'
-assert(os.path.isdir(filepath))
+TanSaysNoNo = c.TanEx
 
-def read_content():
+def read_content(contents_path):
         try:
-            contents_path = f'{filepath}/contents.txt'
-            with open(contents_path, 'r') as file:
+            with open(f'{contents_path}/contents.txt', 'r') as file:
                 file_contents = file.read()
                 return file_contents
         except FileNotFoundError:
             print('No contents.txt in this directory found')
+            raise(TanSaysNoNo)
 
 def sanitize_filename(filename):
         # Remove invalid characters
@@ -33,21 +30,25 @@ def sanitize_filename(filename):
         
         return filename
 
-def arrays_from_content(content):
-        links = []
+def content_to_arrays(content, DELIMITER):
         titles = []
+        links = []
         for line in content.splitlines():
             if DELIMITER not in line:
                 continue
-            else:
-                try:
-                    tit, url = line.split(DELIMITER)
-                except:
-                    print('wow, you broke my delimiter!')
-                    raise(ValueError)
-                links.append(url)
-                titles.append(tit)
-        return links, titles
+            try: # Extracting the title and url from each line
+                tit, url = line.split(DELIMITER)
+            except:
+                print('wow, you broke my delimiter!')
+                raise(ValueError)
+            titles.append(tit)
+            links.append(url)
+        try: # Double checking formatting (list lengths)
+            assert(len(titles) == len(links))
+        except:
+            print(f'Format must be TITLE + {DELIMITER} + URL')
+            raise(TanSaysNoNo)
+        return titles, links
 
 def get_image_hash(image_content):
         hasher = sha256()
@@ -55,13 +56,17 @@ def get_image_hash(image_content):
         return hasher.hexdigest()        
 
 def save_images(titles, links, folder_path):
+        if len(titles) == 0:
+            print('List invalid.')
+            raise(TanSaysNoNo)
+        assert(len(links)) > 0
         duplicates = ''
         count = 0
-        tot_count = 0
+        total_count = 0
         seen = set()
         image_hashes = set()
         ######
-        assert(len(links)) > 0
+        
         # Loop over each line in the file
         for i in range(len(links)):
             url = links[i]
@@ -93,46 +98,81 @@ def save_images(titles, links, folder_path):
             seen.add(filename)
 
             # Save the image
-            with open(f'{folder_path}/{filename}{file_extension}', 'wb') as f:
-                f.write(res.content)
-                tot_count+=1
-        return tot_count, duplicates
+            try:
+                with open(f'{folder_path}/{filename}{file_extension}', 'wb') as f:
+                    f.write(res.content)
+                    total_count+=1
+            except:
+                print('Welp, unable to save the image')
+                raise(TanSaysNoNo)
+        return total_count, duplicates
 
-def main():
-    content = read_content()
+def try_content_to_arrays(content, DELIMITER):
     if content:
-        links, titles = arrays_from_content(content)
+        try:
+            titles, links = content_to_arrays(content, DELIMITER)
+            return titles, links
+        except:
+            print('Error! Traces back to: content_to_arrays')
+            raise(TanSaysNoNo)
     else:
         print('Error? Content empty.')
+        return [], []
+
+def make_folder(folder_path):
+    try:
+        os.mkdir(folder_path)
+    except FileExistsError:
+        print(f'No worries: The folder {folder_name} already exists')
+    
+def try_saving_images(titles, links, folder_path):
+    if all([titles, links]) == False:
+        print('No title/url pairs found')
+        return 0, None
+    try:
+        total_count, duplicates = save_images(titles, links, folder_path)
+    except:
+        print('Error. Output of save_images is faulty.')
+        raise(TanSaysNoNo)
+
+    print(f'There are {len(links)} title*;;*url formatted images')
+    print(f'Total unique images: {total_count}')
+    return total_count, duplicates
+
+def try_saving_results(filepath, total_count, folder_name, duplicates = None):
+    try:
+        with open(f'{filepath}/results.txt', 'w') as file:
+            file.write(f'Total unique images saved to {folder_name}: {total_count}\nDupe Log:\n{duplicates}')
+    except:
+        print('Welp, unable to save results.txt')
+        raise(TanSaysNoNo)
+
+def main(folder_name):
+    DELIMITER = c.DELIMITER
+    reddit_folder_name = c.reddit_folder_name
+    filepath = f'{c.filepath}/{reddit_folder_name}'
+    download_folder_path = f'{filepath}/{folder_name}'
+    try:
+        content = read_content(filepath)
+    except:
+        print('Add a contents.txt file! I recommend running the link_grabber :D')
+        print('Exiting.')
         return
 
-    folder_name = 'RENAME_ME'
-    tot_count = 0
+    try:
+        titles, links = try_content_to_arrays(content, DELIMITER)
+        make_folder(download_folder_path)
+        total_count, duplicates = try_saving_images(titles, links, download_folder_path)
+        try_saving_results(filepath, total_count, folder_name, duplicates)
+    except:
+        print('Failed to save images.')
+        return
 
+if __name__ == '__main__':
     arg_count = len(sys.argv)
     if arg_count > 1:
         arg = sys.argv[1]
         folder_name = arg
-
-    folder_path = f'{filepath}/{folder_name}'   
-
-    try:
-        os.mkdir(folder_path)
-    except FileExistsError:
-        print(f'The folder {folder_path} already exists')
-
-    try:
-        tot_count, duplicates = save_images(titles, links, folder_path)
-    except:
-        print('Error. Output of save_images is faulty.')
-        raise(ValueError)
-    
-    print(f'There are {len(links)} title*;;*url formatted images')
-    assert(len(links) == len(titles))
-    print(f'Total unique images: {tot_count}')
-
-    with open(f'{filepath}/results.txt', 'w') as file:
-        file.write(f'Total unique images saved to {folder_name}: {tot_count}\n{duplicates}')
-
-if __name__ == '__main__':
-    main()
+    else:
+        folder_name = 'RENAME_ME'
+    main(folder_name)

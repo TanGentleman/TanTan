@@ -1,22 +1,32 @@
-filepath = 'Documents/Github/Api_Magic/Chatbot'
+'''Hi there! Hopefully these don't look too scary. The filepath is the location 
+where you installed this repository.'''
 
+filepath = 'Documents/Github/Api_Magic'
+reddit_folder_name = 'ScrapeAndSpreddit'
 ### REDDIT CONFIG
+token_needed = False # Set to True for first use, then to False after you have added your reddit token to mysecrets.py!
+image_only = True # Set to False to allow mp4 filetypes.
+max_count = 500 # Please keep this to a reasonable value (I recommend < 1000 unless experienced or small files)
 
-DELIMITER = '*;;*' # I recommend not touching this one. Everything's on you if you do.
-token_needed = False # set to true before running for first time
+
+
+# The below 6 variables
 debug = False
-max_count = 150 # Increase with care
+limit_qty = 6
+user_input = 'r/anarchychess'
 
-folder_name = 'MY_FOLDER_NAME'
-limit_qty = 5
-user_input = 'r/WhatsWrongWithYourDog'
+# Valid sort types: ['new', 'top']
+# Valid time periods = ['all', 'year', 'month', 'week', 'day', 'hour']
+sort_type = 'top'
+time_period = 'month'
 
-#sort_types = ['new', 'top']
-#time_periods = ['all', 'year', 'month', 'week', 'day', 'hour']
-sort_type = 'new'
-time_period = 'week'
+
+
+
 
 # Do not touch. 
+DELIMITER = '_||_' # Change if experienced and/or cleverer than me.
+TanEx = Exception(ValueError)
 import mysecrets
 def get_openai_api_key():
     return mysecrets.openai_key

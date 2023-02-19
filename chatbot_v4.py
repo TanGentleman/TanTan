@@ -4,20 +4,22 @@ import datetime
 import time
 from os import path
 import config as c
+TanSaysNoNo = c.TanEx
+
 openai_key = c.get_openai_api_key()
 
-filepath = c.filepath
+filepath = f'{c.filepath}/Chatbot'
 full_logfile = 'v4_logfile.txt'
 response_time_logfile = 'v4_response_time_log.txt'
 
 default_engine = 'text-curie-001'
 default_slow_engine = 'text-curie-001'
-default_max_tokens = 100
-max_codex = 3000
+default_max_tokens = 300
+max_codex = 2500
 max_token_limit = 2000
-max_session_total_tokens = 1500
+max_session_total_tokens = 2500
 max_tokens = default_max_tokens
-slow_status = False
+slow_status = False # slow_status = False defaults to davinci - True defaults to curie + disables davinci
 debug = False
 
 def quit_chat(replace_input, replace_input_text):
@@ -46,15 +48,15 @@ def check_truncation_and_toks(response):
     return response['text'], completion_tokens, prompt_tokens, total_tokens
 
 def response_worked(response_input_vars):
-    (previous_history, debug, full_log, history, prompt, response, response_count, time_taken, total_tokens) = response_input_vars
+    (previous_history, debug, full_log, history, prompt, response, response_count, time_taken) = response_input_vars
     if debug: print('beep, response worked')
-    #add a delimiter to distinguish from user text
-    response_delimiter = f'(*{round(time_taken, 1)}s)'
+    #add a marker to distinguish from user text
+    response_time_marker = f'(*{round(time_taken, 1)}s)'
     previous_history = history
     history += prompt + response + '\n'
     if token_count(history) > 500:
         print(f'Conversation token count is growing large [{token_count(history)}]. Please reset my memory as needed.')
-    full_log += f'({response_count+1}.)' + prompt + '\n' + response_delimiter + response + '\n'
+    full_log += f'({response_count+1}.)' + prompt + '\n' + response_time_marker + response + '\n'
     print(f'Response {response_count+1}: {response}\n\n')
     response_count += 1
     print(f'response time: {round(time_taken, 1)} seconds')
@@ -126,9 +128,6 @@ def write_to_log_file(convo, response_times):
 def parse_args(args, slow_status, engine, max_tokens, debug):
 
     if args == []: # No arguments provided
-        ask_engine = False 
-        ask_token = False
-        engine, max_tokens = configurate(engine, max_tokens)
         return engine, max_tokens, debug
 
     arg_count = len(args)
@@ -191,31 +190,33 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
     return engine, max_tokens, debug
                 
 
-def engine_choice(engine_prompt, status):
+def engine_choice(engine_prompt, slow_status):
     if len(engine_prompt) < 2:
         print('Please enter at least two characters')
         raise(NameError)
-    if 'ada'.startswith(engine_prompt):
+    if (engine_prompt == 'text-ada-001') or ('ada'.startswith(engine_prompt)):
         engine = 'text-ada-001'
         return engine
-    elif 'babbage'.startswith(engine_prompt):
-        engine = 'text-babbage-001'
+    elif (engine_prompt == 'text-babbage-001') or ('babbage'.startswith(engine_prompt)):
+        engine = 'text-ada-001'
         return engine
-    
-    elif 'curie'.startswith(engine_prompt):
-        engine = 'text-curie-001'
+    elif (engine_prompt == 'text-curie-001') or ('curie'.startswith(engine_prompt)):
+        engine = 'text-ada-001'
         return engine
-    elif 'codex'.startswith(engine_prompt):
-        if status == 'slow': 
-            print('Unavailable, choose a different engine.')
-            raise(NameError)
+
+    elif (engine_prompt == 'code-davinci-002') or ('codex'.startswith(engine_prompt)):
+        if slow_status == True:
+            print('Codex unavailable, switching to curie.')
+            engine = 'text-curie-001'
+            return engine
         else:
             engine = 'code-davinci-002'
             return engine
-    elif 'davinci'.startswith(engine_prompt):
-        if status == 'slow': 
-            print('Unavailable, choose a different engine.')
-            raise(NameError)
+    elif (engine_prompt == 'text-davinci-003') or ('davinci'.startswith(engine_prompt)):
+        if slow_status == True:
+            print('Davinci unavailable, switching to curie.')
+            engine = 'text-curie-001'
+            return engine
         else:
             engine = 'text-davinci-003'
             return engine
@@ -254,6 +255,10 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
                 print('Not recognized. Try again.')
     if ask_token:
         max_tokens = set_max_tokens(max_tokens)
+    try:
+        engine = engine_choice(engine, slow_status)
+    except:
+        print('Welp, dunno how it broke. Help?')
     return engine, max_tokens
 
 def interactive_chat(slow_status, engine, max_tokens, debug):
@@ -263,7 +268,6 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
     response_time_log = []
     logging_on = True
     prompt_from_file = False
-    engine, max_tokens, debug = parse_args(sys.argv[1:], slow_status, engine, max_tokens, debug)
     config_info = f'Engine set to: {engine}, {max_tokens} Max Tokens\n'
     full_log += config_info
     print(config_info)
@@ -285,8 +289,6 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             prompt = input('Enter a prompt: ')
         start_time = time.time()
 
-        #if it works
-
         # ESCAPE COMMAND
         if prompt == 'quit':
             if session_total_tokens < 1:
@@ -296,7 +298,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 full_log += f'tokens used: {session_total_tokens}'
             return full_log, response_time_log, logging_on
 
-        elif prompt in ['', ' ']:
+        elif prompt == None:
             print('Type a lil somethin at least')
         elif prompt == 'stats':
             print(f'engine: {engine}, max_tokens = {max_tokens}, tokens used: {session_total_tokens}')
@@ -309,9 +311,12 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             print(msg + '\n')
             full_log += msg + '\n'
         elif prompt == 'help':
-            print('Available commands: codex, (’config', 'config -d’), del, forget, help, history, log, read, stats (tok, token)')
+            print('Available commands: codex, del, forget, help, history, log, read, stats, (tok or token),  config, config [engine] [tokens] [-d:optional]')
         elif prompt == 'history':
-            print(f'HISTORY shown below:\n\n{(history)}')
+            if history:
+                print(f'HISTORY shown below:\n\n{(history)}')
+            else:
+                print('No conversation history in memory.')
         elif prompt == 'forget':
             history = ''
             msg = '<History has been erased. Please continue the conversation fresh :)>\n'
@@ -323,7 +328,6 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             print(msg)
             full_log += msg
         elif prompt == 'log':
-            
             if logging_on:
                 msg = '<Logging disabled> Conversation will not be stored.\n'
                 print(msg)
@@ -383,7 +387,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response)
                 if response:
                     time_taken = time.time()-start_time
-                    response_input_vars = (previous_history, debug, full_log, history, prompt, response, response_count, total_tokens)
+                    response_input_vars = (previous_history, debug, full_log, history, prompt, response, response_count)
                     response_output_vars = response_worked(response_input_vars)
                     response_time_log.append((time_taken, total_tokens))
                     (previous_history, full_log, history, response_count) = response_output_vars
@@ -420,7 +424,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             if debug: print('beep')
             if response:
                     time_taken = time.time()-start_time
-                    response_input_vars = (previous_history, debug, full_log, history, prompt, response, response_count, time_taken, total_tokens)
+                    response_input_vars = (previous_history, debug, full_log, history, prompt, response, response_count, time_taken)
                     response_output_vars = response_worked(response_input_vars)
                     (previous_history, full_log, history, response_count) = response_output_vars
                     session_total_tokens += total_tokens
@@ -433,13 +437,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 print('Blocked or truncated')
                 full_log += '*x*'
                 continue
-def main():
-    max_tokens = default_max_tokens
-    if slow_status == True:
-        engine = default_slow_engine
-    else:
-        engine = default_engine
-    # slow_status = False defaults to davinci - True defaults to curie + disables davinci
+def main(engine, max_tokens, debug):
     logs = interactive_chat(slow_status, engine, max_tokens, debug)
     if logs:
         (convo, response_times, logging_on) = logs
@@ -452,4 +450,17 @@ def main():
         return
     
 if __name__ == '__main__':
-    main()
+    import sys
+    
+    if slow_status == True: 
+        engine = default_slow_engine
+    else:
+        engine = default_engine
+
+    max_tokens = default_max_tokens
+    args = sys.argv
+    arg_count = len(args)
+    if arg_count > 1:
+        engine, max_tokens, debug = parse_args(sys.argv[1:], slow_status, engine, max_tokens, debug)
+    
+    main(engine, max_tokens, debug)
