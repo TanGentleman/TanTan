@@ -142,7 +142,7 @@ def try_saving_images(titles, links, folder_path):
 def try_saving_results(filepath, total_count, folder_name, duplicates = None):
     try:
         with open(f'{filepath}/results.txt', 'w') as file:
-            file.write(f'Total unique images saved to {folder_name}: {total_count}\nDupe Log:\n{duplicates}')
+            file.write(f'Total unique images saved to {folder_name}: {total_count}\nDupe Log:\n{duplicates or "None detected"}')
     except:
         print('Welp, unable to save results.txt')
         raise(TanSaysNoNo)

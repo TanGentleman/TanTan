@@ -17,7 +17,7 @@ def get_sort_string(sort_type, time_period):
         return sort_string
 
 def user_input_to_search(user_input):
-        prefix, suffix = user_input[:2],user_input[2:]
+        prefix, suffix = user_input[:2], user_input[2:]
         if prefix == 'u/':
             search = f'user/{suffix}/submitted'
         elif prefix == 'r/':
@@ -26,7 +26,37 @@ def user_input_to_search(user_input):
             raise SyntaxError('Format with u/ (for users) or r/ (for subs)')
         return search
 
-def link_grab(debug, image_only, max_count, headers, limit_qty, search, sort_string, DELIMITER, getHeaders):
+def arrays_to_output_string(image_urls, image_titles, output_string, debug, DELIMITER):
+        output_string = ''
+        seen = set()
+        count = 0
+        for url, title in zip(image_urls, image_titles):
+            if url in seen:
+                continue
+            seen.add(url)
+            line = f'{title}{DELIMITER}{url}'
+            print(line)
+            output_string += line + '\n' 
+            count+=1
+        if debug: print(f'total count: {count}')
+        return output_string
+
+def get_urls_and_titles(posts, image_only, image_urls, image_titles, limit_qty):
+    # Loop through each post
+    for post in posts:
+        if image_only:
+            if ('post_hint' in post['data']) and (post['data']['post_hint'] in ['image', None]):
+                image_url = post['data']['url']
+                if not image_url.endswith(('.jpg', '.jpeg', '.png', '.gif')):
+                    continue
+                image_urls.append(image_url)
+                image_titles.append(post['data']['title'])
+                count += 1
+            if count >= limit_qty:
+                break
+    return image_urls, image_titles, count
+
+def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_count, search, sort_string):
         # Define a variable to keep track of the 'after' parameter
         after = None
         # Define a variable to keep track of the number of fetched urls
@@ -76,18 +106,7 @@ def link_grab(debug, image_only, max_count, headers, limit_qty, search, sort_str
                         counts['other'] += 1
 
                 if debug: print(counts)
-                # Loop through each post
-                for post in posts:
-                    if image_only:
-                        if ('post_hint' in post['data']) and (post['data']['post_hint'] in ['image', None]):
-                            image_url = post['data']['url']
-                            if not image_url.endswith(('.jpg', '.jpeg', '.png', '.gif')):
-                                continue
-                            image_urls.append(image_url)
-                            image_titles.append(post['data']['title'])
-                            count += 1
-                        if count >= limit_qty:
-                            break
+                image_urls, image_titles, count = get_urls_and_titles(posts, image_only, image_urls, image_titles, limit_qty)
                 
                 if (count >= limit_qty) or (count >= max_count):
                     if debug: print(f'maxed out at {count}')
@@ -102,24 +121,13 @@ def link_grab(debug, image_only, max_count, headers, limit_qty, search, sort_str
                 print('Token expired - gimme a sec')
                 token_needed = True
                 newHeaders = getHeaders(token_needed)
-                return link_grab(debug, image_only, max_count, headers, limit_qty, search, sort_string, DELIMITER, getHeaders)
+                return link_grab(DELIMITER, debug, getHeaders, newHeaders, image_only, limit_qty, max_count, search, sort_string)
             else:
                 return f'The Reddit API is not connected ({res.status_code})'
 
         # Print the number of fetched urls
         if debug: print(f'{count} urls fetched')
-
-        seen = set()
-        count = 0
-        for url, title in zip(image_urls, image_titles):
-            if url in seen:
-                continue
-            seen.add(url)
-            line = f'{title}{DELIMITER}{url}'
-            print(line)
-            output_string += line + '\n' 
-            count+=1
-        if debug: print(f'total count: {count}')
+        output_string = arrays_to_output_string(image_urls, image_titles, output_string, debug, DELIMITER)
         return output_string
 
 def main(user_input, limit_qty, sort_type, time_period, max_count, debug):
@@ -143,7 +151,7 @@ def main(user_input, limit_qty, sort_type, time_period, max_count, debug):
     sort_string = get_sort_string(sort_type, time_period)
     
     # Collect output (debugging statements not included)
-    output = link_grab(debug, image_only, max_count, headers, limit_qty, search, sort_string, DELIMITER, getHeaders)
+    output = link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_count, search, sort_string)
     if output == None:
         print('Faulty output. No links grabbed.')
         return
@@ -162,6 +170,7 @@ if __name__ == '__main__':
     arg_count = len(args)
     max_count = c.max_count
     if arg_count > 1:
+
         def valid_arg(arg, index, max_count):
             if index == 1:
                 try:
@@ -189,7 +198,6 @@ if __name__ == '__main__':
                 time_periods = ['all', 'year', 'month', 'week', 'day', 'hour']
                 return arg in time_periods
 
-
         def check_args(args, arg_count, max_count):
             for i in range(arg_count):
                 if i == 0: # Unused element
@@ -210,7 +218,6 @@ if __name__ == '__main__':
                         raise(ValueError)
             return args, arg_count
 
-        
         user_input = ''
         sort_type = ''
         time_period = ''     

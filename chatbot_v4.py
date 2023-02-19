@@ -129,14 +129,11 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
 
     if args == []: # No arguments provided
         return engine, max_tokens, debug
-
     arg_count = len(args)
-
     # '-d' argument given to toggle debug mode on/off 
     if '-d' in args: 
         debug = not(debug) # Toggle debugging state 
-        print('debug set to', str(debug))    
-
+        print('debug set to', str(debug))
     
     if 'd' == args[0] and arg_count == 1: # Debugging is only argument provided
         ask_engine = False
@@ -159,6 +156,7 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
                             temp_tok_limit = max_token_limit
 
                         if (test_toks > 0) and (test_toks <= temp_tok_limit):
+                            max_tokens = test_toks
                             ask_token = False
                             engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
                             return engine, max_tokens, debug
@@ -198,10 +196,10 @@ def engine_choice(engine_prompt, slow_status):
         engine = 'text-ada-001'
         return engine
     elif (engine_prompt == 'text-babbage-001') or ('babbage'.startswith(engine_prompt)):
-        engine = 'text-ada-001'
+        engine = 'text-babbage-001'
         return engine
     elif (engine_prompt == 'text-curie-001') or ('curie'.startswith(engine_prompt)):
-        engine = 'text-ada-001'
+        engine = 'text-curie-001'
         return engine
 
     elif (engine_prompt == 'code-davinci-002') or ('codex'.startswith(engine_prompt)):
@@ -253,12 +251,14 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
                 legal_answer = True
             except:
                 print('Not recognized. Try again.')
+    else:
+        try:
+            engine = engine_choice(engine, slow_status)
+        except:
+            print('Welp, dunno how it broke. Help?')
     if ask_token:
         max_tokens = set_max_tokens(max_tokens)
-    try:
-        engine = engine_choice(engine, slow_status)
-    except:
-        print('Welp, dunno how it broke. Help?')
+    
     return engine, max_tokens
 
 def interactive_chat(slow_status, engine, max_tokens, debug):
@@ -291,7 +291,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
 
         # ESCAPE COMMAND
         if prompt == 'quit':
-            if session_total_tokens < 1:
+            if session_total_tokens == 0:
                 logging_on = False
                 print('This was not logged.')
             else:
@@ -302,14 +302,28 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             print('Type a lil somethin at least')
         elif prompt == 'stats':
             print(f'engine: {engine}, max_tokens = {max_tokens}, tokens used: {session_total_tokens}')
-        elif prompt in ['config', 'config -d']:
-            engine, max_tokens = configurate(True, True, slow_status, engine, max_tokens)
+        elif prompt.startswith('config'):
+            if prompt in ['config', 'config -d']:
+                if '-d' in prompt:
+                    debug = not(debug)
+                    print(f'Debug set to {debug}')
+                ask_engine = True
+                ask_token = True
+                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
+                msg = f'Engine set to: {engine}, {max_tokens} Max Tokens'
+            else:
+                args = prompt.split(' ')
+                args_count = len(args)
+                if args_count > 4:
+                    print('Did you mean to type a config command? Format is "config [engine] [tokens] [-d]" ')
+                    continue
+                else:
+                    engine, max_tokens, debug = parse_args(args, slow_status, engine, max_tokens, debug)
             msg = f'Engine set to: {engine}, {max_tokens} Max Tokens'
-            if '-d' in prompt:
-                debug = not(debug)
-                msg = msg + f', debug set to {debug}'
             print(msg + '\n')
             full_log += msg + '\n'
+            continue
+
         elif prompt == 'help':
             print('Available commands: codex, del, forget, help, history, log, read, stats, (tok or token),  config, config [engine] [tokens] [-d:optional]')
         elif prompt == 'history':
