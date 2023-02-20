@@ -96,7 +96,7 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
 
         after_count = 0
         # Loop until all urls are fetched
-        while True:
+        while ((count < limit_qty) and (count < max_count)):
             # Construct the API URL with the 'after' parameter
             url = f'https://oauth.reddit.com/{search}.json?{sort_string}&limit=500'
             if after:
@@ -128,9 +128,6 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
                 if debug: print(counts)
                 image_urls, image_titles, count = get_urls_and_titles(count, posts, image_only, image_urls, image_titles, limit_qty)
                 
-                if (count >= limit_qty) or (count >= max_count):
-                    if debug: print(f'maxed out at {count}')
-                    break
                 # Update the 'after' parameter for the next iteration
                 after = data['data']['after']
                 
@@ -182,59 +179,59 @@ def main(user_input, limit_qty, sort_type, time_period, max_count, debug):
     with open(f'{filepath}/contents.txt', 'w') as file:
         file.write(output)
 
+def valid_arg(arg, index, max_count):
+    if index == 1:
+        try:
+            return arg[:2] in ['r/', 'u/']
+        except:
+            print('Argument 1 must have a prefix of r/ or u/')
+            return False
+
+    elif arg == '-d': #debug
+        return True
+    elif arg == '-s': #shortcut - no followup input thru terminal
+        return True
+
+    elif index == 2:
+        try:
+            return (int(arg) > 0) and (int(arg) <= max_count)
+        except:
+            print(f'Argument 2 must be a valid quantity from 1 to {max_count}')
+            return False
+    
+    elif index == 3:
+        sort_types = ['new', 'top']
+        return arg in sort_types
+    elif index == 4:
+        time_periods = ['all', 'year', 'month', 'week', 'day', 'hour']
+        return arg in time_periods
+
+def check_args(args, arg_count, max_count):
+    for i in range(arg_count):
+        if i == 0: # Unused element
+            continue
+        if valid_arg(args[i], i, max_count) == False:
+            print(f'Bad formatting on argument {i}: {args[i]}')
+            if i == 1:
+                print('Please format the first arg as u/user or r/subreddit')
+            if i == 2:
+                print(f'Please format the second arg (quantity) as an integer 1 to {max_count}')
+
+            if allow_input:
+                response = input('Valid examples:\nr/funny 10 top week\nu/WoozleWozzle 3 -d\nPlease try again: ')
+                args = response.split(' ')
+                args = ['UNUSED'] + args
+                return check_args(args, len(args), max_count)
+            else:
+                raise(ValueError)
+    return args, arg_count
+
 if __name__ == '__main__':
     import sys
     args = sys.argv
     arg_count = len(args)
     max_count = c.max_count
     if arg_count > 1:
-
-        def valid_arg(arg, index, max_count):
-            if index == 1:
-                try:
-                    return arg[:2] in ['r/', 'u/']
-                except:
-                    print('Argument 1 must have a prefix of r/ or u/')
-                    return False
-
-            elif arg == '-d': #debug
-                return True
-            elif arg == '-s': #shortcut - no followup input thru terminal
-                return True
-
-            elif index == 2:
-                try:
-                    return (int(arg) > 0) and (int(arg) <= max_count)
-                except:
-                    print(f'Argument 2 must be a valid quantity from 1 to {max_count}')
-                    return False
-            
-            elif index == 3:
-                sort_types = ['new', 'top']
-                return arg in sort_types
-            elif index == 4:
-                time_periods = ['all', 'year', 'month', 'week', 'day', 'hour']
-                return arg in time_periods
-
-        def check_args(args, arg_count, max_count):
-            for i in range(arg_count):
-                if i == 0: # Unused element
-                    continue
-                if valid_arg(args[i], i, max_count) == False:
-                    print(f'Bad formatting on argument {i}: {args[i]}')
-                    if i == 1:
-                        print('Please format the first arg as u/user or r/subreddit')
-                    if i == 2:
-                        print(f'Please format the second arg (quantity) as an integer 1 to {max_count}')
-
-                    if allow_input:
-                        response = input('Valid examples:\nr/funny 10 top week\nu/WoozleWozzle 3 -d\nPlease try again: ')
-                        args = response.split(' ')
-                        args = ['UNUSED'] + args
-                        return check_args(args, len(args), max_count)
-                    else:
-                        raise(ValueError)
-            return args, arg_count
 
         user_input = ''
         sort_type = ''
