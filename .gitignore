@@ -4,7 +4,8 @@ ScrapeAndSpreddit
 v5_logfile.txt
 v5_response_time_log.txt
 sand.py
-text_prompt.txt
-codex_prompt.txt
-codex_response.txt
+Chatbot/text_prompt.txt
+Chatbot/codex_prompt.txt
+Chatbot/codex_response.txt
 chatbot_dev.py
+tansecrets.py
