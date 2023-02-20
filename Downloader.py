@@ -174,5 +174,6 @@ if __name__ == '__main__':
         arg = sys.argv[1]
         folder_name = arg
     else:
+        print('When running from command line, please add an argument after path/to/downloader.py <RENAME_ME>')
         folder_name = 'RENAME_ME'
     main(folder_name)

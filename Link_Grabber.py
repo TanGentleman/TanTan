@@ -41,20 +41,48 @@ def arrays_to_output_string(image_urls, image_titles, output_string, debug, DELI
         if debug: print(f'total count: {count}')
         return output_string
 
-def get_urls_and_titles(posts, image_only, image_urls, image_titles, limit_qty):
+def get_urls_and_titles(count, posts, image_only, image_urls, image_titles, limit_qty):
     # Loop through each post
+    valid_extensions = ('.jpg', '.jpeg', '.png', '.gif')
+    if image_only == False:
+        valid_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.mp4')
     for post in posts:
-        if image_only:
-            if ('post_hint' in post['data']) and (post['data']['post_hint'] in ['image', None]):
-                image_url = post['data']['url']
-                if not image_url.endswith(('.jpg', '.jpeg', '.png', '.gif')):
+        if ('post_hint' in post['data']) and (post['data']['post_hint'] in ['image', 'video', None]):
+            image_url = post['data']['url']
+            if not image_url.endswith(valid_extensions):
+                continue
+            
+            if image_url.endswith(('.gif', 'mp4')):
+                res = requests.head(image_url)  # Make a HEAD request to get response headers
+                if 'content-length' in res.headers:  # Check if content-length is present in headers
+                    file_size = int(res.headers['content-length']) / 1024  # Convert bytes to KB and store as an integer
+                    print(f'URL: {image_url}, File Size (in KB): {file_size}')
+                    print('Saving')
+                else:
+                    print(f'URL not added!: {image_url}')
                     continue
-                image_urls.append(image_url)
-                image_titles.append(post['data']['title'])
-                count += 1
-            if count >= limit_qty:
-                break
+            image_urls.append(image_url)
+            image_titles.append(post['data']['title'])
+            count += 1
+        if count >= limit_qty:
+            break
     return image_urls, image_titles, count
+
+def display_hints(counts, posts):
+                    for post in posts:
+                        if 'post_hint' in post['data']:
+                            post_hint = post['data']['post_hint']
+                            if post_hint in counts:
+                                counts[post_hint] += 1
+                        else:
+                            counts['other'] += 1
+                    return counts
+
+def refresh_token(getHeaders):
+    print('Token expired - gimme a sec')
+    token_needed = True
+    newHeaders = getHeaders(token_needed)
+    return newHeaders
 
 def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_count, search, sort_string):
         # Define a variable to keep track of the 'after' parameter
@@ -65,7 +93,6 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
         image_urls = []
         image_titles = []
         output_string = ''
-
 
         after_count = 0
         # Loop until all urls are fetched
@@ -96,17 +123,10 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
                 data = res.json()
                 posts = data['data']['children']
                 counts = {'image': 0, 'text': 0, 'video': 0, 'rich:video': 0, 'hosted:video': 0, 'link': 0, 'self': 0, 'other': 0}
-
-                for post in posts:
-                    if 'post_hint' in post['data']:
-                        post_hint = post['data']['post_hint']
-                        if post_hint in counts:
-                            counts[post_hint] += 1
-                    else:
-                        counts['other'] += 1
+                counts = display_hints(counts, posts)
 
                 if debug: print(counts)
-                image_urls, image_titles, count = get_urls_and_titles(posts, image_only, image_urls, image_titles, limit_qty)
+                image_urls, image_titles, count = get_urls_and_titles(count, posts, image_only, image_urls, image_titles, limit_qty)
                 
                 if (count >= limit_qty) or (count >= max_count):
                     if debug: print(f'maxed out at {count}')
@@ -118,9 +138,7 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
                 if not after:
                     break
             elif res.status_code == 401:
-                print('Token expired - gimme a sec')
-                token_needed = True
-                newHeaders = getHeaders(token_needed)
+                newHeaders = refresh_token(getHeaders)
                 return link_grab(DELIMITER, debug, getHeaders, newHeaders, image_only, limit_qty, max_count, search, sort_string)
             else:
                 return f'The Reddit API is not connected ({res.status_code})'
