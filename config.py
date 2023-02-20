@@ -7,6 +7,7 @@ reddit_folder_name = 'ScrapeAndSpreddit'
 ### REDDIT CONFIG
 image_only = True # Set to False to allow mp4 filetypes. This will not scrape videos hosted by third parties (i.e youtube, tiktok)
 max_count = 500 # Please keep this to a reasonable value (I recommend < 1000 unless experienced or small files)
+max_file_size = 10000 # This is in KB, only filters valid .gif and .mp4 filetypes.
 
 
 debug = False
@@ -18,17 +19,14 @@ user_input = 'r/anarchychess'
 sort_type = 'top'
 time_period = 'year'
 
-allow_files_over_10MB = True
-
-
 
 # Do not touch. 
 DELIMITER = '_||_' # Change only if you're certain it won't be affected by text in title/url pairs.
 TanEx = Exception(ValueError)
-import mysecrets
+import tansecrets
 def get_openai_api_key():
-    return mysecrets.openai_key
+    return tansecrets.openai_key
 
-getHeaders = mysecrets.getHeaders
-getToken = mysecrets.getToken
+getHeaders = tansecrets.getHeaders
+getToken = tansecrets.getToken
 token_needed = False # Please generate a token using mysecrets.py and leave this as False.

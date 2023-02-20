@@ -41,7 +41,7 @@ def arrays_to_output_string(image_urls, image_titles, output_string, debug, DELI
         if debug: print(f'total count: {count}')
         return output_string
 
-def get_urls_and_titles(count, posts, image_only, image_urls, image_titles, limit_qty):
+def get_urls_and_titles(count, posts, image_only, image_urls, image_titles, limit_qty, max_file_size, debug):
     # Loop through each post
     valid_extensions = ('.jpg', '.jpeg', '.png', '.gif')
     if image_only == False:
@@ -57,9 +57,13 @@ def get_urls_and_titles(count, posts, image_only, image_urls, image_titles, limi
                 if 'content-length' in res.headers:  # Check if content-length is present in headers
                     file_size = int(res.headers['content-length']) / 1024  # Convert bytes to KB and store as an integer
                     print(f'URL: {image_url}, File Size (in KB): {file_size}')
-                    print('Saving')
+                    if file_size < max_file_size:
+                        if debug: print('Saving')
+                    else:
+                        if debug: print('Skipping')
+                        continue
                 else:
-                    print(f'URL not added!: {image_url}')
+                    if debug: print(f'URL not added!: {image_url}')
                     continue
             image_urls.append(image_url)
             image_titles.append(post['data']['title'])
@@ -84,7 +88,7 @@ def refresh_token(getHeaders):
     newHeaders = getHeaders(token_needed)
     return newHeaders
 
-def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_count, search, sort_string):
+def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_count, search, sort_string, max_file_size):
         # Define a variable to keep track of the 'after' parameter
         after = None
         # Define a variable to keep track of the number of fetched urls
@@ -126,7 +130,8 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
                 counts = display_hints(counts, posts)
 
                 if debug: print(counts)
-                image_urls, image_titles, count = get_urls_and_titles(count, posts, image_only, image_urls, image_titles, limit_qty)
+                image_urls, image_titles, count = get_urls_and_titles(count, posts, image_only, image_urls, image_titles, 
+                                                                        limit_qty, max_file_size, debug)
                 
                 # Update the 'after' parameter for the next iteration
                 after = data['data']['after']
@@ -136,7 +141,7 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
                     break
             elif res.status_code == 401:
                 newHeaders = refresh_token(getHeaders)
-                return link_grab(DELIMITER, debug, getHeaders, newHeaders, image_only, limit_qty, max_count, search, sort_string)
+                return link_grab(DELIMITER, debug, getHeaders, newHeaders, image_only, limit_qty, max_count, search, sort_string, max_file_size)
             else:
                 return f'The Reddit API is not connected ({res.status_code})'
 
@@ -151,6 +156,7 @@ def main(user_input, limit_qty, sort_type, time_period, max_count, debug):
     token_needed = c.token_needed
     getHeaders = c.getHeaders
     DELIMITER = c.DELIMITER
+    max_file_size = c.max_file_size
 
     try:
         search = user_input_to_search(user_input)
@@ -166,7 +172,7 @@ def main(user_input, limit_qty, sort_type, time_period, max_count, debug):
     sort_string = get_sort_string(sort_type, time_period)
     
     # Collect output (debugging statements not included)
-    output = link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_count, search, sort_string)
+    output = link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_count, search, sort_string, max_file_size)
     if output == None:
         print('Faulty output. No links grabbed.')
         return

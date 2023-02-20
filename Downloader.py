@@ -1,6 +1,6 @@
 import os
 import requests
-import re
+from re import sub
 from hashlib import sha256
 import sys
 import config as c
@@ -18,7 +18,7 @@ def read_content(contents_path):
 
 def sanitize_filename(filename):
         # Remove invalid characters
-        filename = re.sub(r"[\/:*?'<>|]", '', filename)
+        filename = sub(r"[\/:*?'<>|]", '', filename)
         
         # Replace whitespace characters with an underscore
         filename = filename.replace(' ', '_')
