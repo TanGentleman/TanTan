@@ -23,10 +23,10 @@ time_period = 'year'
 # Do not touch. 
 DELIMITER = '_||_' # Change only if you're certain it won't be affected by text in title/url pairs.
 TanEx = Exception(ValueError)
-import tansecrets
+import mysecrets
 def get_openai_api_key():
-    return tansecrets.openai_key
+    return mysecrets.openai_key
 
-getHeaders = tansecrets.getHeaders
-getToken = tansecrets.getToken
+getHeaders = mysecrets.getHeaders
+getToken = mysecrets.getToken
 token_needed = False # Please generate a token using mysecrets.py and leave this as False.
