@@ -12,13 +12,21 @@ filepath = f'{c.filepath}/Chatbot'
 full_logfile = 'v5_logfile.txt'
 response_time_logfile = 'v5_response_time_log.txt'
 
-default_engine = 'text-curie-001'
+default_engine = 'text-davinci-003'
 default_slow_engine = 'text-curie-001'
+
 default_max_tokens = 300
+max_tokens = default_max_tokens
+
+# You can increase the following values after playing around a bit
 max_codex = 2500
 max_token_limit = 2000
-max_session_total_tokens = 2500
 max_tokens = default_max_tokens
+max_session_total_tokens = 4000
+warning_history_count = 1500
+top_p_val = 0.5
+frequency_penalty_val = 0.7
+
 slow_status = False # slow_status = False defaults to davinci - True defaults to curie + disables davinci
 debug = False
 
