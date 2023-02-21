@@ -73,14 +73,14 @@ def get_urls_and_titles(count, posts, image_only, image_urls, image_titles, limi
     return image_urls, image_titles, count
 
 def display_hints(counts, posts):
-                    for post in posts:
-                        if 'post_hint' in post['data']:
-                            post_hint = post['data']['post_hint']
-                            if post_hint in counts:
-                                counts[post_hint] += 1
-                        else:
-                            counts['other'] += 1
-                    return counts
+    for post in posts:
+        if 'post_hint' in post['data']:
+            post_hint = post['data']['post_hint']
+            if post_hint in counts:
+                counts[post_hint] += 1
+        else:
+            counts['other'] += 1
+    return counts
 
 def refresh_token(getHeaders):
     print('Token expired - gimme a sec')
@@ -129,7 +129,7 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
                 counts = {'image': 0, 'text': 0, 'video': 0, 'rich:video': 0, 'hosted:video': 0, 'link': 0, 'self': 0, 'other': 0}
                 counts = display_hints(counts, posts)
 
-                if debug: print(counts)
+                if debug: print(f'This .json batch has the following:\n{counts}')
                 image_urls, image_titles, count = get_urls_and_titles(count, posts, image_only, image_urls, image_titles, 
                                                                         limit_qty, max_file_size, debug)
                 

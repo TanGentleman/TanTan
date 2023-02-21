@@ -18,7 +18,10 @@ default_max_tokens = 300
 max_codex = 2500
 max_token_limit = 2000
 max_session_total_tokens = 2500
+warning_history_count = 1500
 max_tokens = default_max_tokens
+top_p_val = 0.5
+frequency_penalty_val = 0.7
 slow_status = False # slow_status = False defaults to davinci - True defaults to curie + disables davinci
 debug = False
 
@@ -33,6 +36,7 @@ def token_count(s:str):
 def check_truncation_and_toks(response):
     completion_tokens, prompt_tokens, total_tokens = (0,0,0)
     usage_vals = ['completion_tokens', 'prompt_tokens', 'total_tokens']
+    # Check for other potential issues here
     for i in range(len(usage_vals)):
         try:
             tok_val = response['usage'][usage_vals[i]]
@@ -41,7 +45,11 @@ def check_truncation_and_toks(response):
             elif i == 2: total_tokens = tok_val
         except:
             print(f'Token value not found for {usage_vals[i]}')
-    response = response['choices'][0]
+    try:
+        response = response['choices'][0]
+    except:
+        print("Could not access response['choices']")
+        raise(TanSaysNoNo)
 
     if response['finish_reason'] == 'length':
         print('*Warning: message may be truncated. Adjust max tokens as needed.')
@@ -54,7 +62,7 @@ def response_worked(response_input_vars):
     response_time_marker = f'(*{round(time_taken, 1)}s)'
     previous_history = history
     history += prompt + response + '\n'
-    if token_count(history) > 500:
+    if token_count(history) > warning_history_count:
         print(f'Conversation token count is growing large [{token_count(history)}]. Please reset my memory as needed.')
     full_log += f'({response_count+1}.)' + prompt + '\n' + response_time_marker + response + '\n'
     print(f'Response {response_count+1}: {response}\n\n')
@@ -94,8 +102,8 @@ def generate_text(debug, prompt, engine, max_tokens):
         prompt=prompt,
         max_tokens=max_tokens,
         n=1,
-        temperature=0.6,
-        frequency_penalty = 1.2
+        top_p=top_p_val,
+        frequency_penalty=frequency_penalty_val
         )
     except openai.error.OpenAIError as e:
         status = e.http_status
@@ -353,6 +361,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
         elif prompt == 'read':
             if path.isfile(f'{filepath}/text_prompt.txt'):
                 text_prompt = read_text_prompt()
+                print('Reading text_prompt.txt')
                 prompt_from_file = True
                 replace_input = True
                 continue

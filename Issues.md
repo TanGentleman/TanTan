@@ -1,23 +1,25 @@
-Active Issues for chatbot:
+Under development:
+- Image generation integration
 
-[ x ] means fix being tested
+Active Issues:
+
+[ x ] : fix being tested
 
 Chatbot.py
-- [ x ] ! Slow_Status fix to work within config argument strings.
-- [ ] Find use case for completion_tokens, prompt_tokens vars
+- ![ ] Need safeguards in check_truncation_and_toks
+- ![ ] Unsafe array accesses and variable assignments need to be handled appropriately
+- ![ ] Add assert statements to ensure loop correctness
+- [ x ] Slow_Status needs to always apply, even if 'config arg' string shortcut used
+- [ ] Implement completion_tokens, prompt_tokens in their appropriate use cases
 - [ x ] Find better way to handle log file not saved when error
-- [ ] Make consistent the different ways of running it
+- [ ] Make consistent the different ways of running it (i.e no downloads when loaded from python env.)
 - [ ] Consolidate codex + regular else condition logic into one function.
-
-    - [ ] Move token_needed to mysecrets.py? Then one can fill that field and generate token there?
-    - [ ] Or have a new file just for generating a token?
 
 Reddit Link_Grabber
 - [ x ] Enable video configuration with proper safeguards for large mp4 files and total download size.
-- [ ] Enable YouTube downloads
+- [ ] Enable third-party (YouTube) downloads
 - [ ] Fetch more meaningful data alongside the generated list
 
-
 Fixed, but potentially unstable:
-- Add generate token to mysecrets.py
+- Add generate token to test_setup.py
 - Logic for adding smart config strings like <config curie -d> or <config davinci 400> to the function interactive_chat()
