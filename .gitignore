@@ -9,3 +9,5 @@ Chatbot/codex_prompt.txt
 Chatbot/codex_response.txt
 chatbot_dev.py
 tansecrets.py
+*.txt
+*.png

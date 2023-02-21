@@ -29,7 +29,7 @@ def sanitize_filename(filename):
             filename = filename[:max_length]
         
         return filename
-
+    
 def content_to_arrays(content, DELIMITER):
         titles = []
         links = []
