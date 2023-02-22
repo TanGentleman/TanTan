@@ -1,3 +1,5 @@
+.gitignore
+.DS_Store
 .gitattributes
 .history/*
 __pycache__/*
