@@ -30,7 +30,9 @@ I have to decide whether I want this to be a program that lets you feel like a d
     - `sudo set PATH=%PATH%'MUFFIN'`
 
 4. Install the required libraries in terminal using pip:
-    - `pip3 install openai`
+    - `pip3 install requests`
+    - `pip3 install openai` (if using chatbot)
+    
 
 - You should be all set up with the dependencies!
 
