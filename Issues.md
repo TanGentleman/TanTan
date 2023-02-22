@@ -1,9 +1,9 @@
 Under development:
 - Documentation for the chatbot
-- Clearer documentation for the reddit scraper
+- Documentation for the reddit scraper
 - Integration between reddit scraping and chatbot
+- Presets for chatbot. (i.e. debugging code, essay organization, fact checking, general advice)
 - Image generation integration
-
 Active Issues:
 
 [ x ] : fix being tested

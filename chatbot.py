@@ -24,6 +24,8 @@ max_token_limit = 2000
 max_tokens = default_max_tokens
 max_session_total_tokens = 4000
 warning_history_count = 1500
+
+# These will be configurable variables in future updates. Presets need to be added first.
 top_p_val = 0.5
 frequency_penalty_val = 0.7
 

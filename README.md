@@ -1,6 +1,15 @@
 # TanTan
 OpenAI Chatbot with Reddit Scraping Functionality
 
+What it is and what it does:
+- For now, there are two separate components, the chatbot, and reddit scraper, soon to be merged.
+- Using chatbot.py is like OpenAI's ChatGPT, but configurable, and can be integrated into many unique workflows.
+- The conversationality of chatbot.py is relatively rigid at the moment, but presets for different use cases will soon be added.
+
+In Progress:
+- Documentation for using chatbot.py
+- Documentation for using link_grabber.py and downloader.py
+
 Hi there! I'm new to creating tools for other people, so if anything seems counterintuitive, you're likely not alone and I would love the feedback on aspects that don't feel natural.
 
 I've built this primarily for:
@@ -8,6 +17,8 @@ I've built this primarily for:
 - Anyone who'd like to play around with code and build upon a project I've had a ton of fun making.
 
 I have to decide whether I want this to be a program that lets you feel like a developer, changing the names around and having fun adding new functionality, or if I want to have established presets that just make it seem like something neat that someone made.
+
+So far, this is super rough, not user friendly, and tricky to troubleshoot new features. I want to fix this, but thought it'd be neat if all the functions could be reorganized by the chatbot itself. Creating comments and optimizing for clarity of each function's role will be the assigned task. Over time, most of the core code should get cleaned up by davinci if a suitable workflow can be made. An example would be starting the chatbot, typing `codex`, pasting some functions into codex_prompt.txt, and getting a good response that also saves to codex_response.txt.
 
 # Getting this onto your computer (MacOS only):
 1. Go the the github page > Code > Download Zip
@@ -69,11 +80,11 @@ The following steps assume you have all the required dependencies. (Should I mak
 10. You should be all done using your browser! Paste these into their respective fields in mysecrets.py
 11. Set token_needed to True, and leave reddit_token as None for now.
 12. Triple check that all the required fields are entered correctly.
-11. Run test_setup.py with the below command and note the printed string. This is reddit_token, please set it accordingly
+13. Run test_setup.py with the below command and note the printed string. This is reddit_token, please set it accordingly
     - `python3 Documents/TanTan/test_setup.py`
     - If this does not work, please let me know, I am working on some better safeguards.
     - This printed value is reddit_token, please set it accordingly in mysecrets.py
-12. You're all done with the essentials to run the scraper! Please try running test_setup.py (In progress)
+14. You're all done with the essentials to run the scraper! Please try running test_setup.py (In progress)
 
 
 # Running the Reddit Scraper:
