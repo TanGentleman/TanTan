@@ -17,13 +17,29 @@ I have to decide whether I want this to be a program that lets you feel like a d
     - `cd`
     - `curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py`
     - `python get-pip.py`
+    - If you get an error saying WARNING: The scripts pip... are installed in '<.../bin>' which is not on PATH, you have to add it to path
+        - For that, copy what was written in '<>', adding a /pip3 to it 
+        - This will look something like 'Users/.../Library/Python/3.9/bin/pip3'
+        - Paste that instead of MUFFIN below
+    - `sudo set PATH=%PATH%'MUFFIN'`
 
 4. Install the required libraries in terminal using pip :
-    - `pip install openai`
+    - `pip3 install openai`
+
+- You should be all set up with the dependencies!
 
 *Strong avisory: I recommend using a VPN when using the internet, especially over unsecure networks*
 
 The following steps assume you have all the required dependencies. (Should I make a formal check for this?)
+
+# Using the TanTan chatbot
+(Pre-req: Create an openai account)
+1. Grab your openai api key from (https://platform.openai.com/account/api-keys)
+2. Paste this key to mysecrets.py
+    - `cd`
+    - `python3 Documents/TanTan/Chatbot.py`
+
+
 # Setting up the Reddit Scraper:
 
 (Pre-req: Create a reddit account)
@@ -63,12 +79,6 @@ The following steps assume you have all the required dependencies. (Should I mak
     - `python3 Documents/TanTan/Downloader.py Folder_For_Collected_Images`
 - The above example would save the images to TanTan/{reddit_folder_name}/Folder_For_Collected_Images
 
-How to use the TanTan chatbot
-(Pre-req: Create an openai account)
-1. Grab your openai api key from (https://platform.openai.com/account/api-keys)
-2. Paste this key to mysecrets.py
-    - `cd`
-    - `python3 Documents/TanTan/Chatbot.py`
 
 List of important variables, functions, and workflows (Work in Progress):
 - 
