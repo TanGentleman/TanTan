@@ -9,7 +9,7 @@ I've built this primarily for:
 
 I have to decide whether I want this to be a program that lets you feel like a developer, changing the names around and having fun adding new functionality, or if I want to have established presets that just make it seem like something neat that someone made.
 
-# Steps to Dependencies:
+# Steps to Load Dependencies:
 1. Download the latest python version from the official website: https://www.python.org/downloads/
 2. Type python3 in terminal
 3. Install required command line tools if needed
@@ -39,6 +39,11 @@ The following steps assume you have all the required dependencies. (Should I mak
     - `cd`
     - `python3 Documents/TanTan/Chatbot.py`
 
+- I have yet to make proper documentation for the chatbot. For now, play around with asking it stuff.
+- Ada, Babbage, Curie, and Davinci are 4 engines that vary in their capabilities
+- There is also a code-davinci that I have included as "codex"
+- Type help as a prompt to get some of the commands
+    - I have yet to make this even remotely user friendly.
 
 # Setting up the Reddit Scraper:
 
