@@ -13,7 +13,12 @@ I have to decide whether I want this to be a program that lets you feel like a d
 1. Download the latest python version from the official website: https://www.python.org/downloads/
 2. Type python3 in terminal
 3. Install required command line tools if needed
-4. Install the required libraries in terminal using pip (Python package manager):
+4. Install pip (Python package manager) if needed:
+    - `cd`
+    - `curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py`
+    - `python get-pip.py`
+
+4. Install the required libraries in terminal using pip :
     - `pip install openai`
 
 *Strong avisory: I recommend using a VPN when using the internet, especially over unsecure networks*
@@ -45,7 +50,8 @@ The following steps assume you have all the required dependencies. (Should I mak
     - For now, please stick to subs/users with posts of standard imastepge formats, not videos hosted elsewhere.
 2. Set the 5 query variables in config.py, or add the Magic String in the command line for step 3.
 - [MAGIC STRING] = {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}
-3. Run the command in terminal
+3. Run the command in terminal from your home directory.
+    - `cd`
     - `python3 Documents/TanTan/Link_Grabber.py`
     - `python3 Documents/TanTan/Link_Grabber.py r/houseplants 50 top year -d`
 - This should generate a contents.txt file in the {reddit_folder_name} directory (Documents/TanTan/{reddit_folder_name})
@@ -53,13 +59,15 @@ The following steps assume you have all the required dependencies. (Should I mak
 # Downloading from contents.txt:
 - The format in the file should be [Title + DELIMITER(something like '_||_' to separate them) + URL] for each entry
 - The only argument following Downloader.py is the desired folder name.
+    - `cd`
     - `python3 Documents/TanTan/Downloader.py Folder_For_Collected_Images`
-- Th above example would save the images to TanTan/{reddit_folder_name}/Folder_For_Collected_Images
+- The above example would save the images to TanTan/{reddit_folder_name}/Folder_For_Collected_Images
 
 How to use the TanTan chatbot
 (Pre-req: Create an openai account)
 1. Grab your openai api key from (https://platform.openai.com/account/api-keys)
 2. Paste this key to mysecrets.py
+    - `cd`
     - `python3 Documents/TanTan/Chatbot.py`
 
 List of important variables, functions, and workflows (Work in Progress):
