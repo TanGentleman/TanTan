@@ -59,7 +59,10 @@ The following steps assume you have all the required dependencies. (Should I mak
 8. Locate the client id: String of characters written to the right of the icon under personal use script
 9. Locate the client secret: String of characters written next to 'secret'
 10. You should be all done using your browser! Paste these into their respective fields in mysecrets.py
-11. Run mysecrets.py and note the printed string. This is reddit_token, please set it accordingly
+11. Set token_needed to True, and leave reddit_token as None for now.
+11. Run test_setup.py with the below command and note the printed string. This is reddit_token, please set it accordingly
+    - `python3 Documents/TanTan/test_setup.py`
+    - This printed value is reddit_token, please set it accordingly in mysecrets.py
 12. You're all done with the essentials to run the scraper! Please try running test_setup.py (In progress)
 
 
