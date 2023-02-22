@@ -29,7 +29,7 @@ I have to decide whether I want this to be a program that lets you feel like a d
         - Paste that instead of MUFFIN below
     - `sudo set PATH=%PATH%'MUFFIN'`
 
-4. Install the required libraries in terminal using pip :
+4. Install the required libraries in terminal using pip:
     - `pip3 install openai`
 
 - You should be all set up with the dependencies!
@@ -66,6 +66,7 @@ The following steps assume you have all the required dependencies. (Should I mak
 9. Locate the client secret: String of characters written next to 'secret'
 10. You should be all done using your browser! Paste these into their respective fields in mysecrets.py
 11. Set token_needed to True, and leave reddit_token as None for now.
+12. Triple check that all the required fields are entered correctly.
 11. Run test_setup.py with the below command and note the printed string. This is reddit_token, please set it accordingly
     - `python3 Documents/TanTan/test_setup.py`
     - If this does not work, please let me know, I am working on some better safeguards.
