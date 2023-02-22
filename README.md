@@ -9,6 +9,12 @@ I've built this primarily for:
 
 I have to decide whether I want this to be a program that lets you feel like a developer, changing the names around and having fun adding new functionality, or if I want to have established presets that just make it seem like something neat that someone made.
 
+# Getting this onto your computer (MacOS only):
+1. Go the the github page > Code > Download Zip
+2. Download TanTan-Main
+3. Rename to TanTan and move to ~/Documents on your computer.
+4. This location is the filepath variable in config.py
+
 # Steps to Load Dependencies:
 1. Download the latest python version from the official website: https://www.python.org/downloads/
 2. Type python3 in terminal
@@ -32,7 +38,7 @@ I have to decide whether I want this to be a program that lets you feel like a d
 
 The following steps assume you have all the required dependencies. (Should I make a formal check for this?)
 
-# Using the TanTan chatbot
+# Using the TanTan chatbot:
 (Pre-req: Create an openai account)
 1. Grab your openai api key from (https://platform.openai.com/account/api-keys)
 2. Paste this key to mysecrets.py
