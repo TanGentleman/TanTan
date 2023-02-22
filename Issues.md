@@ -1,4 +1,7 @@
 Under development:
+- Documentation for the chatbot
+- Clearer documentation for the reddit scraper
+- Integration between reddit scraping and chatbot
 - Image generation integration
 
 Active Issues:
@@ -9,6 +12,7 @@ Chatbot.py
 - ![ ] Need safeguards in check_truncation_and_toks
 - ![ ] Unsafe array accesses and variable assignments need to be handled appropriately
 - ![ ] Add assert statements to ensure loop correctness
+- [ ] Create better "help" functionality and prompt guidance
 - [ x ] Slow_Status needs to always apply, even if 'config arg' string shortcut used
 - [ ] Implement completion_tokens, prompt_tokens in their appropriate use cases
 - [ x ] Find better way to handle log file not saved when error
