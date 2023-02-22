@@ -62,6 +62,7 @@ The following steps assume you have all the required dependencies. (Should I mak
 11. Set token_needed to True, and leave reddit_token as None for now.
 11. Run test_setup.py with the below command and note the printed string. This is reddit_token, please set it accordingly
     - `python3 Documents/TanTan/test_setup.py`
+    - If this does not work, please let me know, I am working on some better safeguards.
     - This printed value is reddit_token, please set it accordingly in mysecrets.py
 12. You're all done with the essentials to run the scraper! Please try running test_setup.py (In progress)
 
