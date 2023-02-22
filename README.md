@@ -12,13 +12,24 @@ In Progress:
 
 Hi there! I'm new to creating tools for other people, so if anything seems counterintuitive, you're likely not alone and I would love the feedback on aspects that don't feel natural.
 
-I've built this primarily for:
-- People who enjoy the shortcut to reddit scraping or find the Chatbot cool/useful 
-- Anyone who'd like to play around with code and build upon a project I've had a ton of fun making.
+This rough beta is just for friends, but as it progresses, it's intended for anyone interested in harnessing ChatGPT and neat browserless shortcuts to complete various tasks:
 
-I have to decide whether I want this to be a program that lets you feel like a developer, changing the names around and having fun adding new functionality, or if I want to have established presets that just make it seem like something neat that someone made.
+I have to decide whether I want this to be a program that lets you feel like a developer, changing the names around and having fun adding new functionality, or if I want to have established presets that just make it seem like something neat that someone made. I'm now leaning towards prioritizing making it accessible and not clunky to type in terminal each session. Built-in shortcuts app integration and the like, perhaps.
 
-So far, this is super rough, not user friendly, and tricky to troubleshoot new features. I want to fix this, but thought it'd be neat if all the functions could be reorganized by the chatbot itself. Creating comments and optimizing for clarity of each function's role will be the assigned task. Over time, most of the core code should get cleaned up by davinci if a suitable workflow can be made. An example would be starting the chatbot, typing `codex`, pasting some functions into codex_prompt.txt, and getting a good response that also saves to codex_response.txt.
+Some of the goals of this project are to be able to do the following:
+
+Workflow 1:
+1. Select some text anywhere on your computer 
+2. Use a keyboard shortcut to call the TT Chatbot.
+3. Request that the text be more clearly explained, with a glossary of important words and phrases at the bottom
+4. Clarify further questions and maintain a full conversation, saving any desired output in a friendly format.
+
+Workflow 2:
+1. Call the TT Chatbot
+2. Ask "What are some good recipes for shakshuka?"
+
+
+At the moment, this is super rough, not user friendly, and tricky to troubleshoot new features. I want to fix this, but thought it'd be neat if all the functions could be reorganized by the chatbot itself. Creating comments and optimizing for clarity of each function's role will be the assigned task. Over time, most of the core code should get cleaned up by davinci if a suitable workflow can be made. An example would be starting the chatbot, typing `codex`, pasting some functions into codex_prompt.txt, and getting a good response that also saves to codex_response.txt.
 
 # Getting this onto your computer (MacOS only):
 1. Go the the github page > Code > Download Zip
