@@ -1,7 +1,7 @@
 '''Hi there! Hopefully these don't look too scary. The filepath is the location 
 where you installed this repository.'''
 
-filepath = 'Documents/Github/TanTan'
+filepath = 'Documents/TanTan'
 reddit_folder_name = 'ScrapeAndSpreddit'
 
 ### REDDIT CONFIG
@@ -10,15 +10,17 @@ max_count = 500 # Please keep this to a reasonable value (I recommend < 1000 unl
 max_file_size = 10000 # This is in KB, only filters valid .gif and .mp4 filetypes.
 
 
-debug = False
-limit_qty = 69
+
+# The following variables can also optionally be set when running link_grabber.py via the command line
+# [MAGIC STRING] = {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}
+# The terminal command for the following configuration would be:
+# python path/to/TanTan/Link_Grabber.py r/anarchychess 69 top year
 user_input = 'r/anarchychess'
+limit_qty = 69
 
-# Valid sort types: ['new', 'top']
-# Valid time periods = ['all', 'year', 'month', 'week', 'day', 'hour']
-sort_type = 'top'
-time_period = 'year'
-
+sort_type = 'top' # Valid sort types: ['new', 'top']
+time_period = 'year' # Valid time periods = ['all', 'year', 'month', 'week', 'day', 'hour']
+debug = False
 
 # Do not touch. 
 DELIMITER = '_||_' # Change only if you're certain it won't be affected by text in title/url pairs.
