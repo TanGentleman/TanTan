@@ -13,8 +13,6 @@ I have to decide whether I want this to be a program that lets you feel like a d
 1. Downloading the latest python version from the official website: https://www.python.org/downloads/
 2. Install the required libraries using pip (Python package manager):
     - `pip install openai`
-    - `pip install re`
-    - `pip install hashlib`
 
 *Strong avisory: I recommend using a VPN when using the internet, especially over unsecure networks*
 
