@@ -19,7 +19,7 @@ default_max_tokens = 300
 max_tokens = default_max_tokens
 
 # You can increase the following values after playing around a bit
-max_codex = 2500
+max_codex = 4000
 max_token_limit = 2000
 max_tokens = default_max_tokens
 max_session_total_tokens = 4000
@@ -408,9 +408,9 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 user_input = ''
                 user_input = input('Make sure you have a codex_prompt.txt file in the filepath! Set max codex tokens: ')
                 try:
-                    if user_input == 'quit':
-                        replace_input, replace_input_text = quit_chat()
-                        continue
+                    # if user_input == 'quit':
+                    #     replace_input, replace_input_text = quit_chat()
+                    #     continue
                     user_input = int(user_input)
                     if (0 < user_input) and (user_input <= max_codex):
                         codex_tokens = user_input
@@ -420,20 +420,27 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 except:
                     print(f'Format should be a valid integer less than {max_codex}')
 
-            try:
+            try: #1
                 codex_prompt = read_codex_prompt()
-                try:
-                    response = generate_text(debug, codex_prompt, engine, codex_tokens)
+                try: #2
+                    response = generate_text(debug, codex_prompt, 'code-davinci-002', codex_tokens)
                 except:
-                    print('Response not generated. See above error. Try again?')
+                    print('Codex response not generated. Error 2.')
                     continue
-                response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response)
+                try: #3
+                    response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response)
+                except:
+                    print('Codex response not generated. Error 3.')
+                    continue
                 if response:
-                    time_taken = time.time()-start_time
-                    response_input_vars = (previous_history, debug, full_log, history, prompt, response, response_count)
-                    response_output_vars = response_worked(response_input_vars)
-                    response_time_log.append((time_taken, total_tokens))
-                    (previous_history, full_log, history, response_count) = response_output_vars
+                    try: #4
+                        time_taken = time.time()-start_time
+                        response_input_vars = (previous_history, debug, full_log, history, prompt, response, response_count, time_taken)
+                        response_output_vars = response_worked(response_input_vars)
+                        response_time_log.append((time_taken, total_tokens))
+                        (previous_history, full_log, history, response_count) = response_output_vars
+                    except:
+                        print('Codex response not generated. Error 4.')
                 else:
                     print('Blocked or truncated')
                     full_log += '*x*'
@@ -450,7 +457,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                     print('CONVO GETTIN LONG')
                 continue
             except:
-                print('Response not generated. See above error. Try again?')
+                print('Codex response not generated. Error 1.')
                 continue
 
         elif prompt in ['tok', 'token']:
