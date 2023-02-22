@@ -10,8 +10,10 @@ I've built this primarily for:
 I have to decide whether I want this to be a program that lets you feel like a developer, changing the names around and having fun adding new functionality, or if I want to have established presets that just make it seem like something neat that someone made.
 
 # Steps to Dependencies:
-1. Downloading the latest python version from the official website: https://www.python.org/downloads/
-2. Install the required libraries using pip (Python package manager):
+1. Download the latest python version from the official website: https://www.python.org/downloads/
+2. Type python3 in terminal
+3. Install required command line tools if needed
+4. Install the required libraries in terminal using pip (Python package manager):
     - `pip install openai`
 
 *Strong avisory: I recommend using a VPN when using the internet, especially over unsecure networks*
@@ -40,22 +42,24 @@ How to use the Reddit Scraper:
 - Filepath is where you installed this repository.
 - reddit_folder_name is a new folder that holds newly generated files
 - The other variables in config.py can be used in lieu of additional arguments in the command line
-[MAGIC STRING] = {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}
-- Example terminal command:python Documents/TanTan/Link_Grabber.py
-- Example terminal command:python Documents/TanTan/Link_Grabber.py r/houseplants 50 top year -d
+- For now, please stick to subs/users with posts of standard image formats, not videos hosted elsewhere.
+- [MAGIC STRING] = {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}
+    - `python3 Documents/TanTan/Link_Grabber.py`
+    - `python3 Documents/TanTan/Link_Grabber.py r/houseplants 50 top year -d`
 - This should generate a contents.txt file in the {reddit_folder_name} directory (Documents/TanTan/{reddit_folder_name})
 
-To Download
-
+# Downloading from contents.txt:
+- The format in the file should be [Title + DELIMITER(something like '_||_' to separate them) + URL] for each entry
+- The only argument following Downloader.py is the desired folder name.
+    - `python3 Documents/TanTan/Downloader.py Folder_For_Collected_Images`
 
 How to use the TanTan chatbot
 (Pre-req: Create an openai account)
 1. Grab your openai api key from (https://platform.openai.com/account/api-keys)
 2. Paste this key to mysecrets.py
+    - `python3 Documents/TanTan/Chatbot.py`
 
-- Example terminal command:python Documents/TanTan/Chatbot.py
-
-List of important variables and what they do:
-
-*Should I make a variables markdown file for this?*
+List of important variables, functions, and workflows (Work in Progress):
 - 
+
+*Should I make a separate markdown file for this?*

@@ -14,7 +14,7 @@ max_file_size = 10000 # This is in KB, only filters valid .gif and .mp4 filetype
 # The following variables can also optionally be set when running link_grabber.py via the command line
 # [MAGIC STRING] = {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}
 # The terminal command for the following configuration would be:
-# python path/to/TanTan/Link_Grabber.py r/anarchychess 69 top year
+# python3 path/to/TanTan/Link_Grabber.py r/anarchychess 69 top year
 user_input = 'r/anarchychess'
 limit_qty = 69
 
