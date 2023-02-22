@@ -9,8 +9,8 @@ TanSaysNoNo = c.TanEx
 openai_key = c.get_openai_api_key()
 
 filepath = f'{c.filepath}/Chatbot'
-full_logfile = 'v5_logfile.txt'
-response_time_logfile = 'v5_response_time_log.txt'
+full_logfile = 'logfile.txt'
+response_time_logfile = 'response_time_log.txt'
 
 default_engine = 'text-davinci-003'
 default_slow_engine = 'text-curie-001'
@@ -466,6 +466,9 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 full_log += '*x*'
                 continue
 def main(engine, max_tokens, debug):
+    if openai_key == None:
+        print('Please set your OpenAI key in config.py')
+        return
     logs = interactive_chat(slow_status, engine, max_tokens, debug)
     if logs:
         (convo, response_times, logging_on) = logs
