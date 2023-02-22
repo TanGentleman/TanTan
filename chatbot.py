@@ -19,7 +19,7 @@ default_max_tokens = 300
 max_tokens = default_max_tokens
 
 # You can increase the following values after playing around a bit
-max_codex = 2500
+max_codex = 4000
 max_token_limit = 2000
 max_tokens = default_max_tokens
 max_session_total_tokens = 4000
@@ -28,6 +28,9 @@ warning_history_count = 1500
 # These will be configurable variables in future updates. Presets need to be added first.
 top_p_val = 0.5
 frequency_penalty_val = 0.7
+
+# BETA
+prefixes = True
 
 slow_status = False # slow_status = False defaults to davinci - True defaults to curie + disables davinci
 debug = False
@@ -68,7 +71,7 @@ def response_worked(response_input_vars):
     #add a marker to distinguish from user text
     response_time_marker = f'(*{round(time_taken, 1)}s)'
     previous_history = history
-    history += prompt + response + '\n'
+    history += prompt + response
     if token_count(history) > warning_history_count:
         print(f'Conversation token count is growing large [{token_count(history)}]. Please reset my memory as needed.')
     full_log += f'({response_count+1}.)' + prompt + '\n' + response_time_marker + response + '\n'
@@ -96,8 +99,6 @@ def read_text_prompt():
     except FileNotFoundError:
         print('No text_prompt.txt in this directory found')
 
-
-
 def generate_text(debug, prompt, engine, max_tokens):
     # Set the API key
     openai.api_key = openai_key
@@ -108,9 +109,11 @@ def generate_text(debug, prompt, engine, max_tokens):
         engine=engine,
         prompt=prompt,
         max_tokens=max_tokens,
-        n=1,
         top_p=top_p_val,
         frequency_penalty=frequency_penalty_val
+        # stop=None,
+        # prefix='',
+        # suffix = ''
         )
     except openai.error.OpenAIError as e:
         status = e.http_status
@@ -276,6 +279,12 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
     
     return engine, max_tokens
 
+def choosePreset(n):
+    if n == 1:
+        prefix = '''Human: Hello, who are you?
+AI: I am doing great. How can I help you today?
+Human:'''
+
 def interactive_chat(slow_status, engine, max_tokens, debug):
     completion_tokens, prompt_tokens, total_tokens, session_total_tokens = (0, 0, 0, 0)
     history, previous_history, full_log = ('', '', '')
@@ -378,15 +387,19 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                     file.write('Insert text prompt here')
             continue
 
+            # Codex takes the input from codex_prompt.txt and completes the given task. It does not use past conversation history,
         elif prompt == 'codex':
             print(f'Trying codex!')
             if path.isfile(f'{filepath}/codex_prompt.txt'):
                 pass
             else:
                 print('You have not written a codex_prompt.txt file for me to read. I gotchu.')
-                with open(f'{filepath}/codex_prompt.txt', 'w') as file:
-                    file.write('Please create the following function with comments in Python:\n' +
-                                    'def myFunc():\n\t#Do THIS\nSeed Text: It should be optimized for performance and readability.')
+                try:
+                    with open(f'{filepath}/codex_prompt.txt', 'w') as file:
+                        file.write('Please create the following function with comments in Python:\n' +
+                                        'def myFunc():\n\t#Do THIS\nSeed Text: It should be optimized for performance and readability.')
+                except:
+                    print(f'Error! Could not write to {filepath}/codex_prompt.txt')
                 print('Toss something in there and try again!')
                 continue
             valid_answer = False
@@ -395,9 +408,9 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 user_input = ''
                 user_input = input('Make sure you have a codex_prompt.txt file in the filepath! Set max codex tokens: ')
                 try:
-                    if user_input == 'quit':
-                        replace_input, replace_input_text = quit_chat()
-                        continue
+                    # if user_input == 'quit':
+                    #     replace_input, replace_input_text = quit_chat()
+                    #     continue
                     user_input = int(user_input)
                     if (0 < user_input) and (user_input <= max_codex):
                         codex_tokens = user_input
@@ -407,20 +420,27 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 except:
                     print(f'Format should be a valid integer less than {max_codex}')
 
-            try:
+            try: #1
                 codex_prompt = read_codex_prompt()
-                try:
-                    response = generate_text(debug, codex_prompt, engine, codex_tokens)
+                try: #2
+                    response = generate_text(debug, codex_prompt, 'code-davinci-002', codex_tokens)
                 except:
-                    print('Response not generated. See above error. Try again?')
+                    print('Codex response not generated. Error 2.')
                     continue
-                response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response)
+                try: #3
+                    response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response)
+                except:
+                    print('Codex response not generated. Error 3.')
+                    continue
                 if response:
-                    time_taken = time.time()-start_time
-                    response_input_vars = (previous_history, debug, full_log, history, prompt, response, response_count)
-                    response_output_vars = response_worked(response_input_vars)
-                    response_time_log.append((time_taken, total_tokens))
-                    (previous_history, full_log, history, response_count) = response_output_vars
+                    try: #4
+                        time_taken = time.time()-start_time
+                        response_input_vars = (previous_history, debug, full_log, history, prompt, response, response_count, time_taken)
+                        response_output_vars = response_worked(response_input_vars)
+                        response_time_log.append((time_taken, total_tokens))
+                        (previous_history, full_log, history, response_count) = response_output_vars
+                    except:
+                        print('Codex response not generated. Error 4.')
                 else:
                     print('Blocked or truncated')
                     full_log += '*x*'
@@ -437,7 +457,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                     print('CONVO GETTIN LONG')
                 continue
             except:
-                print('Response not generated. See above error. Try again?')
+                print('Codex response not generated. Error 1.')
                 continue
 
         elif prompt in ['tok', 'token']:
@@ -446,7 +466,8 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             # All valid non-command inputs to the bot go through here.
             if debug: print('beep')
             try:
-                response = generate_text(debug, history + prompt, engine, max_tokens)
+                # Continues the conversation (Doesn't add newline if no history)
+                response = generate_text(debug, history + '\n' + prompt if history else prompt, engine, max_tokens)
             except:
                 print('Response not generated. See above error. Try again?')
                 continue

@@ -1,7 +1,7 @@
 '''Hi there! Hopefully these don't look too scary. The filepath is the location 
 where you installed this repository.'''
 
-filepath = 'Documents/TanTan'
+filepath = 'Documents/Github/TanTan'
 reddit_folder_name = 'ScrapeAndSpreddit'
 
 ### REDDIT CONFIG
@@ -25,10 +25,10 @@ debug = False
 # Do not touch. 
 DELIMITER = '_||_' # Change only if you're certain it won't be affected by text in title/url pairs.
 TanEx = Exception(ValueError)
-import mysecrets
+import tansecrets
 def get_openai_api_key():
-    return mysecrets.openai_key
+    return tansecrets.openai_key
 
-getHeaders = mysecrets.getHeaders
-getToken = mysecrets.getToken
+getHeaders = tansecrets.getHeaders
+getToken = tansecrets.getToken
 token_needed = False # Please generate a token using mysecrets.py and leave this as False.
