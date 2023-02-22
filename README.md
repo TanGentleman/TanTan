@@ -18,8 +18,8 @@ I have to decide whether I want this to be a program that lets you feel like a d
 
 *Strong avisory: I recommend using a VPN when using the internet, especially over unsecure networks*
 
-The following steps assume you have all the required dependencies. Should I make a formal check for this?
-How to use the Reddit Scraper:
+The following steps assume you have all the required dependencies. (Should I make a formal check for this?)
+# Setting up the Reddit Scraper:
 
 (Pre-req: Create a reddit account)
 
@@ -39,11 +39,13 @@ How to use the Reddit Scraper:
 
 # Running the Reddit Scraper:
 1. Set the config.py variables filepath and reddit_folder_name
-- Filepath is where you installed this repository.
-- reddit_folder_name is a new folder that holds newly generated files
-- The other variables in config.py can be used in lieu of additional arguments in the command line
-- For now, please stick to subs/users with posts of standard image formats, not videos hosted elsewhere.
+    - Filepath is where you installed this repository.
+    - reddit_folder_name is a new folder that holds newly generated files
+    - The other variables in config.py can be used in lieu of additional arguments in the command line
+    - For now, please stick to subs/users with posts of standard imastepge formats, not videos hosted elsewhere.
+2. Set the 5 query variables in config.py, or add the Magic String in the command line for step 3.
 - [MAGIC STRING] = {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}
+3. Run the command in terminal
     - `python3 Documents/TanTan/Link_Grabber.py`
     - `python3 Documents/TanTan/Link_Grabber.py r/houseplants 50 top year -d`
 - This should generate a contents.txt file in the {reddit_folder_name} directory (Documents/TanTan/{reddit_folder_name})
@@ -52,6 +54,7 @@ How to use the Reddit Scraper:
 - The format in the file should be [Title + DELIMITER(something like '_||_' to separate them) + URL] for each entry
 - The only argument following Downloader.py is the desired folder name.
     - `python3 Documents/TanTan/Downloader.py Folder_For_Collected_Images`
+- Th above example would save the images to TanTan/{reddit_folder_name}/Folder_For_Collected_Images
 
 How to use the TanTan chatbot
 (Pre-req: Create an openai account)
