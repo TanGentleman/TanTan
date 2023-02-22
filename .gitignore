@@ -1,4 +1,7 @@
-
+.gitignore
+.gitattributes
+.DS_Store
+.history/*
 __pycache__/*
 Chatbot/*
 ScrapeAndSpreddit/*
@@ -6,3 +9,4 @@ sand.py
 tansecrets.py
 *.txt
 image_generation.py
+Chatbot/.DS_Store
