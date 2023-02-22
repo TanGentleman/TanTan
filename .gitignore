@@ -1,11 +1,6 @@
-.gitignore
-.gitattributes
-.DS_Store
-.history/*
 Chatbot/*
 ScrapeAndSpreddit/*
 sand.py
 tansecrets.py
 *.txt
 image_generation.py
-__pycache__/*
