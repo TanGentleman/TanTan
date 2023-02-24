@@ -57,7 +57,7 @@ At the moment, this is super rough, not user friendly, and tricky to troubleshoo
 
 *Strong avisory: I recommend using a VPN when using the internet, especially over unsecure networks*
 
-The following steps assume you have all the required dependencies. (Should I make a formal check for this?)
+The following steps assume you have all the required dependencies.
 
 # Using the TanTan chatbot:
 (Pre-req: Create an openai account)
@@ -88,10 +88,10 @@ The following steps assume you have all the required dependencies. (Should I mak
 10. You should be all done using your browser! Paste these into their respective fields in mysecrets.py
 11. Set token_needed to True, and leave reddit_token as None for now.
 12. Triple check that all the required fields are entered correctly.
-13. Run test_setup.py with the below command and note the printed string. This is reddit_token, please set it accordingly
+13. Run test_setup.py with the below command and note the printed string.
     - `python3 Documents/TanTan/test_setup.py`
     - If this does not work, please let me know, I am working on some better safeguards.
-    - This printed value is reddit_token, please set it accordingly in mysecrets.py
+    - The printed outcome value is reddit_token, please set it accordingly in mysecrets.py
 14. You're all done with the essentials! You should now be able to run Link_Grabber.py and Downloader.py
 
 # Running the Reddit Link Grabber:
@@ -102,8 +102,7 @@ The following steps assume you have all the required dependencies. (Should I mak
     - For now, please stick to subs/users with posts of standard image formats, not videos hosted elsewhere.
 2. Set the 5 query variables in config.py, or add the Magic String in the command line for step 3.
 - [MAGIC STRING] = {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}
-3. Run the command in terminal from your home directory.
-    - `cd`
+3. Run either command in terminal from your home directory.
     - `python3 Documents/TanTan/Link_Grabber.py`
     - `python3 Documents/TanTan/Link_Grabber.py r/houseplants 50 top year -d`
 - This should generate a contents.txt file in the {reddit_folder_name} directory (Documents/TanTan/{reddit_folder_name})
@@ -111,10 +110,19 @@ The following steps assume you have all the required dependencies. (Should I mak
 # Downloading from contents.txt:
 - The format in the file should be [Title + DELIMITER(something like '_||_' to separate them) + URL] for each entry
 - The only argument following Downloader.py is the desired folder name.
-    - `cd`
+1. Run command in terminal from your home directory.
     - `python3 Documents/TanTan/Downloader.py Folder_For_Collected_Images`
 - The above example would save the images to TanTan/{reddit_folder_name}/Folder_For_Collected_Images
 
+# Using MacOS Shortcuts to automate running Link_Grabber.py and Downloader.py:
+- Ask for Text with "Format Query as {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}"
+- Run Shell Script
+    - `python3 Documents/TanTan/Link_Grabber.py -s {PROVIDED_TEXT}`
+- Show Shell Script Result
+- Show Alert "Would you like to Download?"
+- Ask for Text with Folder Name:
+- Run Shell Script
+    - `python3 Documents/TanTan/Downloader.py {PROVIDED_TEXT}`
 
 List of important variables, functions, and workflows (Work in Progress):
 - 

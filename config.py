@@ -1,5 +1,5 @@
 '''Hi there! Hopefully these don't look too scary. The filepath is the location 
-where you installed this repository.'''
+where you installed this repository. I recommend Documents/TanTan'''
 
 filepath = 'Documents/Github/TanTan'
 reddit_folder_name = 'ScrapeAndSpreddit'
@@ -8,7 +8,6 @@ reddit_folder_name = 'ScrapeAndSpreddit'
 image_only = True # Set to False to allow mp4 filetypes. This will not scrape videos hosted by third parties (i.e youtube, tiktok)
 max_count = 500 # Please keep this to a reasonable value (I recommend < 1000 unless experienced or small files)
 max_file_size = 10000 # This is in KB, only filters valid .gif and .mp4 filetypes.
-
 
 
 # The following variables can also optionally be set when running link_grabber.py via the command line
