@@ -7,6 +7,7 @@ import config as c
 
 TanSaysNoNo = c.TanEx
 
+# Given a filepath:s to a contents.txt file, returns the internal text as a string.
 def read_content(contents_path):
         try:
             with open(f'{contents_path}/contents.txt', 'r') as file:
@@ -16,20 +17,19 @@ def read_content(contents_path):
             print('No contents.txt in this directory found')
             raise(TanSaysNoNo)
 
+# Takes a filename, returns a safely-formatted filename
 def sanitize_filename(filename):
         # Remove invalid characters
         filename = sub(r"[\/:*?'<>|]", '', filename)
-        
         # Replace whitespace characters with an underscore
         filename = filename.replace(' ', '_')
-        
         # Truncate the filename if it is too long
         max_length = 247
         if len(filename) > max_length:
             filename = filename[:max_length]
-        
         return filename
-    
+
+# Given content as a string, plus the delimiter to parse it, return arrays of titles and links
 def content_to_arrays(content, DELIMITER):
         titles = []
         links = []
@@ -50,22 +50,22 @@ def content_to_arrays(content, DELIMITER):
             raise(TanSaysNoNo)
         return titles, links
 
+# Takes image content, returns its hashed value as a string.
 def get_image_hash(image_content):
         hasher = sha256()
         hasher.update(image_content)
         return hasher.hexdigest()        
 
+# Saves images in the form of titles, links to a given folder_path
 def save_images(titles, links, folder_path):
         if len(titles) == 0:
             print('List invalid.')
             raise(TanSaysNoNo)
-        assert(len(links)) > 0
         duplicates = ''
         count = 0
         total_count = 0
         seen = set()
         image_hashes = set()
-        ######
         
         # Loop over each line in the file
         for i in range(len(links)):
@@ -107,6 +107,7 @@ def save_images(titles, links, folder_path):
                 raise(TanSaysNoNo)
         return total_count, duplicates
 
+# runs content_to_arrays with error handling
 def try_content_to_arrays(content, DELIMITER):
     if content:
         try:
@@ -124,7 +125,11 @@ def make_folder(folder_path):
         os.mkdir(folder_path)
     except FileExistsError:
         print(f'No worries: The folder {folder_name} already exists')
+    except:
+        print('Filepath not found!')
+        raise(TanSaysNoNo)
     
+# runs save_images with error handling, then prints output results
 def try_saving_images(titles, links, folder_path):
     if all([titles, links]) == False:
         print('No title/url pairs found')
@@ -139,6 +144,7 @@ def try_saving_images(titles, links, folder_path):
     print(f'Total unique images: {total_count}')
     return total_count, duplicates
 
+
 def try_saving_results(filepath, total_count, folder_name, duplicates = None):
     try:
         with open(f'{filepath}/results.txt', 'w') as file:
@@ -147,26 +153,29 @@ def try_saving_results(filepath, total_count, folder_name, duplicates = None):
         print('Welp, unable to save results.txt')
         raise(TanSaysNoNo)
 
-def main(folder_name):
-    DELIMITER = c.DELIMITER
-    reddit_folder_name = c.reddit_folder_name
-    filepath = f'{c.filepath}/{reddit_folder_name}'
-    download_folder_path = f'{filepath}/{folder_name}'
+# Given the filepath of the main reddit folder, the new folder to download to, and the delimiter, runs the downloader
+def run_downloader(DELIMITER, filepath, download_folder_path):
+    # Read content
     try:
         content = read_content(filepath)
     except:
         print('Add a contents.txt file! I recommend running the link_grabber :D')
         print('Exiting.')
         return
+    # Set arrays and make folder
+    titles, links = try_content_to_arrays(content, DELIMITER)
+    make_folder(download_folder_path)
 
-    try:
-        titles, links = try_content_to_arrays(content, DELIMITER)
-        make_folder(download_folder_path)
-        total_count, duplicates = try_saving_images(titles, links, download_folder_path)
-        try_saving_results(filepath, total_count, folder_name, duplicates)
-    except:
-        print('Failed to save images.')
-        return
+    #Save images and results
+    total_count, duplicates = try_saving_images(titles, links, download_folder_path)
+    try_saving_results(filepath, total_count, folder_name, duplicates)
+
+def main(folder_name):
+    DELIMITER = c.DELIMITER
+    reddit_folder_name = c.reddit_folder_name
+    filepath = f'{c.filepath}/{reddit_folder_name}'
+    download_folder_path = f'{filepath}/{folder_name}'
+    run_downloader(DELIMITER, filepath, download_folder_path)   
 
 if __name__ == '__main__':
     arg_count = len(sys.argv)
