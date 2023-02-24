@@ -106,14 +106,11 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
             url = f'https://oauth.reddit.com/{search}.json?{sort_string}&limit=500'
             if after:
                 if (after_count > 5) and (limit_qty < 200):
-                    if debug: print('Too many after calls!', after_count)
-                    else: print('no debug on, but too many calls!', after_count)
-                    break
+                    print('Too many after calls!', after_count)
+                    return(output_string)
                 if after_count > 10:
-                    if debug: print('Way too many after calls!', after_count)
-                    else: print('no debug on, but way too many calls!', after_count)
-                    break
-
+                    print('Too many after calls!', after_count)
+                    return(output_string)
                 else:
                     #onto the the next batch!
                     url = f'{url}&after={after}'
