@@ -107,6 +107,7 @@ def refresh_token(getHeaders):
     newHeaders = getHeaders(token_needed)
     return newHeaders
 
+# Returns 
 def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_count, search, sort_string, max_file_size):
         # Define a variable to keep track of the 'after' parameter
         after = None
@@ -155,6 +156,7 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
                 # If there's no more 'after' parameter, we've reached the end of the results
                 if not after:
                     break
+            # If reddit token is expired, refresh and try again
             elif res.status_code == 401:
                 newHeaders = refresh_token(getHeaders)
                 return link_grab(DELIMITER, debug, getHeaders, newHeaders, image_only, limit_qty, max_count, search, sort_string, max_file_size)
@@ -165,6 +167,7 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
         if debug: print(f'{count} urls fetched')
         output_string = arrays_to_output_string(image_urls, image_titles, output_string, debug, DELIMITER)
         return output_string
+
 
 def main(user_input, limit_qty, sort_type, time_period, max_count, debug):
     image_only = c.image_only

@@ -1,15 +1,8 @@
-Under development:
-- Documentation for the chatbot
-- Documentation for the reddit scraper
-- Integration between reddit scraping and chatbot
-- Presets for chatbot. (i.e. debugging code, essay organization, fact checking, general advice)
-- Image generation integration
-Active Issues:
-
 [ x ] : fix being tested
+# Active Issues:
 
 Chatbot.py
-- ![ ] Need safeguards in check_truncation_and_toks
+- [ x ] Need safeguards in check_truncation_and_toks
 - ![ ] Unsafe array accesses and variable assignments need to be handled appropriately
 - ![ ] Add assert statements to ensure loop correctness
 - [ ] Create better "help" functionality and prompt guidance
@@ -27,3 +20,16 @@ Reddit Link_Grabber
 Fixed, but potentially unstable:
 - Add generate token to test_setup.py
 - Logic for adding smart config strings like <config curie -d> or <config davinci 400> to the function interactive_chat()
+
+Under development:
+- Documentation for the chatbot
+- Documentation for the reddit scraper
+- Integration between reddit scraping and chatbot
+- Presets for chatbot. (i.e. debugging code, essay organization, fact checking, general advice)
+- Image generation integration
+
+To-Do List:
+- Comment and clean up functions in chatbot.py
+- Add command to enable reddit downloading within chatbot session
+    - Allow calling Link_Grabber functions
+- Work on image generation

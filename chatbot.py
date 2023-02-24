@@ -21,7 +21,6 @@ max_tokens = default_max_tokens
 # You can increase the following values after playing around a bit
 max_codex = 4000
 max_token_limit = 2000
-max_tokens = default_max_tokens
 max_session_total_tokens = 4000
 warning_history_count = 1500
 
