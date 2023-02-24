@@ -3,16 +3,15 @@ OpenAI Chatbot with Reddit Scraping Functionality
 
 What it is and what it does:
 - For now, there are two separate components, the chatbot, and reddit scraper, soon to be merged.
-- Using chatbot.py is like OpenAI's ChatGPT, but configurable, and can be integrated into many unique workflows.
-- The conversationality of chatbot.py is relatively rigid at the moment, but presets for different use cases will soon be added.
+- Using chatbot.py incorporates OpenAI's API to use their different models, utilizing the combined power of ChatGPT's knowledge, DALL-E's image creation, reddit's existing content, and more, all without the need for a browser.
+- The conversationality of chatbot.py is relatively rigid at the moment, but presets for different use cases, as well as better integration will soon be added.
 
 In Progress:
 - Documentation for using chatbot.py
 - Documentation for using link_grabber.py and downloader.py
+- 
 
-Hi there! I'm new to creating tools for other people, and right now this is a cluttered mess, but as it comes together, I would love the feedback on aspects that don't feel natural.
-
-This rough beta is just for friends, but as it progresses, it's intended to be a more versatile tool to harness ChatGPT and design neat browserless shortcuts to complete various tasks:
+Hi there! I'm new to creating tools for other people, and right now this is a cluttered mess, but as it comes together, I would love the feedback on aspects that don't feel natural. This rough work in progress just for friends, but as it progresses, it's intended to be a more versatile tool to harness ChatGPT and design neat browserless shortcuts to complete various tasks.
 
 I have to decide whether I want this to be a program that lets you feel like a developer, changing the names around and having fun adding new functionality, or if I want to have established presets that just make it seem like something neat that someone made. I'm now leaning towards prioritizing making it accessible and not clunky to type in terminal each session. Built-in shortcuts app integration and the like, perhaps.
 
@@ -103,7 +102,7 @@ The following steps assume you have all the required dependencies. (Should I mak
     - Filepath is where you installed this repository.
     - reddit_folder_name is a new folder that holds newly generated files
     - The other variables in config.py can be used in lieu of additional arguments in the command line
-    - For now, please stick to subs/users with posts of standard imastepge formats, not videos hosted elsewhere.
+    - For now, please stick to subs/users with posts of standard image formats, not videos hosted elsewhere.
 2. Set the 5 query variables in config.py, or add the Magic String in the command line for step 3.
 - [MAGIC STRING] = {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}
 3. Run the command in terminal from your home directory.
