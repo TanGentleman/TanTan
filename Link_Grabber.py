@@ -26,8 +26,6 @@ def user_input_to_search(user_input):
             search = f'user/{suffix}/submitted'
         elif prefix == 'r/':
             search = f'r/{suffix}/top'
-        else:
-            raise SyntaxError('Format with u/ (for users) or r/ (for subs)')
         return search
 
 # Formats the arrays into a string of title+delimiter+url entries, skipping duplicate urls.
@@ -138,7 +136,7 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
                         print(f'Aborting early!')
                         return(output_string)
                 
-                if after < 15:
+                if after_count > 15:
                     print(f'Too many after calls! {after_count} paginations')
                     print(f'Aborting early!')
                     return(output_string)
@@ -223,7 +221,7 @@ def valid_arg(arg, index, max_count):
     # user_input
     if index == 1:
         try:
-            return arg[:2] in ['r/', 'u/']
+            return (arg[:2] in ['r/', 'u/']) and len(arg[2:]) >= 3
         except:
             print('Argument 1 must have a prefix of r/ or u/')
             return False
@@ -272,7 +270,6 @@ def set_vars_from_args(max_count, args, arg_count, allow_input):
     user_input = ''
     sort_type = ''
     time_period = ''     
-    debug = False
     limit_qty = 1
     try: # check if arguments are valid.  If not, raise an error.
         args, arg_count = check_args(args, arg_count, max_count, allow_input)
@@ -320,6 +317,7 @@ try:
                 args.remove('-d')
                 arg_count -= 1
                 debug = True
+                print('Debug set to True')
 
         # If a magic string is used
         if arg_count > 1:
