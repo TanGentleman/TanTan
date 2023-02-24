@@ -2,7 +2,7 @@
 .DS_Store
 .history/*
 __pycache__/*
-Chatbot/*
+# Chatbot/*
 ScrapeAndSpreddit/*
 sand.py
 tansecrets.py
