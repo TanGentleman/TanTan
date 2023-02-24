@@ -9,9 +9,10 @@ What it is and what it does:
 In Progress:
 - Documentation for using chatbot.py
 - Documentation for using link_grabber.py and downloader.py
+- Better checks for valid filepaths
 - MacOS Shortcuts Integration
 
-Hi there! I'm new to creating tools for other people, and right now this is a cluttered mess, but as it comes together, I would love the feedback on aspects that don't feel natural. This rough work in progress just for friends, but as it progresses, it's intended to be a more versatile tool to harness ChatGPT's engines and design neat browserless shortcuts to complete various tasks.
+Hi there! I'm new to creating tools for other people, and right now this is a cluttered mess, but as it comes together, I would love the feedback on aspects that don't feel natural. This rough work in progress is just for friends, but as it progresses, it's intended to be a more versatile tool to harness ChatGPT's engines and design neat browserless shortcuts to complete various tasks.
 
 I have to decide whether I want this to be a program that lets you feel like a developer, changing the names around and having fun adding new functionality, or if I want to have established presets that just make it seem like something neat that someone made. I'm now leaning towards prioritizing making it accessible and not clunky to type in terminal each session. Built-in shortcuts app integration and the like, perhaps.
 

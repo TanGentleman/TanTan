@@ -2,6 +2,8 @@ import requests
 import config as c
 from os import mkdir
 TanSaysNoNo = c.TanEx
+
+# Given valid argument strings for sort_type and time_period, returns formatted sort_string
 def get_sort_string(sort_type, time_period):
         type_string = ''
         time_string = ''
@@ -17,6 +19,7 @@ def get_sort_string(sort_type, time_period):
 
         return sort_string
 
+# Formats the subreddit/user argument into a search string
 def user_input_to_search(user_input):
         prefix, suffix = user_input[:2], user_input[2:]
         if prefix == 'u/':
@@ -27,6 +30,7 @@ def user_input_to_search(user_input):
             raise SyntaxError('Format with u/ (for users) or r/ (for subs)')
         return search
 
+# Formats the arrays into a string of title+delimiter+url entries, skipping duplicate urls.
 def arrays_to_output_string(image_urls, image_titles, output_string, debug, DELIMITER):
         output_string = ''
         seen = set()
@@ -41,23 +45,32 @@ def arrays_to_output_string(image_urls, image_titles, output_string, debug, DELI
             count+=1
         if debug: print(f'total count: {count}')
         return output_string
-
+        
+# Given the current count, batch of posts, current url/title list, returns updated lists and count.
 def get_urls_and_titles(count, posts, image_only, image_urls, image_titles, limit_qty, max_file_size, debug):
     # Loop through each post
     valid_extensions = ('.jpg', '.jpeg', '.png', '.gif')
-    if image_only == False:
-        valid_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.mp4')
+   
     for post in posts:
-        if ('post_hint' in post['data']) and (post['data']['post_hint'] in ['image', 'video', None]):
+        # Check if post_hint is image, video, or None
+        if ('post_hint' in post['data']) and (post['data']['post_hint'] in ['image', 'video' if not(image_only) else None, None]):
             image_url = post['data']['url']
+            # Allow mp4 if image_only is False
+            if image_only == False:
+                valid_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.mp4')
+            # Skips if image url doesn't have a valid extension
             if not image_url.endswith(valid_extensions):
                 continue
+            
+            # Filter out large gif/mp4 files
             
             if image_url.endswith(('.gif', 'mp4')):
                 res = requests.head(image_url)  # Make a HEAD request to get response headers
                 if 'content-length' in res.headers:  # Check if content-length is present in headers
                     file_size = int(res.headers['content-length']) / 1024  # Convert bytes to KB and store as an integer
                     print(f'URL: {image_url}, File Size (in KB): {file_size}')
+
+                    # If the file is a gif or mp4, check if it's too large.  If so, skip it.  Otherwise, save it
                     if file_size < max_file_size:
                         if debug: print('Saving')
                     else:
@@ -66,13 +79,17 @@ def get_urls_and_titles(count, posts, image_only, image_urls, image_titles, limi
                 else:
                     if debug: print(f'URL not added!: {image_url}')
                     continue
+
+            # Save the url and title to their respective lists, and increment count by 1
             image_urls.append(image_url)
             image_titles.append(post['data']['title'])
             count += 1
+        # If count exceeds limit_qty, breaks out of loop
         if count >= limit_qty:
             break
     return image_urls, image_titles, count
 
+# Displays post_hints for a json batch of posts
 def display_hints(counts, posts):
     for post in posts:
         if 'post_hint' in post['data']:
@@ -83,6 +100,7 @@ def display_hints(counts, posts):
             counts['other'] += 1
     return counts
 
+# Refresh token and return updated headers
 def refresh_token(getHeaders):
     print('Token expired - gimme a sec')
     token_needed = True
@@ -105,10 +123,10 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
             # Construct the API URL with the 'after' parameter
             url = f'https://oauth.reddit.com/{search}.json?{sort_string}&limit=500'
             if after:
-                if (after_count > 5) and (limit_qty < 200):
+                if (after_count > 3) and (limit_qty < 200):
                     print('Too many after calls!', after_count)
                     return(output_string)
-                if after_count > 10:
+                if after_count > 5:
                     print('Too many after calls!', after_count)
                     return(output_string)
                 else:
