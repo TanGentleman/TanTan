@@ -151,12 +151,9 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
     if '-d' in args: 
         debug = not(debug) # Toggle debugging state 
         print(f'debug set to {debug}')
-    
-    if 'd' == args[0] and arg_count == 1: # Debugging is only argument provided
-        ask_engine = False
-        ask_token = False
-        engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
-
+        args.remove('d')
+        arg_count-=1
+    # This code needs to become friendlier
     for i in range(arg_count):
         if args[i] == 'config':
             try:
