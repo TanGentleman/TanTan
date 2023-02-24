@@ -249,43 +249,46 @@ def check_args(args, arg_count, max_count, allow_input):
                 raise(TanSaysNoNo)
     return args, arg_count
 
+def set_vars_from_args(max_count, args, arg_count):
+    user_input = ''
+    sort_type = ''
+    time_period = ''     
+    debug = False
+    limit_qty = 1
+    if '-s' == args[1]:
+        args.remove('-s')
+        arg_count -= 1
+        allow_input = False
+    else:
+        allow_input = True
+    args[0] = 'UNUSED'
+    try:
+        args, arg_count = check_args(args, arg_count, max_count, allow_input)
+    except:
+        print("Error. Likely using a shortcut with error in args.")
+        raise(TanSaysNoNo)
+    print(f'Arguments: {args[1:]}')
+    arg_count = len(args)
+    for i in range(arg_count):
+        if i == 1:
+            user_input = args[i]
+        elif args[i] == '-d':
+            debug = True
+        elif i == 2:
+            limit_qty = int(args[i])
+        elif i == 3:
+            sort_type = args[i]
+        elif i == 4:
+            time_period = args[i]
+    return user_input, limit_qty, sort_type, time_period, debug
+
 if __name__ == '__main__':
     import sys
     args = sys.argv
     arg_count = len(args)
     max_count = c.max_count
     if arg_count > 1:
-
-        user_input = ''
-        sort_type = ''
-        time_period = ''     
-        debug = False
-        limit_qty = 1
-        if '-s' == args[1]:
-            args.remove('-s')
-            arg_count -= 1
-            allow_input = False
-        else:
-            allow_input = True
-        args[0] = 'UNUSED'
-        try:
-            args, arg_count = check_args(args, arg_count, max_count, allow_input)
-        except:
-            print("Error. Likely using a shortcut with error in args.")
-            raise(TanSaysNoNo)
-        print(f'Arguments: {args[1:]}')
-        arg_count = len(args)
-        for i in range(arg_count):
-            if i == 1:
-                user_input = args[i]
-            elif args[i] == '-d':
-                debug = True
-            elif i == 2:
-                limit_qty = int(args[i])
-            elif i == 3:
-                sort_type = args[i]
-            elif i == 4:
-                time_period = args[i]
+        user_input, limit_qty, sort_type, time_period, debug = set_vars_from_args(max_count, args, arg_count)
     else:
         user_input = c.user_input
         limit_qty = c.limit_qty
