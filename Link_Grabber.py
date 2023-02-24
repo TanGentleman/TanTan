@@ -171,7 +171,9 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
                 newHeaders = refresh_token(getHeaders)
                 return link_grab(DELIMITER, debug, getHeaders, newHeaders, image_only, limit_qty, max_count, search, sort_string, max_file_size)
             else:
-                return f'The Reddit API is not connected ({res.status_code})'
+                print(f'Invalid URL request to the Reddit API: ({res.status_code})')
+                print(f'Attempted URL:{url}')
+                return
 
         # Print the number of fetched urls
         if debug: print(f'{count} urls fetched')
