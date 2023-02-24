@@ -1,6 +1,7 @@
 import requests
 import config as c
 from os import mkdir
+TanSaysNoNo = c.TanEx
 def get_sort_string(sort_type, time_period):
         type_string = ''
         time_string = ''
@@ -212,7 +213,7 @@ def valid_arg(arg, index, max_count):
         time_periods = ['all', 'year', 'month', 'week', 'day', 'hour']
         return arg in time_periods
 
-def check_args(args, arg_count, max_count):
+def check_args(args, arg_count, max_count, allow_input):
     for i in range(arg_count):
         if i == 0: # Unused element
             continue
@@ -222,14 +223,15 @@ def check_args(args, arg_count, max_count):
                 print('Please format the first arg as u/user or r/subreddit')
             if i == 2:
                 print(f'Please format the second arg (quantity) as an integer 1 to {max_count}')
-
+            
             if allow_input:
                 response = input('Valid examples:\nr/funny 10 top week\nu/WoozleWozzle 3 -d\nPlease try again: ')
                 args = response.split(' ')
                 args = ['UNUSED'] + args
                 return check_args(args, len(args), max_count)
             else:
-                raise(ValueError)
+                print('Gotta be an expert to use the shortcuts app')
+                raise(TanSaysNoNo)
     return args, arg_count
 
 if __name__ == '__main__':
@@ -242,16 +244,20 @@ if __name__ == '__main__':
         user_input = ''
         sort_type = ''
         time_period = ''     
-        debug = False 
+        debug = False
         limit_qty = 1
-
-        allow_input = not('-s' in args)
+        if '-s' == args[1]:
+            args.remove('-s')
+            arg_count -= 1
+            allow_input = False
+        else:
+            allow_input = True
         args[0] = 'UNUSED'
         try:
-            args, arg_count = check_args(args, arg_count, max_count)
+            args, arg_count = check_args(args, arg_count, max_count, allow_input)
         except:
             print("Error. Likely using a shortcut with error in args.")
-            raise(ValueError)
+            raise(TanSaysNoNo)
         print(f'Arguments: {args[1:]}')
         arg_count = len(args)
         for i in range(arg_count):
