@@ -6,7 +6,6 @@ Chatbot.py
 - ![ ] Unsafe array accesses and variable assignments need to be handled appropriately
 - ![ ] Add assert statements to ensure loop correctness
 - [ ] Create better "help" functionality and prompt guidance
-- [ x ] Slow_Status needs to always apply, even if 'config arg' string shortcut used
 - [ ] Implement completion_tokens, prompt_tokens in their appropriate use cases
 - [ x ] Find better way to handle log file not saved when error
 - [ ] Make consistent the different ways of running it (i.e no downloads when loaded from python env.)
@@ -20,6 +19,7 @@ Reddit Link_Grabber
 Fixed, but potentially unstable:
 - Add generate token to test_setup.py
 - Logic for adding smart config strings like <config curie -d> or <config davinci 400> to the function interactive_chat()
+- Slow_Status needs to always apply, even if 'config arg' string shortcut used
 
 Under development:
 - Documentation for the chatbot

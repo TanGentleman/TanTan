@@ -150,7 +150,7 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
     # '-d' argument given to toggle debug mode on/off 
     if '-d' in args: 
         debug = not(debug) # Toggle debugging state 
-        print('debug set to', str(debug))
+        print(f'debug set to {debug}')
     
     if 'd' == args[0] and arg_count == 1: # Debugging is only argument provided
         ask_engine = False
@@ -280,9 +280,11 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
 
 def choosePreset(n):
     if n == 1:
-        prefix = '''Human: Hello, who are you?
+        prompt_prelude = '''Human: Hello, how are you?
 AI: I am doing great. How can I help you today?
 Human:'''
+        prefix = '\nHuman: '
+        suffix = '\nAI: '
 
 def interactive_chat(slow_status, engine, max_tokens, debug):
     completion_tokens, prompt_tokens, total_tokens, session_total_tokens = (0, 0, 0, 0)
@@ -501,19 +503,37 @@ def main(engine, max_tokens, debug):
     else:
         print('Error. Cannot set conversation and response time logfiles.')
         return
-    
-if __name__ == '__main__':
-    import sys
-    
+
+def get_args(args):
     if slow_status == True: 
         engine = default_slow_engine
     else:
         engine = default_engine
 
     max_tokens = default_max_tokens
-    args = sys.argv
+   
     arg_count = len(args)
+    if '-d' in args:
+        args.remove('-d')
+        arg_count -= 1
+        debug = True
+        print('Debug set to True')
+    else:
+        debug = False
+    
     if arg_count > 1:
         engine, max_tokens, debug = parse_args(sys.argv[1:], slow_status, engine, max_tokens, debug)
-    
+
+    return engine, max_tokens, debug
+
+# Default script execution from CLI, uses sys.argv arguments
+if __name__ == '__main__':
+    import sys
+    args = sys.argv
+    engine, max_tokens, debug = get_args(args)
+    main(engine, max_tokens, debug)
+
+# Manual function execution from python environment with `import chatbot`, uses a given argument list
+def main2(args):
+    engine, max_tokens, debug = get_args(args)
     main(engine, max_tokens, debug)
