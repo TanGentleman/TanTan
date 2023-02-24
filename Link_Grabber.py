@@ -249,36 +249,46 @@ def check_args(args, arg_count, max_count, allow_input):
                 raise(TanSaysNoNo)
     return args, arg_count
 
+# Takes the arguments from the command line and sets the input variables for main()
 def set_vars_from_args(max_count, args, arg_count):
     user_input = ''
     sort_type = ''
     time_period = ''     
     debug = False
     limit_qty = 1
+    # If -s tag is used, disallow input retrying (since that's terminal-only)
     if '-s' == args[1]:
         args.remove('-s')
         arg_count -= 1
         allow_input = False
     else:
         allow_input = True
+    #
     args[0] = 'UNUSED'
-    try:
+    try: # check if arguments are valid.  If not, raise an error.
         args, arg_count = check_args(args, arg_count, max_count, allow_input)
-    except:
+    except: # Error - possibly -s tagged invalid magic string
         print("Error. Likely using a shortcut with error in args.")
         raise(TanSaysNoNo)
-    print(f'Arguments: {args[1:]}')
-    arg_count = len(args)
+   
+    print(f'Arguments: {args[1:]}') # prints the list of arguments
+    arg_count = len(args) # sets arg_count to the number of arguments in args
+    
     for i in range(arg_count):
         if i == 1:
+            # Set user_input to the first argument in args. This will be used as input for user_input_to_search.
             user_input = args[i]
         elif args[i] == '-d':
+            # If -d is present in args, set debug to True
             debug = True
         elif i == 2:
+            # Set limit_qty to second argument in args (default is 1)
             limit_qty = int(args[i])
         elif i == 3:
+            # Set sort_type string to third argument in args (default is None)
             sort_type = args[i]
         elif i == 4:
+            # Set time_period string to third argument in args (default is None)
             time_period = args[i]
     return user_input, limit_qty, sort_type, time_period, debug
 
