@@ -246,7 +246,7 @@ def check_args(args, arg_count, max_count, allow_input):
                 response = input('Valid examples:\nr/funny 10 top week\nu/WoozleWozzle 3 -d\nPlease try again: ')
                 args = response.split(' ')
                 args = ['UNUSED'] + args
-                return check_args(args, len(args), max_count)
+                return check_args(args, len(args), max_count, allow_input)
             else:
                 print('Gotta be an expert to use the shortcuts app')
                 raise(TanSaysNoNo)
