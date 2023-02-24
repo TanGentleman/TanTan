@@ -297,37 +297,42 @@ def set_vars_from_args(max_count, args, arg_count, allow_input):
             # Set time_period string to third argument in args (default is None)
             time_period = args[i]
     return user_input, limit_qty, sort_type, time_period
+try:
+    if __name__ == '__main__':
+        import sys
+        args = sys.argv
+        arg_count = len(args)
+        max_count = c.max_count
+        debug = c.debug
+        
+        # If arguments are found
+        if arg_count > 1:
+            # Check for flags
+            # If -s flag is used, disallow input retrying (since that's terminal-only)
+            if '-s' == args[1]:
+                args.remove('-s')
+                arg_count -= 1
+                allow_input = False
+            else:
+                allow_input = True
+            # If -d flag is used, set debug to True
+            if '-d' in args:
+                args.remove('-d')
+                arg_count -= 1
+                debug = True
 
-if __name__ == '__main__':
-    import sys
-    args = sys.argv
-    arg_count = len(args)
-    max_count = c.max_count
-    debug = c.debug
-    
-    # If arguments are found
-    if arg_count > 1:
-        # Check for flags
-        # If -s flag is used, disallow input retrying (since that's terminal-only)
-        if '-s' == args[1]:
-            args.remove('-s')
-            arg_count -= 1
-            allow_input = False
+        # If a magic string is used
+        if arg_count > 1:
+            try:
+                user_input, limit_qty, sort_type, time_period = set_vars_from_args(max_count, args, arg_count, allow_input)
+            except:
+                raise(TanSaysNoNo)
         else:
-            allow_input = True
-        # If -d flag is used, set debug to True
-        if '-d' in args:
-            args.remove('-d')
-            arg_count -= 1
-            debug = True
+            user_input = c.user_input
+            limit_qty = c.limit_qty
+            sort_type = c.sort_type
+            time_period = c.time_period
 
-    # If a magic string is used
-    if arg_count > 1:
-        user_input, limit_qty, sort_type, time_period = set_vars_from_args(max_count, args, arg_count, allow_input)
-    else:
-        user_input = c.user_input
-        limit_qty = c.limit_qty
-        sort_type = c.sort_type
-        time_period = c.time_period
-
-    main(user_input, limit_qty, sort_type, time_period, max_count, debug)
+        main(user_input, limit_qty, sort_type, time_period, max_count, debug)
+except TanSaysNoNo:
+    print('*shortcut_failure*')
