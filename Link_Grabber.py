@@ -61,9 +61,7 @@ def get_urls_and_titles(count, posts, image_only, image_urls, image_titles, limi
             # Skips if image url doesn't have a valid extension
             if not image_url.endswith(valid_extensions):
                 continue
-            
             # Filter out large gif/mp4 files
-            
             if image_url.endswith(('.gif', 'mp4')):
                 res = requests.head(image_url)  # Make a HEAD request to get response headers
                 if 'content-length' in res.headers:  # Check if content-length is present in headers
@@ -117,21 +115,35 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
         image_urls = []
         image_titles = []
         output_string = ''
-
+        if count > 10:
+            json_limit = 100
+        else:
+            json_limit = 25
         after_count = 0
         # Loop until all urls are fetched
         while ((count < limit_qty) and (count < max_count)):
             # Construct the API URL with the 'after' parameter
-            url = f'https://oauth.reddit.com/{search}.json?{sort_string}&limit=500'
+            url = f'https://oauth.reddit.com/{search}.json?{sort_string}&limit={json_limit}'
             if after:
-                if (after_count > 3) and (limit_qty < 200):
-                    print('Too many after calls!', after_count)
-                    return(output_string)
+                if after_count == 3: # After 3 batches checked
+                    if count < 2: # insufficient files found with given parameters
+                        print(f'Too many after calls! {after_count} paginations')
+                        return(output_string)
                 if after_count > 5:
-                    print('Too many after calls!', after_count)
+                    if count < 5: # insufficient files found with given parameters
+                        print(f'Too many after calls! {after_count} paginations')
+                        return(output_string)
+                    if count/limit_qty < 0.5: # If less than 50% of request has been completed
+                        print(f'Too many after calls! {after_count} paginations')
+                        print(f'Aborting early!')
+                        return(output_string)
+                
+                if after < 15:
+                    print(f'Too many after calls! {after_count} paginations')
+                    print(f'Aborting early!')
                     return(output_string)
                 else:
-                    #onto the the next batch!
+                    # Appends to the url string to move onto the the next batch!
                     url = f'{url}&after={after}'
                     after_count+=1
                     
@@ -146,7 +158,7 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
                 counts = {'image': 0, 'text': 0, 'video': 0, 'rich:video': 0, 'hosted:video': 0, 'link': 0, 'self': 0, 'other': 0}
                 counts = display_hints(counts, posts)
 
-                if debug: print(f'This .json batch has the following:\n{counts}')
+                if debug: print(f'Pagination #{after_count}:\n{counts}')
                 image_urls, image_titles, count = get_urls_and_titles(count, posts, image_only, image_urls, image_titles, 
                                                                         limit_qty, max_file_size, debug)
                 
@@ -247,7 +259,7 @@ def check_args(args, arg_count, max_count, allow_input):
             if allow_input:
                 response = input('Valid examples:\nr/funny 10 top week\nu/WoozleWozzle 3 -d\nPlease try again: ')
                 args = response.split(' ')
-                args = unused_filename + args
+                args = [unused_filename] + args
                 arg_count = len(args)
                 return check_args(args, arg_count, max_count, allow_input)
             else:
@@ -264,7 +276,7 @@ def set_vars_from_args(max_count, args, arg_count, allow_input):
     limit_qty = 1
     try: # check if arguments are valid.  If not, raise an error.
         args, arg_count = check_args(args, arg_count, max_count, allow_input)
-    except: # Error - possibly -s tagged invalid magic string
+    except: # Error - possibly -s flagged invalid magic string
         print("Error. Likely using a shortcut with error in args.")
         raise(TanSaysNoNo)
    
@@ -291,21 +303,25 @@ if __name__ == '__main__':
     args = sys.argv
     arg_count = len(args)
     max_count = c.max_count
+    debug = c.debug
     
+    # If arguments are found
     if arg_count > 1:
-        # If -s tag is used, disallow input retrying (since that's terminal-only)
+        # Check for flags
+        # If -s flag is used, disallow input retrying (since that's terminal-only)
         if '-s' == args[1]:
             args.remove('-s')
             arg_count -= 1
             allow_input = False
         else:
             allow_input = True
-        # If -d tag is used, set debug to True
+        # If -d flag is used, set debug to True
         if '-d' in args:
             args.remove('-d')
             arg_count -= 1
             debug = True
 
+    # If a magic string is used
     if arg_count > 1:
         user_input, limit_qty, sort_type, time_period = set_vars_from_args(max_count, args, arg_count, allow_input)
     else:
@@ -313,8 +329,5 @@ if __name__ == '__main__':
         limit_qty = c.limit_qty
         sort_type = c.sort_type
         time_period = c.time_period
-        # Set debug to c.debug only if '-d' not used
-        if not(debug):
-            debug = c.debug
 
     main(user_input, limit_qty, sort_type, time_period, max_count, debug)
