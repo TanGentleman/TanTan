@@ -26,10 +26,7 @@ Workflow 1:
 
 * = Any manipulation of the text can go here.
 
-Workflow 2:
-1. Call the TT Chatbot
-2. Say you're looking for art inspiration ideas. Ask it to generate some ideas given a prompt/theme.
-3. These will automatically save in the desired...
+Ideally, the user would have an arsenal of ChatGPT's knowledge, DALL-E's image creation, and reddit's existing content, all without the need for a browser.
 
 
 At the moment, this is super rough, not user friendly, and tricky to troubleshoot new features. I want to fix this, but thought it'd be neat if all the functions could be reorganized by the chatbot itself. Creating comments and optimizing for clarity of each function's role will be the assigned task. Over time, most of the core code should get cleaned up by davinci if a suitable workflow can be made. An example would be starting the chatbot, typing `codex`, pasting some functions into codex_prompt.txt, and getting a good response that also saves to codex_response.txt.
