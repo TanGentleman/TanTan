@@ -1,5 +1,5 @@
 # TanTan
-OpenAI Chatbot with Reddit Scraping Functionality
+Conversational Chatbot + Speedy, (built-in) Reddit Media-Fetching
 
 What it is and what it does:
 - For now, there are two separate components, the chatbot, and reddit scraper, soon to be merged.
@@ -9,7 +9,7 @@ What it is and what it does:
 In Progress:
 - Documentation for using chatbot.py
 - Documentation for using link_grabber.py and downloader.py
-- 
+- MacOS Shortcuts Integration
 
 Hi there! I'm new to creating tools for other people, and right now this is a cluttered mess, but as it comes together, I would love the feedback on aspects that don't feel natural. This rough work in progress just for friends, but as it progresses, it's intended to be a more versatile tool to harness ChatGPT and design neat browserless shortcuts to complete various tasks.
 
@@ -74,7 +74,7 @@ The following steps assume you have all the required dependencies. (Should I mak
 - Type help as a prompt to get some of the commands
     - I have yet to make this even remotely user friendly.
 
-# Setting up the Reddit Scraper:
+# Setting up the Reddit Image Fetcher:
 
 (Pre-req: Create a reddit account)
 
@@ -83,7 +83,7 @@ The following steps assume you have all the required dependencies. (Should I mak
 3. (Near the bottom) Create another app 
 4. Set name to whatever you'd like, this will be your user agent when filling out mysecrets.py
 5. Select script (Not web app or installed app)
-6. Description: (What it does - i.e. "Scrapes")
+6. Description: (What it does - i.e. "Fetches")
 7. You can leave about url blank, and set redirect to a dummy url: http://localhost should do fine.
 8. Locate the client id: String of characters written to the right of the icon under personal use script
 9. Locate the client secret: String of characters written next to 'secret'
@@ -94,10 +94,9 @@ The following steps assume you have all the required dependencies. (Should I mak
     - `python3 Documents/TanTan/test_setup.py`
     - If this does not work, please let me know, I am working on some better safeguards.
     - This printed value is reddit_token, please set it accordingly in mysecrets.py
-14. You're all done with the essentials to run the scraper! Please try running test_setup.py (In progress)
+14. You're all done with the essentials! You should now be able to run Link_Grabber.py and Downloader.py
 
-
-# Running the Reddit Scraper:
+# Running the Reddit Link Grabber:
 1. Set the config.py variables filepath and reddit_folder_name
     - Filepath is where you installed this repository.
     - reddit_folder_name is a new folder that holds newly generated files
