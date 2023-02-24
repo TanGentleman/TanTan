@@ -11,7 +11,7 @@ In Progress:
 - Documentation for using link_grabber.py and downloader.py
 - MacOS Shortcuts Integration
 
-Hi there! I'm new to creating tools for other people, and right now this is a cluttered mess, but as it comes together, I would love the feedback on aspects that don't feel natural. This rough work in progress just for friends, but as it progresses, it's intended to be a more versatile tool to harness ChatGPT and design neat browserless shortcuts to complete various tasks.
+Hi there! I'm new to creating tools for other people, and right now this is a cluttered mess, but as it comes together, I would love the feedback on aspects that don't feel natural. This rough work in progress just for friends, but as it progresses, it's intended to be a more versatile tool to harness ChatGPT's engines and design neat browserless shortcuts to complete various tasks.
 
 I have to decide whether I want this to be a program that lets you feel like a developer, changing the names around and having fun adding new functionality, or if I want to have established presets that just make it seem like something neat that someone made. I'm now leaning towards prioritizing making it accessible and not clunky to type in terminal each session. Built-in shortcuts app integration and the like, perhaps.
 
@@ -24,9 +24,6 @@ Workflow 1:
 4. Clarify further questions and maintain a full conversation, saving any desired output in a friendly format.
 
 * = Any manipulation of the text can go here.
-
-Ideally, the user would have an arsenal of ChatGPT's knowledge, DALL-E's image creation, and reddit's existing content, all without the need for a browser.
-
 
 At the moment, this is super rough, not user friendly, and tricky to troubleshoot new features. I want to fix this, but thought it'd be neat if all the functions could be reorganized by the chatbot itself. Creating comments and optimizing for clarity of each function's role will be the assigned task. Over time, most of the core code should get cleaned up by davinci if a suitable workflow can be made. An example would be starting the chatbot, typing `codex`, pasting some functions into codex_prompt.txt, and getting a good response that also saves to codex_response.txt.
 
