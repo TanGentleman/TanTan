@@ -201,37 +201,39 @@ def main(user_input, limit_qty, sort_type, time_period, max_count, debug):
     except FileExistsError:
         pass
         # print(f'The folder {filepath} already exists')
-    with open(f'{filepath}/contents.txt', 'w') as file:
-        file.write(output)
+    try:
+        with open(f'{filepath}/contents.txt', 'w') as file:
+            file.write(output)
+    except:
+        print('Error. Could not write to contents.txt')
 
 def valid_arg(arg, index, max_count):
+    # user_input
     if index == 1:
         try:
             return arg[:2] in ['r/', 'u/']
         except:
             print('Argument 1 must have a prefix of r/ or u/')
             return False
-
-    elif arg == '-d': #debug
-        return True
-    elif arg == '-s': #shortcut - no followup input thru terminal
-        return True
-
+    # limit_qty
     elif index == 2:
         try:
             return (int(arg) > 0) and (int(arg) <= max_count)
         except:
             print(f'Argument 2 must be a valid quantity from 1 to {max_count}')
             return False
-    
+    # sort_type
     elif index == 3:
         sort_types = ['new', 'top']
         return arg in sort_types
+    # time_period
     elif index == 4:
         time_periods = ['all', 'year', 'month', 'week', 'day', 'hour']
         return arg in time_periods
 
 def check_args(args, arg_count, max_count, allow_input):
+    unused_filename = args[0]
+    args[0] = 'UNUSED' # No current use case for args[0] (filename)
     for i in range(arg_count):
         if i == 0: # Unused element
             continue
@@ -245,29 +247,21 @@ def check_args(args, arg_count, max_count, allow_input):
             if allow_input:
                 response = input('Valid examples:\nr/funny 10 top week\nu/WoozleWozzle 3 -d\nPlease try again: ')
                 args = response.split(' ')
-                args = ['UNUSED'] + args
-                return check_args(args, len(args), max_count, allow_input)
+                args = unused_filename + args
+                arg_count = len(args)
+                return check_args(args, arg_count, max_count, allow_input)
             else:
                 print('Gotta be an expert to use the shortcuts app')
                 raise(TanSaysNoNo)
     return args, arg_count
 
 # Takes the arguments from the command line and sets the input variables for main()
-def set_vars_from_args(max_count, args, arg_count):
+def set_vars_from_args(max_count, args, arg_count, allow_input):
     user_input = ''
     sort_type = ''
     time_period = ''     
     debug = False
     limit_qty = 1
-    # If -s tag is used, disallow input retrying (since that's terminal-only)
-    if '-s' == args[1]:
-        args.remove('-s')
-        arg_count -= 1
-        allow_input = False
-    else:
-        allow_input = True
-    #
-    args[0] = 'UNUSED'
     try: # check if arguments are valid.  If not, raise an error.
         args, arg_count = check_args(args, arg_count, max_count, allow_input)
     except: # Error - possibly -s tagged invalid magic string
@@ -281,9 +275,6 @@ def set_vars_from_args(max_count, args, arg_count):
         if i == 1:
             # Set user_input to the first argument in args. This will be used as input for user_input_to_search.
             user_input = args[i]
-        elif args[i] == '-d':
-            # If -d is present in args, set debug to True
-            debug = True
         elif i == 2:
             # Set limit_qty to second argument in args (default is 1)
             limit_qty = int(args[i])
@@ -293,20 +284,37 @@ def set_vars_from_args(max_count, args, arg_count):
         elif i == 4:
             # Set time_period string to third argument in args (default is None)
             time_period = args[i]
-    return user_input, limit_qty, sort_type, time_period, debug
+    return user_input, limit_qty, sort_type, time_period
 
 if __name__ == '__main__':
     import sys
     args = sys.argv
     arg_count = len(args)
     max_count = c.max_count
+    
     if arg_count > 1:
-        user_input, limit_qty, sort_type, time_period, debug = set_vars_from_args(max_count, args, arg_count)
+        # If -s tag is used, disallow input retrying (since that's terminal-only)
+        if '-s' == args[1]:
+            args.remove('-s')
+            arg_count -= 1
+            allow_input = False
+        else:
+            allow_input = True
+        # If -d tag is used, set debug to True
+        if '-d' in args:
+            args.remove('-d')
+            arg_count -= 1
+            debug = True
+
+    if arg_count > 1:
+        user_input, limit_qty, sort_type, time_period = set_vars_from_args(max_count, args, arg_count, allow_input)
     else:
         user_input = c.user_input
         limit_qty = c.limit_qty
         sort_type = c.sort_type
         time_period = c.time_period
-        debug = c.debug
+        # Set debug to c.debug only if '-d' not used
+        if not(debug):
+            debug = c.debug
 
     main(user_input, limit_qty, sort_type, time_period, max_count, debug)
