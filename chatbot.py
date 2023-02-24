@@ -110,10 +110,8 @@ def generate_text(debug, prompt, engine, max_tokens):
         max_tokens=max_tokens,
         top_p=top_p_val,
         frequency_penalty=frequency_penalty_val
-        # stop=None,
-        # prefix='',
-        # suffix = ''
         )
+        
     except openai.error.OpenAIError as e:
         status = e.http_status
         error_dict = e.error
@@ -435,7 +433,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                         time_taken = time.time()-start_time
                         response_input_vars = (previous_history, debug, full_log, history, prompt, response, response_count, time_taken)
                         response_output_vars = response_worked(response_input_vars)
-                        response_time_log.append((time_taken, total_tokens))
+                        response_time_log.append((time_taken, total_tokens, engine))
                         (previous_history, full_log, history, response_count) = response_output_vars
                     except:
                         print('Codex response not generated. Error 4.')
@@ -478,7 +476,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                     (previous_history, full_log, history, response_count) = response_output_vars
                     session_total_tokens += total_tokens
 
-                    response_time_log.append((time_taken, total_tokens))
+                    response_time_log.append((time_taken, total_tokens, engine))
                     if session_total_tokens > max_session_total_tokens:
                         print('CONVERSATION TOO LONG')
                     continue
