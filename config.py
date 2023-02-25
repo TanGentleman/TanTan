@@ -24,7 +24,10 @@ debug = False
 # Do not touch. 
 DELIMITER = '_||_' # Change only if you're certain it won't be affected by text in title/url pairs.
 TanEx = Exception(ValueError)
-import mysecrets as m
+try:
+    import tansecrets as m
+except:
+    import mysecrets as m
 def get_openai_api_key():
     return m.openai_key
 

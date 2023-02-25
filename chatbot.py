@@ -25,7 +25,7 @@ max_session_total_tokens = 4000
 warning_history_count = 1500
 
 # These will be configurable variables in future updates. Presets need to be added first.
-temperature = 0.5
+temperature = 0
 frequency_penalty_val = None
 
 # BETA
@@ -481,7 +481,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
         else:
             # All valid non-command inputs to the bot go through here.
             if conversation_preset and prompt == 'download':
-                raw_input = input('Throw something at me. Magic string headed back your way.')
+                raw_input = input('Throw something at me. Magic string headed back your way:\n')
                 try:
                     template = read_download_prompt()
                 except:
@@ -547,7 +547,7 @@ def get_args(args):
         debug = False
     
     if arg_count > 1:
-        engine, max_tokens, debug = parse_args(sys.argv[1:], slow_status, engine, max_tokens, debug)
+        engine, max_tokens, debug = parse_args(args, slow_status, engine, max_tokens, debug)
 
     return engine, max_tokens, debug
 
