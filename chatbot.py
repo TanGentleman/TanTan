@@ -29,7 +29,7 @@ temperature = 0.5
 frequency_penalty_val = None
 
 # BETA
-prefixes = True
+conversation_preset = False
 
 slow_status = False # slow_status = False defaults to davinci - True defaults to curie + disables davinci
 debug = False
@@ -106,7 +106,7 @@ def generate_text(debug, prompt, engine, max_tokens):
     try:
        response = openai.Completion.create(
         engine=engine,
-        prompt= 'Human: ' + prompt,
+        prompt=prompt,
         max_tokens=max_tokens,
         temperature = 0 if 'code' in engine else temperature
         )
@@ -465,7 +465,9 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             max_tokens = set_max_tokens(max_tokens)
         else:
             # All valid non-command inputs to the bot go through here.
-            if debug: print('beep')
+            if conversation_preset:
+                prompt = 'Human: ' + prompt + '\nAI: '
+            if debug: print('beep, about to try generating response')
             try:
                 # Continues the conversation (Doesn't add newline if no history)
                 response = generate_text(debug, history + '\n' + prompt if history else prompt, engine, max_tokens)
@@ -475,16 +477,16 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response)
             if debug: print('beep')
             if response:
-                    time_taken = time.time()-start_time
-                    response_input_vars = (previous_history, debug, full_log, history, prompt, response, response_count, time_taken)
-                    response_output_vars = response_worked(response_input_vars)
-                    (previous_history, full_log, history, response_count) = response_output_vars
-                    session_total_tokens += total_tokens
+                time_taken = time.time()-start_time
+                response_input_vars = (previous_history, debug, full_log, history, prompt, response, response_count, time_taken)
+                response_output_vars = response_worked(response_input_vars)
+                (previous_history, full_log, history, response_count) = response_output_vars
+                session_total_tokens += total_tokens
 
-                    response_time_log.append((time_taken, total_tokens, engine))
-                    if session_total_tokens > max_session_total_tokens:
-                        print('CONVERSATION TOO LONG')
-                    continue
+                response_time_log.append((time_taken, total_tokens, engine))
+                if session_total_tokens > max_session_total_tokens:
+                    print('CONVERSATION TOO LONG')
+                continue
             else:
                 print('Blocked or truncated')
                 full_log += '*x*'

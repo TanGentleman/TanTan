@@ -29,12 +29,14 @@ Under development:
 - Image generation integration
 
 To-Do List:
+- Create amnesic mode that doesn't keep track of convo
 - Work on better codex implementation
     - Text edit and text completions
     - Make sure temperature set to 0
 - Comment and clean up functions in chatbot.py
 - Add command to enable reddit downloading within chatbot session
     - Allow calling Link_Grabber functions
-    - Use prompt engineering on an OpenAI engine to generate magic string from natural language and keywords
+    - Use prompt engineering on an OpenAI engine to generate magic strings from natural language and keywords
         - Create a dataset of natural language queries and corresponding magic strings
+        - Create template "Pre-prompts" that restart the conversation with a template.
 - Work on image generation
