@@ -29,7 +29,7 @@ temperature = 0.5
 frequency_penalty_val = None
 
 # BETA
-conversation_preset = False
+conversation_preset = True
 
 slow_status = False # slow_status = False defaults to davinci - True defaults to curie + disables davinci
 debug = False
@@ -97,6 +97,17 @@ def read_text_prompt():
             return file_contents
     except FileNotFoundError:
         print('No text_prompt.txt in this directory found')
+
+def read_download_prompt():
+    try:
+        contents_path = f'{filepath}/download_template.txt'
+        with open(contents_path, 'r') as file:
+            file_contents = file.read()
+            return file_contents
+    except FileNotFoundError:
+        print('No download_template.txt in this directory found')
+
+
 
 def generate_text(debug, prompt, engine, max_tokens):
     # Set the API key
@@ -182,6 +193,10 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
                             ask_token = True # Ask for the max tokens again
                             engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
                             break
+                    except NameError:
+                        ask_engine = True # Ask for the engine again
+                        ask_token = True # Ask for the max tokens again
+                        break
                     except IndexError: # If no input arg for tokens
                         ask_token = True # Ask for the max tokens again
                         engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
@@ -465,8 +480,11 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             max_tokens = set_max_tokens(max_tokens)
         else:
             # All valid non-command inputs to the bot go through here.
-            if conversation_preset:
-                prompt = 'Human: ' + prompt + '\nAI: '
+            if conversation_preset and prompt == 'download':
+                prompt = input('Throw something at me. Magic string headed back your way.')
+                prompt = read_download_prompt() + prompt
+                history = ''
+                max_tokens = 10
             if debug: print('beep, about to try generating response')
             try:
                 # Continues the conversation (Doesn't add newline if no history)
