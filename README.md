@@ -117,14 +117,18 @@ The following steps assume you have all the required dependencies.
 # Using MacOS Shortcuts to automate running Link_Grabber.py and Downloader.py:
 - Ask for Text with "Format Query as {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}"
 - Run Shell Script
-    - `python3 Documents/TanTan/Link_Grabber.py -s {PROVIDED_TEXT}`
-- Show Shell Script Result
-- Show Alert "Would you like to Download?"
-- Ask for Text with Folder Name:
-- Run Shell Script
-    - `python3 Documents/TanTan/Downloader.py {PROVIDED_TEXT}`
+    - `python3 Documents/TanTan/Link_Grabber.py -s {PROVIDED_INPUT}`
+- Text = Shell Script Result
+- If <Text> <contains> <*shortcut_failure*>
+    - Run this shortcut again (Link Grab + Download)
+- Otherwise
+    - Show Alert "Would you like to Download?"
+    - Ask for Text with Folder Name:
+    - Run Shell Script
+    - `python3 Documents/TanTan/Downloader.py {PROVIDED_INPUT}`
+- End If
 
-List of important variables, functions, and workflows (Work in Progress):
+# List of important variables, functions, and workflows (Work in Progress):
 - 
 
 *Should I make a separate markdown file for this?*

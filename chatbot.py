@@ -481,8 +481,13 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
         else:
             # All valid non-command inputs to the bot go through here.
             if conversation_preset and prompt == 'download':
-                prompt = input('Throw something at me. Magic string headed back your way.')
-                prompt = read_download_prompt() + prompt
+                raw_input = input('Throw something at me. Magic string headed back your way.')
+                try:
+                    template = read_download_prompt()
+                except:
+                    print('welp, could not read download_template.txt')
+                    continue
+                prompt = template + raw_input
                 history = ''
                 max_tokens = 10
             if debug: print('beep, about to try generating response')
