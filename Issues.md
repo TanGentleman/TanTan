@@ -40,3 +40,4 @@ To-Do List:
         - Create a dataset of natural language queries and corresponding magic strings
         - Create template "Pre-prompts" that restart the conversation with a template.
 - Work on image generation
+- Add 'tanman' command to chatbot.py that shows full command list and documentation

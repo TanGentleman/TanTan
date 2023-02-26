@@ -301,6 +301,7 @@ Human:'''
         prefix = '\nHuman: '
         suffix = '\nAI: '
 
+# This function needs proper re-structuring for readability!
 def interactive_chat(slow_status, engine, max_tokens, debug):
     completion_tokens, prompt_tokens, total_tokens, session_total_tokens = (0, 0, 0, 0)
     history, previous_history, full_log = ('', '', '')
@@ -487,7 +488,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 except:
                     print('welp, could not read download_template.txt')
                     continue
-                prompt = template + raw_input
+                prompt = template + raw_input + '\nOutput:'
                 history = ''
                 max_tokens = 10
             if debug: print('beep, about to try generating response')
@@ -559,6 +560,6 @@ if __name__ == '__main__':
     main(engine, max_tokens, debug)
 
 # Manual function execution from python environment with `import chatbot`, uses a given argument list
-def main2(args):
+def py_env_main(args):
     engine, max_tokens, debug = get_args(args)
     main(engine, max_tokens, debug)

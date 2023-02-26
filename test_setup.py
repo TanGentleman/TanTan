@@ -12,8 +12,8 @@ def openai_configuration_exists():
 def config_py_ready():
     return False or 'Config.py looks good to go!'
 
-def main():
+def get_a_token():
     m.first_time_token()
 
 if __name__ == '__main__':
-    main()
+    get_a_token()
