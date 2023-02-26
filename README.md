@@ -69,7 +69,7 @@ The following steps assume you have all the required dependencies.
 (Pre-req: Create an openai account)
 1. Grab your openai api key from (https://platform.openai.com/account/api-keys)
 2. Paste this key to mysecrets.py
-    - `cd`
+3. Run terminal command from home directory
     - `python3 Documents/TanTan/Chatbot.py`
 
 - I have yet to make proper documentation for the chatbot. For now, play around with asking it stuff.
