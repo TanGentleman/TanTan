@@ -3,7 +3,7 @@ Conversational Chatbot + Speedy, (built-in) Reddit Media-Fetching
 
 What it is and what it does:
 - For now, there are separate components, the chatbot, the reddit fetcher, and the downloader, soon to be merged.
-- Using chatbot.py incorporates OpenAI's API to use their different models, utilizing the combined power of ChatGPT's knowledge, DALL-E's image creation, reddit's existing content, and more, all without the need for a browser.
+- Chatbot.py incorporates OpenAI's API, allowing access to different models, utilizing the combined power of ChatGPT's knowledge, DALL-E's image creation, reddit's existing content, and more, all without the need for a browser.
 - The conversationality of chatbot.py is relatively rigid at the moment, but presets for different use cases, as well as better integration will soon be added.
 
 In Progress:
@@ -18,7 +18,7 @@ I have to decide whether I want this to be a program that lets you feel like a d
 
 Some of the goals of this project are to be able to do the following:
 
-Workflow 1:
+Sample Workflow 1:
 1. Select some text anywhere on your computer 
 2. Use a keyboard shortcut to call the TT Chatbot.
 3. * Request that the text be more clearly explained, with a glossary of important words and phrases at the bottom
@@ -26,7 +26,13 @@ Workflow 1:
 
 * = Any manipulation of the text can go here.
 
-At the moment, this is super rough, not user friendly, and tricky to troubleshoot new features. I want to fix this, but thought it'd be neat if all the functions could be reorganized by the chatbot itself. Creating comments and optimizing for clarity of each function's role will be the assigned task. Over time, most of the core code should get cleaned up by davinci if a suitable workflow can be made. An example would be starting the chatbot, typing `codex`, pasting some functions into codex_prompt.txt, and getting a good response that also saves to codex_response.txt.
+Sample Workflow 2:
+1. Call the TT Chatbot.
+2. Type codex
+3. Paste any ugly functions into codex_prompt.txt
+4. Get a cleaned up response that also saves to codex_response.txt.
+
+At the moment, this is rough, not particularly user friendly, and tricky to troubleshoot new features. I want to fix this, but thought it'd be neat if all the functions could be reorganized by the chatbot itself. Creating comments and optimizing for clarity of each function's role will be the assigned task. Over time, most of the core code should get cleaned up by davinci if a suitable workflow can be made, such as Sample Workflow 2 up above.
 
 # Getting this onto your computer (MacOS only):
 1. Go the the github page > Code > Download Zip
