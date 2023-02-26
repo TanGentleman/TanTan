@@ -72,6 +72,7 @@ The following steps assume you have all the required dependencies.
 3. Run terminal command from home directory
     - `python3 Documents/TanTan/Chatbot.py`
 
+- Please check out Chatbot/Chatbot_README.md for documentation and alternate setup environments.
 - I have yet to make proper documentation for the chatbot. For now, play around with asking it stuff.
 - Ada, Babbage, Curie, and Davinci are 4 engines that vary in their capabilities
 - There is also a code-davinci that I have included as "codex"
