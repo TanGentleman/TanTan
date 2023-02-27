@@ -4,6 +4,7 @@ import datetime
 import time
 from os import path
 import config as c
+import clipboard
 TanSaysNoNo = c.TanEx
 
 openai_key = c.get_openai_api_key()
@@ -34,10 +35,6 @@ conversation_preset = True
 slow_status = False # slow_status = False defaults to davinci - True defaults to curie + disables davinci
 debug = False
 
-def quit_chat(replace_input, replace_input_text):
-    replace_input = True
-    replace_input_text = 'quit'
-    return replace_input, replace_input_text
 
 def token_count(s:str):
     return len(s.strip().split(' '))
@@ -403,7 +400,12 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 with open(f'{filepath}/text_prompt.txt', 'w') as file:
                     file.write('Insert text prompt here')
             continue
-
+        elif prompt in ['tok', 'token']:
+                    max_tokens = set_max_tokens(max_tokens)
+        elif prompt == '-r':
+            replace_input = True
+            replace_input_text = clipboard.paste()
+            continue
             # Codex takes the input from codex_prompt.txt and completes the given task. It does not use past conversation history,
         elif prompt == 'codex':
             print(f'Trying codex!')
@@ -425,9 +427,10 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 user_input = ''
                 user_input = input('Make sure you have a codex_prompt.txt file in the filepath! Set max codex tokens: ')
                 try:
-                    # if user_input == 'quit':
-                    #     replace_input, replace_input_text = quit_chat()
-                    #     continue
+                    if user_input == 'quit':
+                        replace_input = True
+                        replace_input_text = 'quit'
+                        continue
                     user_input = int(user_input)
                     if (0 < user_input) and (user_input <= max_codex):
                         codex_tokens = user_input
@@ -477,8 +480,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 print('Codex response not generated. Error 1.')
                 continue
 
-        elif prompt in ['tok', 'token']:
-            max_tokens = set_max_tokens(max_tokens)
+        
         else:
             # All valid non-command inputs to the bot go through here.
             if conversation_preset and prompt == 'download':
