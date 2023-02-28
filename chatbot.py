@@ -571,6 +571,7 @@ def main(engine, max_tokens, debug):
         logs = interactive_chat(slow_status, engine, max_tokens, debug)
     except KeyboardInterrupt:
         print('You have interrupted your session. It has been terminated, with no logfiles saved.')
+        return
     if logs:
         (convo, response_times, logging_on) = logs
         if logging_on:
