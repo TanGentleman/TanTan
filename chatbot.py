@@ -324,7 +324,6 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
     config_info = f'Engine set to: {engine}, {max_tokens} Max Tokens\n'
     full_log += config_info
     print(config_info)
-    
 
     while True:
         #Ask for input
@@ -336,13 +335,16 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 prompt = replace_input_text
                 history = ''
             replace_input = False
-
         else:
             prompt = input('Enter a prompt: ')
         start_time = time.time()
 
+        # TO-DO: Organize this section
+
         # ESCAPE COMMAND
-        if prompt == 'quit':
+        if len(prompt) < 1:
+            print('Taylor Swift, I like it!')
+        elif prompt == 'quit':
             if session_total_tokens == 0:
                 logging_on = False
                 print('This was not logged.')
@@ -350,8 +352,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 full_log += f'tokens used: {session_total_tokens}'
             return full_log, response_time_log, logging_on
 
-        elif prompt == None:
-            print('Type a lil somethin at least')
+        
         elif prompt == 'stats':
             print(f'engine: {engine}, max_tokens = {max_tokens}, tokens used: {session_total_tokens}')
         elif prompt.startswith('config'):
@@ -376,25 +377,25 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             full_log += msg + '\n'
             continue
 
-        elif prompt == 'help':
+        elif prompt == 'help': # Show list of commands
             print('For the full manual of commands and descriptions, type the command tanman')
             print('Available commands: codex, del, forget, help, history, log, read, stats, (tok or token),  config, config [engine] [tokens] [-d:optional]')
-        elif prompt == 'history':
+        elif prompt == 'history': # Show convo history
             if history:
                 print(f'HISTORY shown below:\n\n{(history)}')
             else:
                 print('No conversation history in memory.')
-        elif prompt == 'forget':
+        elif prompt in ['-f','forget']: # Erase convo history
             history = ''
             msg = '<History has been erased. Please continue the conversation fresh :)>\n'
             print(msg)
             full_log += msg
-        elif prompt == 'del':
+        elif prompt == 'del': # Delete last exchange
             history = previous_history
             msg = '<I have deleted the last exchange from my memory>\n'
             print(msg)
             full_log += msg
-        elif prompt == 'log':
+        elif prompt == 'log': # Toggle logging
             if logging_on:
                 msg = '<Logging disabled> Conversation will not be stored.\n'
                 print(msg)
@@ -403,7 +404,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 msg = '<Logging enabled> Conversation WILL be stored.\n'
                 print(msg)
                 logging_on = True
-        elif prompt == 'read':
+        elif prompt == 'read': # Respond to text_prompt.txt
             if path.isfile(f'{filepath}/text_prompt.txt'):
                 text_prompt = read_text_prompt()
                 print('Reading text_prompt.txt')
@@ -415,11 +416,14 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 with open(f'{filepath}/text_prompt.txt', 'w') as file:
                     file.write('Insert text prompt here')
             continue
-        elif prompt in ['tok', 'token']:
-                    max_tokens = set_max_tokens(max_tokens)
-        elif prompt == '-r':
+        elif prompt in ['tok', 'token', 'tokens']:
+            max_tokens = set_max_tokens(max_tokens)
+        elif prompt in ['-r','-rs']: # This is used to perform a completion using the text in one's clipboard. Check the below prompt framing.
             replace_input = True
-            replace_input_text = '"# Please provide a brief summary of the following text":\n' + clipboard.paste() + '\n#'
+            if prompt == '-rs':
+                replace_input_text = '"# Please provide a brief summary of the following text":\n' + clipboard.paste() + '\n#'
+            else:
+                replace_input_text = clipboard.paste()
             continue
             # Codex takes the input from codex_prompt.txt and completes the given task. It does not use past conversation history,
         elif prompt == 'codex':
@@ -519,7 +523,8 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             print(text)      
         else:
             # All valid non-command inputs to the bot go through here.
-            if dev and prompt == 'download':
+            
+            if dev and prompt == 'download': # Experimenting with a magic string generator for Link_Grabber.py to use
                 raw_input = input('Throw something at me. Magic string headed back your way:\n')
                 try:
                     template = read_download_prompt()
@@ -557,7 +562,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
 
                 response_time_log.append((time_taken, total_tokens, engine))
                 if session_total_tokens > max_session_total_tokens:
-                    print('CONVERSATION TOO LONG')
+                    print(f'Conversation is very lengthy. Session total tokens: {session_total_tokens}')
                 continue
             else:
                 print('Blocked or truncated')
