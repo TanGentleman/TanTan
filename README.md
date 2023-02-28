@@ -55,9 +55,9 @@ At the moment, this is rough, not particularly user friendly, and tricky to trou
     - `sudo set PATH=%PATH%'MUFFIN'`
 
 4. Install the required libraries in terminal using pip:
-    - `pip3 install requests`
-    - `pip3 install openai` (if using chatbot)
-    
+    - `pip3 install requests` (Link_Grabber.py, Downloader.py)
+    - `pip3 install openai` (Chatbot.py)
+    - `pip3 install clipboard` (Chatbot.py)
 
 - You should be all set up with the dependencies!
 

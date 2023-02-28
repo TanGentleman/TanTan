@@ -2,6 +2,7 @@
 # Active Issues:
 
 Chatbot.py
+- [ ] Change some commands to flags (-c, -r, -rs, etc. to decrease collisions with legitimate prompts) + organize that section
 - [ x ] Need safeguards in check_truncation_and_toks
 - ![ ] Unsafe array accesses and variable assignments need to be handled appropriately
 - ![ ] Add assert statements to ensure loop correctness

@@ -30,22 +30,16 @@ max_tokens = default_max_tokens
 
 # You can increase the following values after playing around a bit
 max_codex = 4000
-max_token_limit = 3000
+max_token_limit = 4000
 max_session_total_tokens = 4000
-warning_history_count = 1500
+warning_history_count = 3000
 
 # These will be configurable variables in future updates. Presets need to be added first.
-temperature = 0
+temperature = 0.2
 frequency_penalty_val = 0.8
-
-# BETA
 
 slow_status = False # slow_status = False defaults to davinci - True defaults to curie + disables davinci
 debug = False
-
-
-def token_count(s:str):
-    return len(s.strip().split(' '))
 
 def check_truncation_and_toks(response):
     completion_tokens, prompt_tokens, total_tokens = (0,0,0)
@@ -78,8 +72,12 @@ def response_worked(response_input_vars):
     response_time_marker = f'(*{round(time_taken, 1)}s)'
     previous_history = history
     history += prompt + response
-    if token_count(history) > warning_history_count:
-        print(f'Conversation token count is growing large [{token_count(history)}]. Please reset my memory as needed.')
+    # Dev tokenization check
+    if dev:
+        tokenized_text = tokenize(history)
+        token_count = len(tokenized_text)
+        if token_count > warning_history_count:
+            print(f'Conversation token count is growing large [{token_count}]. Please reset my memory as needed.')
     full_log += f'({response_count+1}.)' + prompt + '\n' + response_time_marker + response + '\n'
     print(f'Response {response_count+1}: {response}\n\n')
     response_count += 1
@@ -125,11 +123,11 @@ def generate_text(debug, prompt, engine, max_tokens):
        response = openai.Completion.create(
         engine=engine,
         prompt=prompt,
-        max_tokens=max_tokens,
+        # testing this 2000 thing for a sec
+        max_tokens=2000 if (max_tokens > 2000 and 'davinci' not in engine) else max_tokens,
         temperature = 0 if 'code' in engine else temperature,
         frequency_penalty = frequency_penalty_val
         )
-        
     except openai.error.OpenAIError as e:
         status = e.http_status
         error_dict = e.error
@@ -179,55 +177,57 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
         if args[i] == 'config': # If the config argument is given
             try:
                 test_engine = args[i+1] # Get the engine name
-                try:
-                    test_engine = engine_choice(test_engine, slow_status) # Check if the engine is valid
-                    engine = test_engine # Set the engine to the new value
-                    ask_engine = False # Don't ask for the engine again
-                    try:
-                        test_toks = int(args[i+2]) # Get the max tokens value
-                        temp_tok_limit = 0
-                        if engine == 'code-davinci-002':
-                            temp_tok_limit = max_codex # Set the max tokens limit to the codex limit
-                        else:
-                            temp_tok_limit = max_token_limit # Set the max tokens limit to the normal limit
-
-                        if (test_toks > 0) and (test_toks <= temp_tok_limit):
-                            max_tokens = test_toks # Set the max tokens to the new value
-                            ask_token = False # Don't ask for the max tokens again
-                            engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
-                            return engine, max_tokens, debug
-                        else:
-                            print(f'Max tokens value must be under {temp_tok_limit}.') # Print an error message
-                            ask_token = True # Ask for the max tokens again
-                            engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
-                            break
-                    except NameError:
-                        ask_engine = True # Ask for the engine again
-                        ask_token = True # Ask for the max tokens again
-                        break
-                    except IndexError: # If no input arg for tokens
-                        ask_token = True # Ask for the max tokens again
-                        engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
-                    except ValueError: # If the max tokens value is not an integer
-                        print('Integers only!') # Print an error message
-                        ask_token = True # Ask for the max tokens again
-                        engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
-                        break
-                    except:
-                        # I DONT THINK I CAN GET HERE BUT IDK
-                        print('what got me here? Trace this') # Print an error message
-                        assert(False)
-                except NameError: # If the engine is not valid
-                    ask_engine = True # Ask for the engine again
-                    ask_token = True # Ask for the max tokens again
-                    engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
-                    break
             except IndexError: # If no input arg for engine
                 ask_engine = True # Ask for the engine again
                 ask_token = True # Ask for the max tokens again
+                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
                 break
-    return engine, max_tokens, debug
+            try:
+                test_engine = engine_choice(test_engine, slow_status) # Check if the engine is valid
+            except NameError: # If the engine is not valid
+                ask_engine = True # Ask for the engine again
+                ask_token = True # Ask for the max tokens again
+                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
+                break
+            engine = test_engine # Set the engine to the new value
+            ask_engine = False # Don't ask for the engine again
+            try:
+                test_toks = int(args[i+2]) # Get the max tokens value
+            except ValueError: # If the max tokens value is not an integer
+                print('Integers only!') # Print an error message
+                ask_token = True # Ask for the max tokens again
+                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
+                break
+            except IndexError: # If no input arg for tokens
+                # I CHANGED THIS
+                ask_token = False # Do NOT Ask for the max tokens again
+                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
+                break
+            temp_tok_limit = 0
+            if engine == 'code-davinci-002':
+                temp_tok_limit = max_codex # Set the max tokens limit to the codex limit
+            else:
+                temp_tok_limit = max_token_limit # Set the max tokens limit to the normal limit
 
+            if (test_toks > 0) and (test_toks <= temp_tok_limit):
+                max_tokens = test_toks # Set the max tokens to the new value
+                ask_token = False # Don't ask for the max tokens again
+                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
+                return engine, max_tokens, debug
+            else:
+                print(f'Max tokens value must be under {temp_tok_limit}.') # Print an error message
+                ask_token = True # Ask for the max tokens again
+                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
+                break
+        else:
+            if i == 0:
+                continue
+            print(f'Invalid argument on {args[i]}. Syntax is config (engine) (max_tokens) (optional -d)')
+            ask_engine = True # Ask for the engine again
+            ask_token = True # Ask for the max tokens again
+            engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
+            break
+    return engine, max_tokens, debug
 
 def engine_choice(engine_prompt, slow_status):
     if len(engine_prompt) < 2:
@@ -351,27 +351,17 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             else:
                 full_log += f'tokens used: {session_total_tokens}'
             return full_log, response_time_log, logging_on
-
         
         elif prompt == 'stats':
             print(f'engine: {engine}, max_tokens = {max_tokens}, tokens used: {session_total_tokens}')
         elif prompt.startswith('config'):
-            if prompt in ['config', 'config -d']:
-                if '-d' in prompt:
-                    debug = not(debug)
-                    print(f'Debug set to {debug}')
-                ask_engine = True
-                ask_token = True
-                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens)
-                msg = f'Engine set to: {engine}, {max_tokens} Max Tokens'
+            args = prompt.split(' ')
+            args_count = len(args)
+            if args_count > 4:
+                print('Did you mean to type a config command? Format is "config [engine] [tokens] [-d]" ')
+                continue
             else:
-                args = prompt.split(' ')
-                args_count = len(args)
-                if args_count > 4:
-                    print('Did you mean to type a config command? Format is "config [engine] [tokens] [-d]" ')
-                    continue
-                else:
-                    engine, max_tokens, debug = parse_args(args, slow_status, engine, max_tokens, debug)
+                engine, max_tokens, debug = parse_args(args, slow_status, engine, max_tokens, debug)
             msg = f'Engine set to: {engine}, {max_tokens} Max Tokens'
             print(msg + '\n')
             full_log += msg + '\n'
