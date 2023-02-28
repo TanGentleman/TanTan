@@ -5,10 +5,19 @@ import time
 from os import path
 import config as c
 import clipboard
+if c.dev:
+    from os import environ
+    from transformers import GPT2TokenizerFast
+    tokenize = GPT2TokenizerFast.from_pretrained("gpt2").tokenize
+    environ["TOKENIZERS_PARALLELISM"] = "false"
+    dev = True
+else:
+    dev = False
+    def tokenize(arg):
+        pass
 TanSaysNoNo = c.TanEx
 
 openai_key = c.get_openai_api_key()
-
 filepath = f'{c.filepath}/Chatbot'
 full_logfile = 'logfile.txt'
 response_time_logfile = 'response_time_log.txt'
@@ -21,16 +30,15 @@ max_tokens = default_max_tokens
 
 # You can increase the following values after playing around a bit
 max_codex = 4000
-max_token_limit = 2000
+max_token_limit = 3000
 max_session_total_tokens = 4000
 warning_history_count = 1500
 
 # These will be configurable variables in future updates. Presets need to be added first.
 temperature = 0
-frequency_penalty_val = None
+frequency_penalty_val = 0.8
 
 # BETA
-conversation_preset = True
 
 slow_status = False # slow_status = False defaults to davinci - True defaults to curie + disables davinci
 debug = False
@@ -51,6 +59,8 @@ def check_truncation_and_toks(response):
             elif i == 2: total_tokens = tok_val
         except:
             print(f'Token value not found for {usage_vals[i]}')
+            print('Response failed.')
+            raise(TanSaysNoNo)
     try:
         response = response['choices'][0]
     except:
@@ -116,7 +126,8 @@ def generate_text(debug, prompt, engine, max_tokens):
         engine=engine,
         prompt=prompt,
         max_tokens=max_tokens,
-        temperature = 0 if 'code' in engine else temperature
+        temperature = 0 if 'code' in engine else temperature,
+        frequency_penalty = frequency_penalty_val
         )
         
     except openai.error.OpenAIError as e:
@@ -209,6 +220,7 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
                 except NameError: # If the engine is not valid
                     ask_engine = True # Ask for the engine again
                     ask_token = True # Ask for the max tokens again
+                    engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
                     break
             except IndexError: # If no input arg for engine
                 ask_engine = True # Ask for the engine again
@@ -219,7 +231,7 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
 
 def engine_choice(engine_prompt, slow_status):
     if len(engine_prompt) < 2:
-        print('Please enter at least two characters')
+        print('Please enter at least two characters for the engine selection.')
         raise(NameError)
     if (engine_prompt == 'text-ada-001') or ('ada'.startswith(engine_prompt)):
         engine = 'text-ada-001'
@@ -248,7 +260,7 @@ def engine_choice(engine_prompt, slow_status):
             engine = 'text-davinci-003'
             return engine
     else:
-        print('invalid')
+        print('invalid engine choice')
         raise(NameError)
 
 def set_max_tokens(max_tokens):
@@ -306,12 +318,13 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
     response_time_log = []
     logging_on = True
     prompt_from_file = False
-    config_info = f'Engine set to: {engine}, {max_tokens} Max Tokens\n'
-    full_log += config_info
-    print(config_info)
     text_prompt = ''
     replace_input = False
     replace_input_text = ''
+    config_info = f'Engine set to: {engine}, {max_tokens} Max Tokens\n'
+    full_log += config_info
+    print(config_info)
+    
 
     while True:
         #Ask for input
@@ -321,6 +334,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 prompt_from_file = False
             else:
                 prompt = replace_input_text
+                history = ''
             replace_input = False
 
         else:
@@ -363,6 +377,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             continue
 
         elif prompt == 'help':
+            print('For the full manual of commands and descriptions, type the command tanman')
             print('Available commands: codex, del, forget, help, history, log, read, stats, (tok or token),  config, config [engine] [tokens] [-d:optional]')
         elif prompt == 'history':
             if history:
@@ -404,7 +419,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                     max_tokens = set_max_tokens(max_tokens)
         elif prompt == '-r':
             replace_input = True
-            replace_input_text = clipboard.paste()
+            replace_input_text = '"# Please provide a brief summary of the following text":\n' + clipboard.paste() + '\n#'
             continue
             # Codex takes the input from codex_prompt.txt and completes the given task. It does not use past conversation history,
         elif prompt == 'codex':
@@ -442,6 +457,11 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
 
             try: #1
                 codex_prompt = read_codex_prompt()
+                if dev:
+                    tokenized_text = tokenize(codex_prompt)
+                    token_count = len(tokenized_text)
+                    if token_count + codex_tokens > 4000:
+                        print(f'TOO LONG I THINK: prompt is {token_count} tokens, decrease codex_tokens to {4000-token_count}')
                 try: #2
                     response = generate_text(debug, codex_prompt, 'code-davinci-002', codex_tokens)
                 except:
@@ -479,11 +499,27 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             except:
                 print('Codex response not generated. Error 1.')
                 continue
-
-        
+        elif prompt == 'tanman':
+            cmd_dict = {
+            'config': 'Prompts configuration of engine and max_tokens. Optional arguments are {-d}{engine}{max_tokens}',
+            'codex': 'Generate code from codex_prompt.txt',
+            'del': 'Delete the last exchange from memory',
+            'forget': 'Forget the past conversation',
+            'help': 'Display the list of commands',
+            'history': 'The current conversation in memory', 
+            'log': 'Toggle to enable or disable logging of conversation + response times', 
+            'read': 'Respond to text_prompt.txt', 
+            'stats': 'Prints the current engine and max_tokens configuration', 
+            'tanman': 'brings up the TanManual (commands with their descriptions))',
+            'tok': 'Set max tokens for the next response, you can use "token" or "tokens" too'}
+            
+            text = 'TanManual Opened! Available commands:\n' 
+            for i in range(len(cmd_dict)):
+                text += f'{list(cmd_dict.keys())[i]}: {list(cmd_dict.values())[i]}\n'
+            print(text)      
         else:
             # All valid non-command inputs to the bot go through here.
-            if conversation_preset and prompt == 'download':
+            if dev and prompt == 'download':
                 raw_input = input('Throw something at me. Magic string headed back your way:\n')
                 try:
                     template = read_download_prompt()
@@ -494,13 +530,23 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 history = ''
                 max_tokens = 10
             if debug: print('beep, about to try generating response')
+            if dev:
+                tokenized_text = tokenize(prompt)
+                token_count = len(tokenized_text)
+                if token_count + max_tokens > 4000:
+                    print('WARNING: prompt is too long. I will try to generate a response, but it may be truncated.')
+                print(f'prompt is {token_count} tokens, keep max_tokens below roughly {4000-token_count}')
             try:
                 # Continues the conversation (Doesn't add newline if no history)
                 response = generate_text(debug, history + '\n' + prompt if history else prompt, engine, max_tokens)
             except:
                 print('Response not generated. See above error. Try again?')
                 continue
-            response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response)
+            try:
+                response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response)
+            except:
+                print('TRUNCATION BROKE IT')
+                continue
             if debug: print('beep')
             if response:
                 time_taken = time.time()-start_time
@@ -521,7 +567,10 @@ def main(engine, max_tokens, debug):
     if openai_key == None:
         print('Please set your OpenAI key in config.py')
         return
-    logs = interactive_chat(slow_status, engine, max_tokens, debug)
+    try:
+        logs = interactive_chat(slow_status, engine, max_tokens, debug)
+    except KeyboardInterrupt:
+        print('You have interrupted your session. It has been terminated, with no logfiles saved.')
     if logs:
         (convo, response_times, logging_on) = logs
         if logging_on:
