@@ -19,6 +19,7 @@ Chatbot.py
 - [ x ] Find better way to handle log file not saved when error
 - [ ] Make consistent the different ways of running it (i.e no downloads when loaded from python env.)
 - [ ] Consolidate codex + regular else condition logic into one function.
+- [ ] Need a way to cache history on user's request and later call it back smoothly.
 
 Reddit Link_Grabber
 - [ x ] Enable video configuration with proper safeguards for large mp4 files and total download size.

@@ -36,7 +36,7 @@ warning_history_count = 3000
 
 # These will be configurable variables in future updates. Presets need to be added first.
 temperature = 0.2
-frequency_penalty_val = 0.8
+frequency_penalty_val = 1.0
 
 slow_status = False # slow_status = False defaults to davinci - True defaults to curie + disables davinci
 debug = False
@@ -126,7 +126,8 @@ def generate_text(debug, prompt, engine, max_tokens):
         # testing this 2000 thing for a sec
         max_tokens=2000 if (max_tokens > 2000 and 'davinci' not in engine) else max_tokens,
         temperature = 0 if 'code' in engine else temperature,
-        frequency_penalty = frequency_penalty_val
+        frequency_penalty = frequency_penalty_val,
+        stop = '*stop*'
         )
     except openai.error.OpenAIError as e:
         status = e.http_status
@@ -170,7 +171,7 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
     if '-d' in args: 
         debug = not(debug) # Toggle debugging state
         print(f'debug set to {debug}')
-        args.remove('d')
+        args.remove('-d')
         arg_count-=1
     # This code needs to become friendlier, but it works for now
     for i in range(arg_count):
@@ -328,12 +329,12 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
     while True:
         #Ask for input
         if replace_input:
+            history = '' # Don't factor in the previous conversation
             if prompt_from_file:
                 prompt = text_prompt
                 prompt_from_file = False
             else:
                 prompt = replace_input_text
-                history = ''
             replace_input = False
         else:
             prompt = input('Enter a prompt: ')
@@ -408,10 +409,11 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             continue
         elif prompt in ['tok', 'token', 'tokens']:
             max_tokens = set_max_tokens(max_tokens)
+        # -c and -cs for Clipboard and Clipboard Summary erase all prior history.
         elif prompt in ['-c','-cs']: # This is used to perform a completion using the text in one's clipboard. Check the below prompt framing.
             replace_input = True
             if prompt == '-cs': #clipboard summary? I think -cs kinda works
-                replace_input_text = '"# Please provide a brief summary of the following text":\n' + clipboard.paste() + '\n#'
+                replace_input_text = '"# Please provide a brief summary of the following text, then add *stop*:\n' + clipboard.paste() + '\n#'
             else:
                 replace_input_text = clipboard.paste()
             continue
