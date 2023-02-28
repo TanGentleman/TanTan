@@ -71,13 +71,10 @@ The following steps assume you have all the required dependencies.
 2. Paste this key to mysecrets.py
 3. Run terminal command from home directory
     - `python3 Documents/TanTan/Chatbot.py`
+    To see the manual of commands and descriptions:
+    - `tanman`
 
 - Please check out Chatbot/Chatbot_README.md for documentation and alternate setup environments.
-- I have yet to make proper documentation for the chatbot. For now, play around with asking it stuff.
-- Ada, Babbage, Curie, and Davinci are 4 engines that vary in their capabilities
-- There is also a code-davinci that I have included as "codex"
-- Type help as a prompt to get some of the commands
-    - I have yet to make this even remotely user friendly.
 
 # Setting up the Reddit Image Fetcher:
 

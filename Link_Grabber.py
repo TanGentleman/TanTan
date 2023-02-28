@@ -263,7 +263,7 @@ def check_args(args, arg_count, max_count, allow_input):
                 arg_count = len(args)
                 return check_args(args, arg_count, max_count, allow_input)
             else:
-                print('Gotta be an expert to use the shortcuts app')
+                # Using MacOS Shortcuts, re-prompting there')
                 raise(TanSaysNoNo)
     return args, arg_count
 
@@ -334,5 +334,5 @@ try:
             time_period = c.time_period
 
         main(user_input, limit_qty, sort_type, time_period, max_count, debug)
-except TanSaysNoNo:
+except:
     print('*shortcut_failure*')
