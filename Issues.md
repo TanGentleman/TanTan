@@ -1,3 +1,11 @@
+Under development:
+- Tokenizer using an offline, local, pretrained GPT2 Model (Need to handle log-warning better)
+- Documentation for the chatbot
+- Documentation for the reddit scraper
+- Integration between reddit scraping and chatbot
+- Presets for chatbot. (i.e. debugging code, essay organization, fact checking, general advice)
+- Image generation integration
+
 [ x ] : fix being tested
 # Active Issues:
 
@@ -17,18 +25,11 @@ Reddit Link_Grabber
 - [ ] Enable third-party (YouTube) downloads
 - [ ] Fetch more meaningful data alongside the generated list
 
-Fixed, but potentially unstable:
+Fixed:
 - Add generate token to test_setup.py
 - Logic for adding smart config strings like <config curie -d> or <config davinci 400> to the function interactive_chat()
 - Slow_Status needs to always apply, even if 'config arg' string shortcut used
-
-Under development:
-- Tokenizer using an offline, local, pretrained GPT2 Model
-- Documentation for the chatbot
-- Documentation for the reddit scraper
-- Integration between reddit scraping and chatbot
-- Presets for chatbot. (i.e. debugging code, essay organization, fact checking, general advice)
-- Image generation integration
+- Add 'tanman' command to chatbot.py that shows full command list and documentation [ Under development ]
 
 To-Do List:
 - Create amnesic mode that doesn't keep track of convo
@@ -40,4 +41,4 @@ To-Do List:
     - Use prompt engineering on an OpenAI engine to generate magic strings from natural language and keywords
         - Create a dataset of natural language queries and corresponding magic strings [ In testing ]
 - Work on image generation
-- Add 'tanman' command to chatbot.py that shows full command list and documentation [ Under development ]
+
