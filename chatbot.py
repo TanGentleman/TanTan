@@ -528,9 +528,11 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             if dev:
                 tokenized_text = tokenize(prompt)
                 token_count = len(tokenized_text)
+                # This 4000 is a hard cap for the full completion. I'll work it in better soon. 
                 if token_count + max_tokens > 4000:
                     print('WARNING: prompt is too long. I will try to generate a response, but it may be truncated.')
-                print(f'prompt is {token_count} tokens, keep max_tokens below roughly {4000-token_count}')
+                    print(f'max_tokens would need to be set to roughly {4000-token_count}')
+                print(f'prompt is {token_count} tokens')
             try:
                 # Continues the conversation (Doesn't add newline if no history)
                 response = generate_text(debug, history + '\n' + prompt if history else prompt, engine, max_tokens)
