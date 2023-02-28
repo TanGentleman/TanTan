@@ -408,9 +408,9 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             continue
         elif prompt in ['tok', 'token', 'tokens']:
             max_tokens = set_max_tokens(max_tokens)
-        elif prompt in ['-r','-rs']: # This is used to perform a completion using the text in one's clipboard. Check the below prompt framing.
+        elif prompt in ['-c','-cs']: # This is used to perform a completion using the text in one's clipboard. Check the below prompt framing.
             replace_input = True
-            if prompt == '-rs':
+            if prompt == '-cs': #clipboard summary? I think -cs kinda works
                 replace_input_text = '"# Please provide a brief summary of the following text":\n' + clipboard.paste() + '\n#'
             else:
                 replace_input_text = clipboard.paste()
