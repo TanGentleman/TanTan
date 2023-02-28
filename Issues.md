@@ -23,6 +23,7 @@ Fixed, but potentially unstable:
 - Slow_Status needs to always apply, even if 'config arg' string shortcut used
 
 Under development:
+- Tokenizer using an offline, local, pretrained GPT2 Model
 - Documentation for the chatbot
 - Documentation for the reddit scraper
 - Integration between reddit scraping and chatbot

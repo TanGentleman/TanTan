@@ -8,7 +8,7 @@ import clipboard
 if c.dev:
     from os import environ
     from transformers import GPT2TokenizerFast
-    tokenize = GPT2TokenizerFast.from_pretrained("gpt2").tokenize
+    tokenize = GPT2TokenizerFast.from_pretrained("gpt2", local_files_only = True).tokenize
     environ["TOKENIZERS_PARALLELISM"] = "false"
     dev = True
 else:
@@ -567,6 +567,9 @@ def main(engine, max_tokens, debug):
     try:
         logs = interactive_chat(slow_status, engine, max_tokens, debug)
     except KeyboardInterrupt:
+        print('You have interrupted your session. It has been terminated, with no logfiles saved.')
+        return
+    except EOFError:
         print('You have interrupted your session. It has been terminated, with no logfiles saved.')
         return
     if logs:
