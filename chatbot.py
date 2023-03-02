@@ -462,7 +462,6 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                     continue
                 replace_input = True
                 replace_input_text = clipboard.paste()
-                print('Reading clipboard. Working on response...')
                 # Cache history here
                 cached_history = history
                 history = ''
@@ -488,9 +487,6 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             continue
         elif prompt == 'help': # Show list of commands
             print('For the full manual of commands and descriptions, type tan')
-            text = ''
-            # for i in range(len(cmd_dict)):
-            #     text += f'{list(cmd_dict.keys())[i]}'
             print(list(cmd_dict.keys()))
         elif prompt == 'history': # Show convo history
             if history:
