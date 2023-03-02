@@ -21,6 +21,7 @@ filepath = f'{c.filepath}/Chatbot'
 full_logfile = 'logfile.txt'
 response_time_logfile = 'response_time_log.txt'
 
+slow_status = False # slow_status = False defaults to davinci - True defaults to curie + disables davinci
 default_engine = 'text-davinci-003'
 default_slow_engine = 'text-curie-001'
 
@@ -34,11 +35,34 @@ max_session_total_tokens = 4000
 warning_history_count = 3000
 
 # These will be configurable variables in future updates. Presets need to be added first.
-temperature = 0.2
+default_temperature = 0.2
 frequency_penalty_val = 1.0
 
-slow_status = False # slow_status = False defaults to davinci - True defaults to curie + disables davinci
+
 debug = False
+
+cmd_dict = {
+            'config': 'Prompts configuration of engine and max_tokens. `config [engine] [tokens] [-d]`',
+            'codex': 'Generate code from codex_prompt.txt',
+            'debug': 'Toggle debug mode. Alias -d',
+            'del': 'Delete the last exchange from memory',
+            'forget': 'Forget the past conversation. Alias -f',
+            'help': 'Display the list of commands',
+            'history': 'The current conversation in memory', 
+            'log': 'Toggle to enable or disable logging of conversation + response times', 
+            'read': 'Respond to text_prompt.txt', 
+            'stats': 'Prints the current configuration and session total tokens. Alias -s',
+            'tanman': 'brings up the TanManual (commands with their descriptions). Alias tan',
+            'tok': 'Set max tokens for the next response',
+            '-c': 'Respond to clipboard text (Uses conversation history)',
+            '-cs': 'Summarize clipboard text (Amnesic)',
+            '-r': 'Replaces second instance of -r with contents of clipboard:\n' + 
+                    'Syntax: `-r [prefix text] -r [optional suffix text]`\n' +
+                    'Example Usage: `-r Define this word: # -r #`\n' +
+                    'Replaces prompt with: Define this word: #clipboard_contents#'
+        }
+
+
 
 def set_prompt(prompt, prefix = None,  suffix = None):
     if prefix is None:
@@ -108,7 +132,7 @@ def read_download_template():
 
 
 # Needs comments
-def generate_text(debug, prompt, engine, max_tokens):
+def generate_text(debug, prompt, engine, max_tokens, temperature):
     # Set the API key
     openai.api_key = openai_key
     
@@ -118,7 +142,7 @@ def generate_text(debug, prompt, engine, max_tokens):
         engine=engine,
         prompt=prompt,
         # testing this 2000 thing for a sec
-        max_tokens=2000 if (max_tokens > 2000 and 'davinci' not in engine) else max_tokens,
+        max_tokens = 2000 if (max_tokens > 2000 and 'davinci' not in engine) else max_tokens,
         temperature = 0 if 'code' in engine else temperature,
         frequency_penalty = frequency_penalty_val,
         stop = '*stop*'
@@ -298,6 +322,27 @@ def set_max_tokens(default, limit):
     # Answer is legal, return it
     return max_tokens
 
+# This function assumes both the default tokens and token limit are SAFE and correct values
+def set_temperature(default):
+    legal_answer = False
+    while legal_answer == False:
+        user_input = input('Temperature: ')
+        if user_input in ['', ' ']:
+            print(f'Temperature [default]: {default}')
+            return default
+        try:
+            user_temp = float(user_input)
+        except:
+            print('Not recognized temp value. Try a float from 0.0 to 1.0.')
+            continue
+
+        if (user_temp >= 0.0) and (user_temp <= 1.0):
+            temperature = user_temp
+            legal_answer = True
+        else:
+            print('Try a value between 0.0 and 1.0')
+    return temperature
+
 def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
     if ask_engine:
         legal_answer = False
@@ -320,13 +365,6 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
         max_tokens = set_max_tokens(default, limit)
     return engine, max_tokens
 
-def choosePreset(n):
-    if n == 1:
-        prompt_prelude = '''Human: Hello, how are you?
-AI: I am doing great. How can I help you today?
-Human:'''
-        prefix = '\nHuman: '
-        suffix = '\nAI: '
 
 # This function needs proper re-structuring for readability!
 def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
@@ -348,7 +386,8 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
     response_count = 0
     chat_ongoing = True
 
-    config_info = f'Engine set to: {engine}, {max_tokens} Max Tokens\n'
+    temperature = default_temperature
+    config_info = f'Engine: {engine}, {max_tokens} Max Tokens, Temp is {temperature}\n'
     full_log += config_info
     print(config_info)
     while chat_ongoing:
@@ -393,7 +432,9 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
 
         # Need to organize the below commands
         elif prompt in ['-s','stats']:
-            print(f'engine: {engine}, max_tokens = {max_tokens}, tokens used: {session_total_tokens}')
+            print(f'engine: {engine}, max_tokens = {max_tokens}, temp = {temperature}, tokens used: {session_total_tokens}')
+        elif prompt in ['-d', 'debug']:
+            debug = not(debug)
         elif prompt.startswith('config'):
             args = prompt.split(' ')
             args_count = len(args)
@@ -411,6 +452,11 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             args = prompt.split(' ')
             args_count = len(args)
             if args_count == 1:
+                if args[0] == '-r':
+                    print('Reading clipboard. Working on response...')
+                else:
+                    print('Syntax for -r strings is `-r [prefix text] -r [optional suffix text]`')
+                    continue
                 replace_input = True
                 replace_input_text = clipboard.paste()
                 print('Reading clipboard. Working on response...')
@@ -422,7 +468,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 continue
             else:
                 if '-r' not in args[1:]:
-                    print('This command must be used as -r [prefix text] -r [optional suffix text]')
+                    print('Format with a second -r, such as in: `-r Define this word: # -r #`')
                     continue
                 else:
                     args = args[1:]
@@ -438,9 +484,11 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             amnesia = True
             continue
         elif prompt == 'help': # Show list of commands
-            print('For the full manual of commands and descriptions, type the command tanman')
-            print('''Available commands: codex, del, forget, help, history, 
-                    log, read, stats, (tok or token),  config, config [engine] [tokens] [-d:optional]''')
+            print('For the full manual of commands and descriptions, type tan')
+            text = ''
+            # for i in range(len(cmd_dict)):
+            #     text += f'{list(cmd_dict.keys())[i]}'
+            print(list(cmd_dict.keys()))
         elif prompt == 'history': # Show convo history
             if history:
                 print(f'Conversation in memory shown below:\n\n{(history)}')
@@ -492,6 +540,9 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             default = max_tokens
             limit = max_token_limit
             max_tokens = set_max_tokens(default, limit)
+        elif prompt == 'temp':
+            temperature = set_temperature(temperature)
+            print(f'Temperature set to {temperature}')
         elif prompt in ['-c','-cs']: 
             # -c is a NON-amnesic clipboard reader
             # -cs is an amnesic clipboard summarizer.
@@ -563,25 +614,6 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 print('No readable text in codex_prompt.txt')
                 continue
         elif prompt in ['tan', 'tanman']:
-            cmd_dict = {
-            'config': 'Prompts configuration of engine and max_tokens. Used as config [engine] [tokens] [-d]',
-            'codex': 'Generate code from codex_prompt.txt',
-            'del': 'Delete the last exchange from memory',
-            'forget': 'Forget the past conversation. Alias -f',
-            'help': 'Display the list of commands',
-            'history': 'The current conversation in memory', 
-            'log': 'Toggle to enable or disable logging of conversation + response times', 
-            'read': 'Respond to text_prompt.txt', 
-            'stats': 'Prints the current configuration and session total tokens. Alias -s',
-            'tanman': 'brings up the TanManual (commands with their descriptions). Alias tan',
-            'tok': 'Set max tokens for the next response',
-            '-c': 'Respond to clipboard text (Uses conversation history)',
-            '-cs': 'Summarize clipboard text (Amnesic)',
-            '-r': 'Replaces second instance of -r with contents of clipboard:\n' + 
-                    'Syntax: -r [prefix text] -r [optional suffix text]\n' +
-                    'Example Usage: -r Define this word: # -r #\n' +
-                    'Replaces prompt with: Define this word: #clipboard_contents#'
-                    }
             
             text = '\nTanManual Opened! Available commands:\n\n' 
             for i in range(len(cmd_dict)):
@@ -612,7 +644,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 print(f'prompt is {token_count} tokens')
             try:
                 # Continues the conversation (Doesn't add newline if no history)
-                response = generate_text(debug, history + '\n' + prompt if history else prompt, engine, max_tokens)
+                response = generate_text(debug, history + '\n' + prompt if history else prompt, engine, max_tokens, temperature)
             except:
                 print('Response not generated. See above error. Try again?')
                 continue
