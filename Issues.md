@@ -1,11 +1,4 @@
-Current issue:
-{
-      "finish_reason": "stop",
-      "index": 0,
-      "logprobs": null,
-      "text": ""
-    }
-Working on using response for a bit more logic
+!! Do checks to see if directories valid first.
 
 
 In development:

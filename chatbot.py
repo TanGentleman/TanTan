@@ -169,16 +169,17 @@ def generate_text(debug, prompt, engine, max_tokens, temperature):
     return response
 
 # In development
-def try_gen(size):
+def try_gen(image_size, prompts = None):
+    print('Starting image generation!')
     valid = False
     while valid == False:
         try:
-            ig.generate_images_from_prompts(size)
+            ig.generate_images_from_prompts(f'{filepath}/DallE', image_size, prompts)
             valid = True
         except:
             print('Image generation failed.')
             return
-    print('Image generation successful!')
+
 def write_to_log_file(convo, response_times):
     try:
         with open(f'{filepath}/{full_logfile}', 'a') as file:
@@ -624,7 +625,6 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
         elif dev and prompt == 'download': 
             # image generation
             try_gen('default') 
-
             # Experimenting with a magic string generator for Link_Grabber.py to use
 
             # user_input = input('Throw something at me. Magic string headed back your way:\n')

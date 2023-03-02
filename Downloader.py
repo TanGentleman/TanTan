@@ -31,81 +31,81 @@ def sanitize_filename(filename):
 
 # Given content as a string, plus the delimiter to parse it, return arrays of titles and links
 def content_to_arrays(content, DELIMITER):
-        titles = []
-        links = []
-        for line in content.splitlines():
-            if DELIMITER not in line:
-                continue
-            try: # Extracting the title and url from each line
-                tit, url = line.split(DELIMITER)
-            except:
-                print('wow, you broke my delimiter!')
-                raise(ValueError)
-            titles.append(tit)
-            links.append(url)
-        try: # Double checking formatting (list lengths)
-            assert(len(titles) == len(links))
+    titles = []
+    links = []
+    for line in content.splitlines():
+        if DELIMITER not in line:
+            continue
+        try: # Extracting the title and url from each line
+            tit, url = line.split(DELIMITER)
         except:
-            print(f'Format must be TITLE + {DELIMITER} + URL')
-            raise(TanSaysNoNo)
-        return titles, links
+            print('wow, you broke my delimiter!')
+            raise(ValueError)
+        titles.append(tit)
+        links.append(url)
+    try: # Double checking formatting (list lengths)
+        assert(len(titles) == len(links))
+    except:
+        print(f'Format must be TITLE + {DELIMITER} + URL')
+        raise(TanSaysNoNo)
+    return titles, links
 
 # Takes image content, returns its hashed value as a string.
 def get_image_hash(image_content):
-        hasher = sha256()
-        hasher.update(image_content)
-        return hasher.hexdigest()        
+    hasher = sha256()
+    hasher.update(image_content)
+    return hasher.hexdigest()        
 
 # Saves images in the form of titles, links to a given folder_path
 def save_images(titles, links, folder_path):
-        if len(titles) == 0:
-            print('List invalid.')
-            raise(TanSaysNoNo)
-        duplicates = ''
-        count = 0
-        total_count = 0
-        seen = set()
-        image_hashes = set()
+    if len(titles) == 0:
+        print('List invalid.')
+        raise(TanSaysNoNo)
+    duplicates = ''
+    count = 0
+    total_count = 0
+    seen = set()
+    image_hashes = set()
+    
+    # Loop over each line in the file
+    for i in range(len(links)):
+        url = links[i]
+        title = titles[i]
         
-        # Loop over each line in the file
-        for i in range(len(links)):
-            url = links[i]
-            title = titles[i]
-            
-            # Download the file
-            res = requests.get(url)
-            
-            # Extract the file extension from the URL
-            _, file_extension = os.path.splitext(url)
-            
-            # Compute the hash of the image data
-            image_hash = get_image_hash(res.content)
+        # Download the file
+        res = requests.get(url)
+        
+        # Extract the file extension from the URL
+        _, file_extension = os.path.splitext(url)
+        
+        # Compute the hash of the image data
+        image_hash = get_image_hash(res.content)
 
-            # Check if the image has already been downloaded
-            if image_hash in image_hashes:
-                # Skip this image
-                duplicates += (f'Skipping duplicate image: {title}{file_extension}\n')
-                print(f'Skipping duplicate image: {title}{file_extension}')
-                continue
+        # Check if the image has already been downloaded
+        if image_hash in image_hashes:
+            # Skip this image
+            duplicates += (f'Skipping duplicate image: {title}{file_extension}\n')
+            print(f'Skipping duplicate image: {title}{file_extension}')
+            continue
 
-            # Add the image hash to the set of image hashes
-            image_hashes.add(image_hash)
-            filename = sanitize_filename(title)
+        # Add the image hash to the set of image hashes
+        image_hashes.add(image_hash)
+        filename = sanitize_filename(title)
 
-            if filename in seen:
-                count+=1
-                filename = filename + f'_{count}'
-            seen.add(filename)
+        if filename in seen:
+            count+=1
+            filename = filename + f'_{count}'
+        seen.add(filename)
 
-            # Save the image
-            try:
-                with open(f'{folder_path}/{filename}{file_extension}', 'wb') as f:
-                    f.write(res.content)
-                    total_count+=1
-            except:
-                print('Welp, unable to save the image')
-                raise(TanSaysNoNo)
-        return total_count, duplicates
+        # Save the image
+        try:
+            with open(f'{folder_path}/{filename}{file_extension}', 'wb') as f:
+                f.write(res.content)
+                total_count+=1
+        except:
+            print('Welp, unable to save the image')
+            raise(TanSaysNoNo)
+    return total_count, duplicates
 
 # runs content_to_arrays with error handling
 def try_content_to_arrays(content, DELIMITER):
