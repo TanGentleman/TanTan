@@ -87,9 +87,12 @@ def check_truncation_and_toks(response):
             elif i == 1: prompt_tokens = tok_val
             elif i == 2: total_tokens = tok_val
         except:
-            print(f'Token value not found for {usage_vals[i]}')
-            print('Response failed.')
-            raise(TanSaysNoNo)
+            if i == 0: completion_tokens = 0
+            else:
+                print(f'Token value not found for {usage_vals[i]}')
+                print('Response failed.')
+                raise(TanSaysNoNo)
+        
     try:
         response = response['choices'][0]
     except:
@@ -663,7 +666,14 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             except:
                 print('check_truncation_and_toks failure, fix incoming')
                 continue
-            if response:
+            if response is None:
+                print('Blocked or truncated')
+                full_log += '*x*'
+                continue
+            if response == '':
+                print('Blank Space (no response)')
+                full_log += '*x*'
+            if response is not None:
                 time_taken = time.time()-start_time
                 if debug: print('beep, we got a response!')
                 # Dev tokenization check
@@ -712,6 +722,8 @@ def main(engine, max_tokens, debug):
     except EOFError:
         print('You have interrupted your session. It has been terminated, with no logfiles saved.')
         return
+    except:
+        print('Debug me! I am looking for more ways to reach this point.')
     if logs:
         (convo, response_times, logging_on) = logs
         if logging_on:
