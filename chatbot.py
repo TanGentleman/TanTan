@@ -35,7 +35,7 @@ max_session_total_tokens = 4000
 warning_history_count = 3000
 
 # These will be configurable variables in future updates. Presets need to be added first.
-default_temperature = 0.2
+default_temperature = 0.3
 frequency_penalty_val = 1.0
 
 
@@ -51,16 +51,19 @@ cmd_dict = {
             'history': 'The current conversation in memory', 
             'log': 'Toggle to enable or disable logging of conversation + response times', 
             'read': 'Respond to text_prompt.txt', 
-            'stats': 'Prints the current configuration and session total tokens. Alias -s',
+            'save': 'Save the current conversation log to conversation.txt. Alias -s',
+            'stats': 'Prints the current configuration and session total tokens.',
             'tanman': 'brings up the TanManual (commands with their descriptions). Alias tan',
-            'tok': 'Set max tokens for the next response',
+            'temp': 'Configure temperature (0.0-1.0)',
+            'tok': 'Configure max tokens for the response',
             '-c': 'Respond to clipboard text (Uses conversation history)',
             '-cs': 'Summarize clipboard text (Amnesic)',
-            '-r': 'Replaces second instance of -r with contents of clipboard:\n' + 
+            '-r': 'Amnesic command, as lone command it uses clipboard contents as prompt\n' +
+                    'To format: Replace second instance of -r with contents of clipboard:\n' + 
                     'Syntax: `-r [prefix text] -r [optional suffix text]`\n' +
                     'Example Usage: `-r Define this word: # -r #`\n' +
                     'Replaces prompt with: Define this word: #clipboard_contents#'
-        }
+            }
 
 
 
@@ -341,7 +344,7 @@ def set_temperature(default):
             legal_answer = True
         else:
             print('Try a value between 0.0 and 1.0')
-    return temperature
+    return round(temperature,2)
 
 def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
     if ask_engine:
@@ -431,7 +434,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             return full_log, response_time_log, logging_on
 
         # Need to organize the below commands
-        elif prompt in ['-s','stats']:
+        elif prompt == 'stats':
             print(f'engine: {engine}, max_tokens = {max_tokens}, temp = {temperature}, tokens used: {session_total_tokens}')
         elif prompt in ['-d', 'debug']:
             debug = not(debug)
@@ -570,20 +573,14 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             # Amnesic command, will not affect current configuration or history
             # Responds to codex_prompt.txt using codex engine
             
-            print(f'Trying codex!')
             # If file exists, read it. Else, write a template.
             if path.isfile(f'{filepath}/codex_prompt.txt'):
-                pass
+                print(f'Reading codex!')
             else:
                 print('You have not written a codex_prompt.txt file for me to read. I gotchu.')
-                try:
-                    with open(f'{filepath}/codex_prompt.txt', 'w') as file:
+                with open(f'{filepath}/codex_prompt.txt', 'w') as file:
                         file.write('# This Python3 function [What it does]:\ndef myFunc():\n\t#Do THIS')
                         print('Toss something in there before setting the tokens!')
-                except:
-                    print(f'Error! Could not write to {filepath}/codex_prompt.txt')
-                    print('That is bad! Pls fix!')
-                    continue
             
             # Set tokens (persistent until valid chosen!)
             default = None
@@ -620,17 +617,34 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 text += f'{list(cmd_dict.keys())[i]}: {list(cmd_dict.values())[i]}\n'
             print(text)      
         # This one is just experimentation for now
-        elif dev and prompt == 'download': # Experimenting with a magic string generator for Link_Grabber.py to use
-            raw_input = input('Throw something at me. Magic string headed back your way:\n')
-            try:
-                template = read_download_template()
-            except:
-                print('welp, could not read download_template.txt')
-                continue
-            replace_input = True
-            replace_input_text = template + raw_input + '\nOutput:'
-            history = ''
-            max_tokens = 15
+        # save the current full_log to a response.txt
+        elif prompt in ['-s','save']:
+            with open(f'{filepath}/conversation.txt', 'w') as file:
+                file.write(full_log)
+            print('Saved!')
+        elif dev and prompt == 'download': 
+            # image generation
+            try_gen('default') 
+
+            # Experimenting with a magic string generator for Link_Grabber.py to use
+
+            # user_input = input('Throw something at me. Magic string headed back your way:\n')
+            # template = read_download_template()
+            # if template:
+            #     replace_input = True
+            #     prefix = template
+            #     suffix = '\nOutput:'
+            #     replace_input_text = set_prompt(user_input, prefix, suffix)
+            #     history = ''
+            #     max_tokens = 15
+            #     cached_history = history
+            #     history = ''
+
+            #     amnesia = True
+            #     continue
+            # else:
+            #     print('welp, could not read download_template.txt')
+            #     continue
         else:
             # All valid non-command inputs to the bot go through here.
             if debug: print('beep, about to try generating response')
@@ -674,7 +688,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 response_count += 1
                 # Log the response and response time
                 full_log += f'({response_count}.)' + prompt + '\n' + response_time_marker + response + '\n'
-                response_time_log += f'[#:{response_count}, RT:{RT}, T:{total_tokens}, E:{engine_marker}]'
+                response_time_log += f'[#{response_count}, RT:{RT}, T:{total_tokens}, E:{engine_marker}]'
 
                 # Print the response and response time
                 print(f'Response {response_count}: {response}\n\n')
