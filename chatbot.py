@@ -73,32 +73,38 @@ def check_truncation_and_toks(response):
         print('*Warning: message may be truncated. Adjust max tokens as needed.')
     return response['text'], completion_tokens, prompt_tokens, total_tokens
 
-def read_codex_prompt():
+def read_prompt(filepath, filename):
     try:
-        contents_path = f'{filepath}/codex_prompt.txt'
+        contents_path = f'{filepath}/{filename}'
         with open(contents_path, 'r') as file:
             file_contents = file.read()
             return file_contents
     except FileNotFoundError:
-        print('No codex_prompt.txt in this directory found')
+        print(f'No {filename} in this directory found')
+
+def read_codex_prompt():
+    filename = 'codex_prompt.txt'
+    text = read_prompt(filepath, filename)
+    if text:
+        return text
+    else:
+        print('Could not read codex_prompt.txt')
 
 def read_text_prompt():
-    try:
-        contents_path = f'{filepath}/text_prompt.txt'
-        with open(contents_path, 'r') as file:
-            file_contents = file.read()
-            return file_contents
-    except FileNotFoundError:
-        print('No text_prompt.txt in this directory found')
+    filename = 'text_prompt.txt'
+    text = read_prompt(filepath, filename)
+    if text:
+        return text
+    else:
+        print(f'Could not read {filename}')
 
 def read_download_template():
-    try:
-        contents_path = f'{filepath}/TrainingData/download_template.txt'
-        with open(contents_path, 'r') as file:
-            file_contents = file.read()
-            return file_contents
-    except FileNotFoundError:
-        print('No download_template.txt in this directory found')
+    filename = 'TrainingData/download_template.txt'
+    text = read_prompt(filepath, filename)
+    if text:
+        return text
+    else:
+        print(f'Could not read {filename}')
 
 
 # Needs comments
@@ -158,9 +164,9 @@ def write_to_log_file(convo, response_times):
 
 
 def parse_args(args, slow_status, engine, max_tokens, debug):
-    """
+    '''
     This function parses the command line arguments and returns the engine, max_tokens, and debug values.
-    """
+    '''
 
     if args == []: # No arguments provided, return default values
         return engine, max_tokens, debug
@@ -386,13 +392,13 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             return full_log, response_time_log, logging_on
 
         # Need to organize the below commands
-        elif prompt == 'stats':
+        elif prompt in ['-s','stats']:
             print(f'engine: {engine}, max_tokens = {max_tokens}, tokens used: {session_total_tokens}')
         elif prompt.startswith('config'):
             args = prompt.split(' ')
             args_count = len(args)
             if args_count > 4:
-                print('Did you mean to type a config command? Format is "config [engine] [tokens] [-d]" ')
+                print('Did you mean to type a config command? Format is: config [engine] [tokens] [-d]')
                 continue
             else:
                 engine, max_tokens, debug = parse_args(args, slow_status, engine, max_tokens, debug)
@@ -401,7 +407,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             full_log += msg + '\n'
             continue
         # Embedded clipboard reading. Example command:-r Define this word: # -r #
-        elif prompt.startswith('-r'): # amnesic reading
+        elif prompt.startswith('-r'): # Amnesic mode
             args = prompt.split(' ')
             args_count = len(args)
             if args_count == 1:
@@ -482,7 +488,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 with open(f'{filepath}/text_prompt.txt', 'w') as file:
                     file.write('Insert text prompt here')
                 print('Try adding something!')
-        elif prompt in ['tok', 'token', 'tokens']:
+        elif prompt == 'tok':
             default = max_tokens
             limit = max_token_limit
             max_tokens = set_max_tokens(default, limit)
@@ -513,7 +519,6 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             # Amnesic command, will not affect current configuration or history
             # Responds to codex_prompt.txt using codex engine
             
-
             print(f'Trying codex!')
             # If file exists, read it. Else, write a template.
             if path.isfile(f'{filepath}/codex_prompt.txt'):
@@ -557,21 +562,28 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             else:
                 print('No readable text in codex_prompt.txt')
                 continue
-        elif prompt == 'tanman':
+        elif prompt in ['tan', 'tanman']:
             cmd_dict = {
-            'config': 'Prompts configuration of engine and max_tokens. Optional arguments are {-d}{engine}{max_tokens}',
+            'config': 'Prompts configuration of engine and max_tokens. Used as config [engine] [tokens] [-d]',
             'codex': 'Generate code from codex_prompt.txt',
             'del': 'Delete the last exchange from memory',
-            'forget': 'Forget the past conversation',
+            'forget': 'Forget the past conversation. Alias -f',
             'help': 'Display the list of commands',
             'history': 'The current conversation in memory', 
             'log': 'Toggle to enable or disable logging of conversation + response times', 
             'read': 'Respond to text_prompt.txt', 
-            'stats': 'Prints the current engine and max_tokens configuration', 
-            'tanman': 'brings up the TanManual (commands with their descriptions))',
-            'tok': 'Set max tokens for the next response, you can use "token" or "tokens" too'}
+            'stats': 'Prints the current configuration and session total tokens. Alias -s',
+            'tanman': 'brings up the TanManual (commands with their descriptions). Alias tan',
+            'tok': 'Set max tokens for the next response',
+            '-c': 'Respond to clipboard text (Uses conversation history)',
+            '-cs': 'Summarize clipboard text (Amnesic)',
+            '-r': 'Replaces second instance of -r with contents of clipboard:\n' + 
+                    'Syntax: -r [prefix text] -r [optional suffix text]\n' +
+                    'Example Usage: -r Define this word: # -r #\n' +
+                    'Replaces prompt with: Define this word: #clipboard_contents#'
+                    }
             
-            text = 'TanManual Opened! Available commands:\n' 
+            text = '\nTanManual Opened! Available commands:\n\n' 
             for i in range(len(cmd_dict)):
                 text += f'{list(cmd_dict.keys())[i]}: {list(cmd_dict.values())[i]}\n'
             print(text)      
@@ -626,7 +638,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 RT = round(time_taken, 1)
                 response_time_marker = f'(*{RT}s)' # (*1.2s) is the marker for 1.2 seconds
                 engine_id = engine.split('-')
-                engine_marker = engine_id[0][0], engine_id[0], engine_id[-1]
+                engine_marker = engine_id[0][0] + engine_id[1][0] + engine_id[2][-1]
                 response_count += 1
                 # Log the response and response time
                 full_log += f'({response_count}.)' + prompt + '\n' + response_time_marker + response + '\n'
