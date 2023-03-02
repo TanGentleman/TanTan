@@ -73,28 +73,6 @@ def check_truncation_and_toks(response):
         print('*Warning: message may be truncated. Adjust max tokens as needed.')
     return response['text'], completion_tokens, prompt_tokens, total_tokens
 
-# Needs comments
-def response_worked(response_input_vars):
-    if debug: print('beep, entering icky function response_worked')
-    (previous_history, debug, full_log, history, prompt, response, response_count, time_taken) = response_input_vars
-    
-    #add a marker to distinguish from user text
-    response_time_marker = f'(*{round(time_taken, 1)}s)'
-    previous_history = history
-    history += prompt + response + '\n'
-    # Dev tokenization check
-    if dev:
-        tokenized_text = tokenize(history)
-        token_count = len(tokenized_text)
-        if token_count > warning_history_count:
-            print(f'Conversation token count is growing large [{token_count}]. Please reset my memory as needed.')
-    full_log += f'({response_count+1}.)' + prompt + '\n' + response_time_marker + response + '\n'
-    print(f'Response {response_count+1}: {response}\n\n')
-    response_count += 1
-    print(f'response time: {round(time_taken, 1)} seconds')
-    response_output_vars = (previous_history, full_log, history, response_count)
-    return response_output_vars
-        
 def read_codex_prompt():
     try:
         contents_path = f'{filepath}/codex_prompt.txt'
@@ -347,21 +325,26 @@ Human:'''
 # This function needs proper re-structuring for readability!
 def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
     completion_tokens, prompt_tokens, total_tokens, session_total_tokens = (0, 0, 0, 0)
-    history, previous_history, full_log = ('', '', '')
-    response_count = 0
-    response_time_log = []
+    history, previous_history,  = ('', '')
+    
+    full_log, response_time_log = ('','')
     logging_on = True
-    text_prompt = ''
     replace_input = False
     replace_input_text = ''
-    config_info = f'Engine set to: {engine}, {max_tokens} Max Tokens\n'
-    full_log += config_info
-    print(config_info)
+    
+
+    amnesia = False
     cached_engine = None
     cached_history = None
     cached_tokens = None
-    amnesia = False
+    
+
+    response_count = 0
     chat_ongoing = True
+
+    config_info = f'Engine set to: {engine}, {max_tokens} Max Tokens\n'
+    full_log += config_info
+    print(config_info)
     while chat_ongoing:
         # Amnesia mode saves current configuration and history for next prompt
         if amnesia:
@@ -627,16 +610,37 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 print('check_truncation_and_toks failure, fix incoming')
                 continue
             if response:
-                if debug: print('beep, we got a response!')
                 time_taken = time.time()-start_time
-                response_input_vars = (previous_history, debug, full_log, history, prompt, response, response_count, time_taken)
-                response_output_vars = response_worked(response_input_vars)
-                (previous_history, full_log, history, response_count) = response_output_vars
+                if debug: print('beep, we got a response!')
+                # Dev tokenization check
+                if dev:
+                    tokenized_text = tokenize(history)
+                    token_count = len(tokenized_text)
+                    if token_count > warning_history_count:
+                        print(f'Conversation token count is growing large [{token_count}]. Please reset my memory as needed.')
+                # Record a savestate and append history
+                previous_history = history
+                history += prompt + response + '\n'
+
+                #add a marker to distinguish from user text
+                RT = round(time_taken, 1)
+                response_time_marker = f'(*{RT}s)' # (*1.2s) is the marker for 1.2 seconds
+                engine_id = engine.split('-')
+                engine_marker = engine_id[0][0], engine_id[0], engine_id[-1]
+                response_count += 1
+                # Log the response and response time
+                full_log += f'({response_count}.)' + prompt + '\n' + response_time_marker + response + '\n'
+                response_time_log += f'[#:{response_count}, RT:{RT}, T:{total_tokens}, E:{engine_marker}]'
+
+                # Print the response and response time
+                print(f'Response {response_count}: {response}\n\n')
+                print(f'response time: {round(time_taken, 1)} seconds')
+
                 session_total_tokens += total_tokens
-                response_time_log.append((time_taken, total_tokens, engine))
+                
                 if session_total_tokens > max_session_total_tokens:
                     print(f'Conversation is very lengthy. Session total tokens: {session_total_tokens}')
-                if debug: print(f'This completion was {round(total_tokens/4096)}% of the davinci maximum')
+                if debug: print(f'This completion was {round(100*total_tokens/4096)}% of the davinci maximum')
                 continue
             else:
                 print('Blocked or truncated')
