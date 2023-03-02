@@ -1,5 +1,6 @@
-!! Do checks to see if directories valid first.
-
+Current issue:
+! Checks to see if directories valid first.
+! Functions to make all needed folders
 
 In development:
 - Tokenizer using an offline, local, pretrained GPT2 Model (Need to handle log-warning better)

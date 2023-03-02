@@ -14,10 +14,7 @@ filepath = c.filepath + '/DallE'
 size_dict = {'small': '256x256', 'medium': '512x512', 'large': '1024x1024', 'default': default_size}
 
 
-debug = True
 openai_key = c.get_openai_api_key()
-
-
 
 # Takes a filename, returns a safely-formatted filename
 sanitize_filename = Downloader.sanitize_filename
@@ -45,8 +42,8 @@ def url_from_prompt(prompt, image_size):
     filename = sanitize_filename(prompt) + '.png'
     return image_url, filename
 
-#Takes in a filepath to an image, returns url of a generated variant.
-def image_from_image(filepath, image_size):
+# Takes in a filepath to an image, returns url of a generated variant.
+def image_url_from_image(filepath, image_size):
     openai.api_key = openai_key
     image = Image.open(filepath)
     # Convert the image to a BytesIO object
@@ -108,8 +105,6 @@ def prompts_from_input():
     print('sending over prompt list promptly!')
     return prompts
 
-
-
 def generate_images_from_prompts(filepath, image_size, prompts = None):
     urls = []
     titles = []
@@ -149,7 +144,7 @@ if __name__ == '__main__':
     main()
 
 def generate_variant(source_filepath, destination_filepath):
-    image_url = image_from_image(source_filepath)
+    image_url = image_url_from_image(source_filepath)
     save_file_from_url(destination_filepath, image_url)
     
 def save_file_from_url(filepath, url):
