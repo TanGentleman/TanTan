@@ -75,8 +75,9 @@ def check_truncation_and_toks(response):
 
 # Needs comments
 def response_worked(response_input_vars):
+    if debug: print('beep, entering icky function response_worked')
     (previous_history, debug, full_log, history, prompt, response, response_count, time_taken) = response_input_vars
-    if debug: print('beep, response worked')
+    
     #add a marker to distinguish from user text
     response_time_marker = f'(*{round(time_taken, 1)}s)'
     previous_history = history
@@ -444,9 +445,9 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                     print('Reading clipboard and formatting. Working on response...')
             cached_history = history
             history = ''
+
             amnesia = True
             continue
-            
         elif prompt == 'help': # Show list of commands
             print('For the full manual of commands and descriptions, type the command tanman')
             print('''Available commands: codex, del, forget, help, history, 
@@ -478,16 +479,26 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 msg = '<Logging enabled> Conversation WILL be stored.\n'
                 print(msg)
                 logging_on = True
-        elif prompt == 'read': # Respond to text_prompt.txt
+        elif prompt == 'read': # Responds to text_prompt.txt
+            # Amnesic reading
             if path.isfile(f'{filepath}/text_prompt.txt'):
                 text_prompt = read_text_prompt()
-                print('Reading text_prompt.txt')
-                replace_input = True
-                replace_input_text = text_prompt
+                if text_prompt:
+                    print('Reading text_prompt.txt')
+                    replace_input = True
+                    replace_input_text = text_prompt
+                    cached_history = history
+                    history = ''
+
+                    amnesia = True
+                    continue
+                else:
+                    print('text_prompt.txt is empty. Try adding something!')
             else:
                 print('You have not written a text_prompt.txt file for me to read. I gotchu.')
                 with open(f'{filepath}/text_prompt.txt', 'w') as file:
                     file.write('Insert text prompt here')
+                print('Try adding something!')
         elif prompt in ['tok', 'token', 'tokens']:
             default = max_tokens
             limit = max_token_limit
@@ -513,6 +524,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 # I think I will keep this non-amnesic, as it may be useful to use -c to keep convo but with text selections.
                 replace_input_text = clipboard.paste()
                 print('Responding to clipboard text...')
+                continue # No amnesia, so it will use the current history.
 
         elif prompt == 'codex':
             # Amnesic command, will not affect current configuration or history
@@ -621,10 +633,10 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 response_output_vars = response_worked(response_input_vars)
                 (previous_history, full_log, history, response_count) = response_output_vars
                 session_total_tokens += total_tokens
-
                 response_time_log.append((time_taken, total_tokens, engine))
                 if session_total_tokens > max_session_total_tokens:
                     print(f'Conversation is very lengthy. Session total tokens: {session_total_tokens}')
+                if debug: print(f'This completion was {round(total_tokens/4096)}% of the davinci maximum')
                 continue
             else:
                 print('Blocked or truncated')
