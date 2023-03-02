@@ -1,3 +1,13 @@
+Current issue:
+{
+      "finish_reason": "stop",
+      "index": 0,
+      "logprobs": null,
+      "text": ""
+    }
+Working on using response for a bit more logic
+
+
 In development:
 - Tokenizer using an offline, local, pretrained GPT2 Model (Need to handle log-warning better)
 - Documentation for the chatbot
@@ -29,10 +39,11 @@ Fixed:
 - Logic for adding smart config strings like <config curie -d> or <config davinci 400> to the function interactive_chat()
 - Slow_Status needs to always apply, even if 'config arg' string shortcut used
 - Consolidate codex + regular else condition logic
+- Handle log file exceptions
 - Add cache variables to store engine/token/history
 - Expand 'tanman' command documentation
-- Handling log files
 - Be able to save current convo to conversation.txt at any time.
+- Pesky bugfix for empty string response not storing original prompt in history
 
 To-Do List:
 - Make var valid_flags = [-c, -cs, etc.] and organize command section accordingly

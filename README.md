@@ -131,8 +131,3 @@ The following steps assume you have all the required dependencies.
     - Run Shell Script
     - `python3 Documents/TanTan/Downloader.py {PROVIDED_INPUT}`
 - End If
-
-# List of important variables, functions, and workflows (Work in Progress):
-- 
-
-*Should I make a separate markdown file for this?*

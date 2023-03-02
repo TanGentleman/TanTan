@@ -4,8 +4,6 @@
 # Permits arrow key functionality to see prior messages within an input() prompt, which can be an annoyance by default in the executable
     # The above perk needs readline installed, using homebrew make things simpler.
 
-
-# Double check file is in ~/Users/{Name}/chat.py! and you are running this from {Name}! (Afaik, the default in terminal)
 # Check Chatbot README.md for how to run
 
 import sys
