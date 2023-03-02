@@ -7,3 +7,5 @@ ScrapeAndSpreddit/*
 tansecrets.py
 image_generation.py
 sand.py
+whisper.py
+conversation_generation.py

@@ -10,8 +10,6 @@ Under development:
 # Active Issues:
 
 Chatbot.py
-- [ ] Change some commands to flags (-c, -r, -rs, etc. to decrease collisions with legitimate prompts) + organize that section
-- [ x ] Need safeguards in check_truncation_and_toks
 - ![ ] Unsafe array accesses and variable assignments need to be handled appropriately
 - ![ ] Add assert statements to ensure loop correctness
 - [ ] Create better "help" functionality and prompt guidance
@@ -30,10 +28,15 @@ Fixed:
 - Add generate token to test_setup.py
 - Logic for adding smart config strings like <config curie -d> or <config davinci 400> to the function interactive_chat()
 - Slow_Status needs to always apply, even if 'config arg' string shortcut used
-- Add 'tanman' command to chatbot.py that shows full command list and documentation [ Under development ]
 
 To-Do List:
-- Create amnesic mode that doesn't keep track of convo
+- Make var valid_flags = [-c, -cs, etc.] and organize command section accordingly
+- Expand 'tanman' command to chatbot.py that shows full command list and better documentation
+
+- Be able to save current convo to conversation.txt at any time.
+- Create cache variables that can store engine/token/history values? 
+    - It is possible that the better implementation is to create new engine/token/history variables, use them in generation,
+    and only store in cache when needed, which should not be often.
 - Work on better codex implementation
     - Text edit and text completions
 - Comment and clean up functions in chatbot.py
@@ -42,4 +45,15 @@ To-Do List:
     - Use prompt engineering on an OpenAI engine to generate magic strings from natural language and keywords
         - Create a dataset of natural language queries and corresponding magic strings [ In testing ]
 - Work on image generation
+- Play around with offline pretrained models like gpt2 but specialized
 
+My current workflow for Chatbot:
+- `python -i -m chat`
+
+If message truncated:
+- increase tokens as needed:
+    - `tok`
+    - input `500` (or however many ya need)
+
+To complete a truncated response:
+- Use a single space as the next input, should work fine with appropriate max token values.

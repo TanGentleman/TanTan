@@ -10,11 +10,10 @@ if c.dev:
     from transformers import GPT2TokenizerFast
     tokenize = GPT2TokenizerFast.from_pretrained("gpt2", local_files_only = True).tokenize
     environ["TOKENIZERS_PARALLELISM"] = "false"
+    import image_generation as ig
     dev = True
 else:
     dev = False
-    def tokenize(arg):
-        pass
 TanSaysNoNo = c.TanEx
 
 openai_key = c.get_openai_api_key()
@@ -41,6 +40,15 @@ frequency_penalty_val = 1.0
 slow_status = False # slow_status = False defaults to davinci - True defaults to curie + disables davinci
 debug = False
 
+def set_prompt(prompt, prefix = None,  suffix = None):
+    if prefix is None:
+        prefix = ''
+    if suffix is None:
+        suffix = ''
+    prompt = prefix + prompt + suffix
+    return prompt
+
+# Needs comments and clearer error handling after response fails
 def check_truncation_and_toks(response):
     completion_tokens, prompt_tokens, total_tokens = (0,0,0)
     usage_vals = ['completion_tokens', 'prompt_tokens', 'total_tokens']
@@ -65,13 +73,14 @@ def check_truncation_and_toks(response):
         print('*Warning: message may be truncated. Adjust max tokens as needed.')
     return response['text'], completion_tokens, prompt_tokens, total_tokens
 
+# Needs comments
 def response_worked(response_input_vars):
     (previous_history, debug, full_log, history, prompt, response, response_count, time_taken) = response_input_vars
     if debug: print('beep, response worked')
     #add a marker to distinguish from user text
     response_time_marker = f'(*{round(time_taken, 1)}s)'
     previous_history = history
-    history += prompt + response
+    history += prompt + response + '\n'
     # Dev tokenization check
     if dev:
         tokenized_text = tokenize(history)
@@ -103,9 +112,9 @@ def read_text_prompt():
     except FileNotFoundError:
         print('No text_prompt.txt in this directory found')
 
-def read_download_prompt():
+def read_download_template():
     try:
-        contents_path = f'{filepath}/download_template.txt'
+        contents_path = f'{filepath}/TrainingData/download_template.txt'
         with open(contents_path, 'r') as file:
             file_contents = file.read()
             return file_contents
@@ -113,7 +122,7 @@ def read_download_prompt():
         print('No download_template.txt in this directory found')
 
 
-
+# Needs comments
 def generate_text(debug, prompt, engine, max_tokens):
     # Set the API key
     openai.api_key = openai_key
@@ -144,7 +153,17 @@ def generate_text(debug, prompt, engine, max_tokens):
     if debug: print(response)
     return response
 
-
+# In development
+def try_gen(size):
+    valid = False
+    while valid == False:
+        try:
+            ig.generate_images_from_prompts(size)
+            valid = True
+        except:
+            print('Image generation failed.')
+            return
+    print('Image generation successful!')
 def write_to_log_file(convo, response_times):
     try:
         with open(f'{filepath}/{full_logfile}', 'a') as file:
@@ -234,8 +253,11 @@ def engine_choice(engine_prompt, slow_status):
     if len(engine_prompt) < 2:
         print('Please enter at least two characters for the engine selection.')
         raise(NameError)
-    if (engine_prompt == 'text-ada-001') or ('ada'.startswith(engine_prompt)):
+    elif (engine_prompt == 'text-ada-001') or ('ada'.startswith(engine_prompt)):
         engine = 'text-ada-001'
+        return engine
+    elif (engine_prompt == 'text-embedding-ada-002') or ('adae'.startswith(engine_prompt)):
+        engine = 'text-embedding-ada-002'
         return engine
     elif (engine_prompt == 'text-babbage-001') or ('babbage'.startswith(engine_prompt)):
         engine = 'text-babbage-001'
@@ -264,22 +286,31 @@ def engine_choice(engine_prompt, slow_status):
         print('invalid engine choice')
         raise(NameError)
 
-def set_max_tokens(max_tokens):
+# This function assumes both the default tokens and token limit are SAFE and correct values
+def set_max_tokens(default, limit):
+    # Keep trying until a valid max_tokens value is set
     legal_answer = False
     while legal_answer == False:
-        token_prompt = input('Max Token count: ')
-        if input in ['', ' ']:
-            token_prompt = default_max_tokens
-            print(f'Max tokens [default]: {default_max_tokens}')
-        try:
-            token_prompt = int(token_prompt)
-            if (token_prompt > 0) and (token_prompt <= max_token_limit):
-                max_tokens = token_prompt
-                legal_answer = True
+        user_input = input('Max Token count: ')
+        if user_input in ['', ' ']:
+            if default:
+                print(f'Max tokens [default]: {default}')
+                return default
             else:
-                print(f'Try a value between 1 and {max_token_limit} for now')
+                'You really like Blank Space, huh?'
+                continue
+        try:
+            user_tokens = int(user_input)
         except:
-            print(f'Not recognized max token value. Try an integer from 1 to {max_token_limit}.')
+            print(f'Not recognized max token value. Try an integer from 1 to {limit}.')
+            continue
+
+        if (user_tokens > 0) and (user_tokens <= limit):
+            max_tokens = user_tokens
+            legal_answer = True
+        else:
+            print(f'Try a value between 1 and {limit} for now')
+    # Answer is legal, return it
     return max_tokens
 
 def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
@@ -297,10 +328,11 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
         try:
             engine = engine_choice(engine, slow_status)
         except:
-            print('Welp, dunno how it broke. Help?')
+            print('config():Welp, seems your engine appears invalid to engine_choice(). I shall leave it alone.')
     if ask_token:
-        max_tokens = set_max_tokens(max_tokens)
-    
+        default = default_max_tokens
+        limit = max_token_limit
+        max_tokens = set_max_tokens(default, limit)
     return engine, max_tokens
 
 def choosePreset(n):
@@ -312,47 +344,64 @@ Human:'''
         suffix = '\nAI: '
 
 # This function needs proper re-structuring for readability!
-def interactive_chat(slow_status, engine, max_tokens, debug):
+def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
     completion_tokens, prompt_tokens, total_tokens, session_total_tokens = (0, 0, 0, 0)
     history, previous_history, full_log = ('', '', '')
     response_count = 0
     response_time_log = []
     logging_on = True
-    prompt_from_file = False
     text_prompt = ''
     replace_input = False
     replace_input_text = ''
     config_info = f'Engine set to: {engine}, {max_tokens} Max Tokens\n'
     full_log += config_info
     print(config_info)
+    cached_engine = None
+    cached_history = None
+    cached_tokens = None
+    amnesia = False
+    chat_ongoing = True
+    while chat_ongoing:
+        # Amnesia mode saves current configuration and history for next prompt
+        if amnesia:
+            amnesia = False
+        else:
+            # The following 3 assume correctness of cached vars
+            if cached_engine:
+                engine = cached_engine # Restore the engine
+                cached_engine = None
+            if cached_history:
+                history = cached_history # Restore the history
+                cached_history = None
+            if cached_tokens:
+                max_tokens = cached_tokens # Restore the max_tokens
+                cached_tokens = None
 
-    while True:
-        #Ask for input
+        # Get prompt
         if replace_input:
-            history = '' # Don't factor in the previous conversation
-            if prompt_from_file:
-                prompt = text_prompt
-                prompt_from_file = False
-            else:
-                prompt = replace_input_text
+            prompt = replace_input_text # Use the replacement text
             replace_input = False
         else:
             prompt = input('Enter a prompt: ')
+
+        # Start the timer
         start_time = time.time()
 
-        # TO-DO: Organize this section
-
-        # ESCAPE COMMAND
+        # If Blank Space
         if len(prompt) < 1:
             print('Taylor Swift, I like it!')
+
+        # Quit Chat
         elif prompt == 'quit':
             if session_total_tokens == 0:
                 logging_on = False
                 print('This was not logged.')
             else:
-                full_log += f'tokens used: {session_total_tokens}'
+                full_log += f'Tokens used: {session_total_tokens}'
+            # chat_ongoing = False (eventually will be updated)
             return full_log, response_time_log, logging_on
-        
+
+        # Need to organize the below commands
         elif prompt == 'stats':
             print(f'engine: {engine}, max_tokens = {max_tokens}, tokens used: {session_total_tokens}')
         elif prompt.startswith('config'):
@@ -367,13 +416,44 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             print(msg + '\n')
             full_log += msg + '\n'
             continue
+        # Embedded clipboard reading. Example command:-r Define this word: # -r #
+        elif prompt.startswith('-r'): # amnesic reading
+            args = prompt.split(' ')
+            args_count = len(args)
+            if args_count == 1:
+                replace_input = True
+                replace_input_text = clipboard.paste()
+                print('Reading clipboard. Working on response...')
+                # Cache history here
+                cached_history = history
+                history = ''
 
+                amnesia = True
+                continue
+            else:
+                if '-r' not in args[1:]:
+                    print('This command must be used as -r [prefix text] -r [optional suffix text]')
+                    continue
+                else:
+                    args = args[1:]
+                    n = args.index('-r')
+                    prefix = ' '.join(args[:n])
+                    suffix = ' '.join(args[n+1:])
+                    replace_input = True
+                    replace_input_text = set_prompt(clipboard.paste(), prefix, suffix)
+                    print('Reading clipboard and formatting. Working on response...')
+            cached_history = history
+            history = ''
+            amnesia = True
+            continue
+            
         elif prompt == 'help': # Show list of commands
             print('For the full manual of commands and descriptions, type the command tanman')
-            print('Available commands: codex, del, forget, help, history, log, read, stats, (tok or token),  config, config [engine] [tokens] [-d:optional]')
+            print('''Available commands: codex, del, forget, help, history, 
+                    log, read, stats, (tok or token),  config, config [engine] [tokens] [-d:optional]''')
         elif prompt == 'history': # Show convo history
             if history:
-                print(f'HISTORY shown below:\n\n{(history)}')
+                print(f'Conversation in memory shown below:\n\n{(history)}')
             else:
                 print('No conversation history in memory.')
         elif prompt in ['-f','forget']: # Erase convo history
@@ -382,6 +462,9 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             print(msg)
             full_log += msg
         elif prompt == 'del': # Delete last exchange
+            if history == previous_history:
+                print('No previous exchange to delete.')
+                continue
             history = previous_history
             msg = '<I have deleted the last exchange from my memory>\n'
             print(msg)
@@ -399,101 +482,85 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             if path.isfile(f'{filepath}/text_prompt.txt'):
                 text_prompt = read_text_prompt()
                 print('Reading text_prompt.txt')
-                prompt_from_file = True
                 replace_input = True
-                continue
+                replace_input_text = text_prompt
             else:
                 print('You have not written a text_prompt.txt file for me to read. I gotchu.')
                 with open(f'{filepath}/text_prompt.txt', 'w') as file:
                     file.write('Insert text prompt here')
-            continue
         elif prompt in ['tok', 'token', 'tokens']:
-            max_tokens = set_max_tokens(max_tokens)
-        # -c and -cs for Clipboard and Clipboard Summary erase all prior history.
-        elif prompt in ['-c','-cs']: # This is used to perform a completion using the text in one's clipboard. Check the below prompt framing.
+            default = max_tokens
+            limit = max_token_limit
+            max_tokens = set_max_tokens(default, limit)
+        elif prompt in ['-c','-cs']: 
+            # -c is a NON-amnesic clipboard reader
+            # -cs is an amnesic clipboard summarizer.
+
+            # This is used to perform a completion using the text in one's clipboard. Check the below prompt framing.
             replace_input = True
             if prompt == '-cs': #clipboard summary? I think -cs kinda works
-                replace_input_text = '"# Please provide a brief summary of the following text, then add *stop*:\n' + clipboard.paste() + '\n#'
-            else:
+                prefix = '# Provide a brief summary of the following text:\n#'
+                suffix = '\n#'
+                replace_input_text = set_prompt(clipboard.paste(), 
+                                prefix = 'Please provide a brief summary of the following text:\n#', suffix = '\n#')
+                print('Summarizing clipboard text...')
+                cached_history = history
+                history = ''
+
+                amnesia = True
+                continue
+            elif prompt == '-c':
+                # I think I will keep this non-amnesic, as it may be useful to use -c to keep convo but with text selections.
                 replace_input_text = clipboard.paste()
-            continue
-            # Codex takes the input from codex_prompt.txt and completes the given task. It does not use past conversation history,
+                print('Responding to clipboard text...')
+
         elif prompt == 'codex':
+            # Amnesic command, will not affect current configuration or history
+            # Responds to codex_prompt.txt using codex engine
+            
+
             print(f'Trying codex!')
+            # If file exists, read it. Else, write a template.
             if path.isfile(f'{filepath}/codex_prompt.txt'):
                 pass
             else:
                 print('You have not written a codex_prompt.txt file for me to read. I gotchu.')
                 try:
                     with open(f'{filepath}/codex_prompt.txt', 'w') as file:
-                        file.write('Please create the following function with comments in Python:\n' +
-                                        'def myFunc():\n\t#Do THIS\nSeed Text: It should be optimized for performance and readability.')
+                        file.write('# This Python3 function [What it does]:\ndef myFunc():\n\t#Do THIS')
+                        print('Toss something in there before setting the tokens!')
                 except:
                     print(f'Error! Could not write to {filepath}/codex_prompt.txt')
-                print('Toss something in there and try again!')
-                continue
-            valid_answer = False
-            codex_tokens = 0
-            while valid_answer == False:
-                user_input = ''
-                user_input = input('Make sure you have a codex_prompt.txt file in the filepath! Set max codex tokens: ')
-                try:
-                    if user_input == 'quit':
-                        replace_input = True
-                        replace_input_text = 'quit'
-                        continue
-                    user_input = int(user_input)
-                    if (0 < user_input) and (user_input <= max_codex):
-                        codex_tokens = user_input
-                        valid_answer = True
-                    else:
-                        print(f'Choose a value under {max_codex}')
-                except:
-                    print(f'Format should be a valid integer less than {max_codex}')
+                    print('That is bad! Pls fix!')
+                    continue
+            
+            # Set tokens (persistent until valid chosen!)
+            default = None
+            limit = max_codex
+            codex_tokens = set_max_tokens(default, limit)
+            
+            # Set prompt
+            codex_text = read_codex_prompt()
 
-            try: #1
-                codex_prompt = read_codex_prompt()
-                if dev:
-                    tokenized_text = tokenize(codex_prompt)
-                    token_count = len(tokenized_text)
-                    if token_count + codex_tokens > 4000:
-                        print(f'TOO LONG I THINK: prompt is {token_count} tokens, decrease codex_tokens to {4000-token_count}')
-                try: #2
-                    response = generate_text(debug, codex_prompt, 'code-davinci-002', codex_tokens)
-                except:
-                    print('Codex response not generated. Error 2.')
-                    continue
-                try: #3
-                    response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response)
-                except:
-                    print('Codex response not generated. Error 3.')
-                    continue
-                if response:
-                    try: #4
-                        time_taken = time.time()-start_time
-                        response_input_vars = (previous_history, debug, full_log, history, prompt, response, response_count, time_taken)
-                        response_output_vars = response_worked(response_input_vars)
-                        response_time_log.append((time_taken, total_tokens, engine))
-                        (previous_history, full_log, history, response_count) = response_output_vars
-                    except:
-                        print('Codex response not generated. Error 4.')
-                else:
-                    print('Blocked or truncated')
-                    full_log += '*x*'
-                    continue
-                try:
-                    with open(f'{filepath}/codex_response.txt', 'w') as file:
-                        file.write(response)
-                        print('Saved codex_response.txt')
-                except:
-                    print('Could not save codex_response.txt')
-                    
-                session_total_tokens += total_tokens
-                if session_total_tokens > max_session_total_tokens:
-                    print('CONVO GETTIN LONG')
+            if codex_text:
+                # Replace prompt text with the text from codex_prompt.txt
+                replace_input = True
+                replace_input_text = codex_text
+
+                # Cache history to continue conversation afterwards
+                cached_history = history
+                cached_engine = engine
+                cached_tokens = max_tokens
+
+                # Configure for codex, Bypasses slow_status!
+                history = ''
+                engine = 'code-davinci-002' # Latest codex model
+                max_tokens = codex_tokens
+                
+                amnesia = True
                 continue
-            except:
-                print('Codex response not generated. Error 1.')
+            else:
+                print('No readable text in codex_prompt.txt')
                 continue
         elif prompt == 'tanman':
             cmd_dict = {
@@ -513,19 +580,20 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             for i in range(len(cmd_dict)):
                 text += f'{list(cmd_dict.keys())[i]}: {list(cmd_dict.values())[i]}\n'
             print(text)      
+        # This one is just experimentation for now
+        elif dev and prompt == 'download': # Experimenting with a magic string generator for Link_Grabber.py to use
+            raw_input = input('Throw something at me. Magic string headed back your way:\n')
+            try:
+                template = read_download_template()
+            except:
+                print('welp, could not read download_template.txt')
+                continue
+            replace_input = True
+            replace_input_text = template + raw_input + '\nOutput:'
+            history = ''
+            max_tokens = 15
         else:
             # All valid non-command inputs to the bot go through here.
-            
-            if dev and prompt == 'download': # Experimenting with a magic string generator for Link_Grabber.py to use
-                raw_input = input('Throw something at me. Magic string headed back your way:\n')
-                try:
-                    template = read_download_prompt()
-                except:
-                    print('welp, could not read download_template.txt')
-                    continue
-                prompt = template + raw_input + '\nOutput:'
-                history = ''
-                max_tokens = 10
             if debug: print('beep, about to try generating response')
             if dev:
                 tokenized_text = tokenize(prompt)
@@ -544,10 +612,10 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             try:
                 response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response)
             except:
-                print('TRUNCATION BROKE IT')
+                print('check_truncation_and_toks failure, fix incoming')
                 continue
-            if debug: print('beep')
             if response:
+                if debug: print('beep, we got a response!')
                 time_taken = time.time()-start_time
                 response_input_vars = (previous_history, debug, full_log, history, prompt, response, response_count, time_taken)
                 response_output_vars = response_worked(response_input_vars)
