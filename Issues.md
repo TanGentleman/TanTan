@@ -2,6 +2,7 @@ Current issue:
 ! Checks to see if directories valid first.
 ! Functions to make all needed folders
 ! Do reddit API key check before any workflow progress
+! 
 
 !! Issues in Downloader.py if filename arg invalid (like "r/sharks")
     - Should I just sanitize it first?
@@ -24,24 +25,29 @@ Chatbot.py
 - [ ] Checks to ensure loop correctness
 - [ x ] Create better "help" functionality and prompt guidance
 - [ ] Implement completion_tokens, prompt_tokens in their appropriate use cases
-- [ ! ] Command to save the current full_log to a response.txt
-- [ x ] Make consistent the different ways of running it (i.e no downloads when loaded from python env.)
+
 
 Reddit Link_Grabber
 - [ x ] Enable video configuration with proper safeguards for large mp4 files and total download size.
 - [ ] Enable third-party (YouTube) downloads
 - [ ] Fetch more meaningful data alongside the generated list
 
-Fixed:
-- Add generate token to test_setup.py
-- Logic for adding smart config strings like <config curie -d> or <config davinci 400> to the function interactive_chat()
-- Slow_Status needs to always apply, even if 'config arg' string shortcut used
+# Inactive Issues:
 - Consolidate codex + regular else condition logic
 - Handle log file exceptions
+- [ x ] Make consistent the different ways of running it (i.e no downloads when loaded from python env.)
+
+Features Added:
+- Add generate token to test_setup.py
+- Logic for adding smart config strings like <config curie -d> or <config davinci 400> to the function interactive_chat()
 - Add cache variables to store engine/token/history
-- Expand 'tanman' command documentation
+- Expanded 'tanman' command documentation
 - Be able to save current convo to conversation.txt at any time.
+
+Bugs Squashed:
+- Slow_Status needs to always apply, even if 'config arg' string shortcut used
 - Pesky bugfix for empty string response not storing original prompt in history
+- Filename from CLI arg sanitized in Downloader.py
 
 To-Do List:
 - Make var valid_flags = [-c, -cs, etc.] and organize command section accordingly
