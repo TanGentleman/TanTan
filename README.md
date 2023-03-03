@@ -131,3 +131,12 @@ The following steps assume you have all the required dependencies.
     - Run Shell Script
     - `python3 Documents/TanTan/Downloader.py {PROVIDED_INPUT}`
 - End If
+
+
+Using Chatbot from scratch (still in development):
+1. install homebrew
+2. install python
+3. install pip
+4. install dependencies
+5. install readline
+6. Run chatbot
