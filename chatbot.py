@@ -4,7 +4,7 @@ import openai
 import sys
 import datetime
 import time
-from os import path
+import os
 import config as c
 import clipboard
 if c.dev:
@@ -24,6 +24,15 @@ class QuitAndSaveError(Exception):
 def check_quit(text):
     if text == 'quit':
         raise QuitAndSaveError
+
+def format_engine_string(engine:str):
+    engine_id = engine.split('-')
+    engine_marker = engine_id[0][0].upper() + engine_id[1][0].upper() + engine_id[2][-1]
+    return engine_marker
+
+def config_msg(engine, max_tokens, session_total_tokens):
+    engine_marker = format_engine_string(engine)
+    return f'Engine: {engine_marker} | Max Tokens: {max_tokens} | Tokens Used: {session_total_tokens}\n'
 
 openai_key = c.get_openai_api_key()
 filepath = f'{c.filepath}/Chatbot'
@@ -159,20 +168,22 @@ def generate_text(debug, prompt, engine, max_tokens, temperature):
         # testing this 2000 thing for a sec
         max_tokens = 2000 if (max_tokens > 2000 and 'davinci' not in engine) else max_tokens,
         temperature = 0 if 'code' in engine else temperature,
-        frequency_penalty = frequency_penalty_val,
-        stop = '*stop*'
+        frequency_penalty = frequency_penalty_val
         )
     except openai.error.OpenAIError as e:
         status = e.http_status
         error_dict = e.error
         
-        print(status)
-        print(error_dict)
-        print(type(status), type(error_dict))
+        print('error:',status)
+        
         if status == 400:
             if error_dict['type'] == 'invalid_request_error':
                 message = error_dict['message']
                 print(f'invalid_request_error: {message}')
+            else:
+                print(error_dict)
+        else:
+            print(error_dict)
         return
     if debug: print(response)
     return response
@@ -222,14 +233,8 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
         if args[i] == 'config': # If the config argument is given
             try:
                 test_engine = args[i+1] # Get the engine name
-            except IndexError: # If no input arg for engine
-                ask_engine = True # Ask for the engine again
-                ask_token = True # Ask for the max tokens again
-                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
-                break
-            try:
                 test_engine = engine_choice(test_engine, slow_status) # Check if the engine is valid
-            except NameError: # If the engine is not valid
+            except (IndexError,ValueError): # If no input arg for engine / If the engine choice is invalid
                 ask_engine = True # Ask for the engine again
                 ask_token = True # Ask for the max tokens again
                 engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
@@ -248,7 +253,6 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
                 ask_token = False # Do NOT Ask for the max tokens again
                 engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
                 break
-            temp_tok_limit = 0
             if engine == 'code-davinci-002':
                 temp_tok_limit = max_codex # Set the max tokens limit to the codex limit
             else:
@@ -277,7 +281,7 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
 def engine_choice(engine_prompt, slow_status):
     if len(engine_prompt) < 2:
         print('Please enter at least two characters for the engine selection.')
-        raise(NameError)
+        raise(ValueError)
     elif (engine_prompt == 'text-ada-001') or ('ada'.startswith(engine_prompt)):
         engine = 'text-ada-001'
         return engine
@@ -309,7 +313,7 @@ def engine_choice(engine_prompt, slow_status):
             return engine
     else:
         print('invalid engine choice')
-        raise(NameError)
+        raise(ValueError)
 
 # This function assumes both the default tokens and token limit are SAFE and correct values
 def set_max_tokens(default, limit):
@@ -394,7 +398,8 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
 # This function needs proper re-structuring for readability!
 def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
     completion_tokens, prompt_tokens, total_tokens, session_total_tokens = (0, 0, 0, 0)
-    prefix, history, previous_history,  = ('','', '')
+    prefix, suffix = ('', '')
+    history, previous_history,  = ('', '')
     
     full_log, response_time_log = ('','')
     logging_on = True
@@ -413,7 +418,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
     chat_ongoing = True
 
     temperature = default_temperature
-    config_info = f'Engine: {engine}, {max_tokens} Max Tokens, Temp is {temperature}\n'
+    config_info = config_msg(engine, max_tokens, session_total_tokens)
     full_log += config_info
     print(config_info)
     while chat_ongoing:
@@ -464,10 +469,12 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             continue 
         # Need to organize the below commands
         elif prompt == 'stats':
-            print(f'engine: {engine}, max_tokens = {max_tokens}, temp = {temperature}, tokens used: {session_total_tokens}')
+            config_info = config_msg(engine, max_tokens, session_total_tokens)
+            print(config_info)
         elif prompt in ['-d', 'debug']:
             debug = not(debug)
         elif prompt.startswith('config'):
+            # Fix this to make it a bit more like -r
             args = prompt.split(' ')
             args_count = len(args)
             if args_count > 4:
@@ -484,40 +491,34 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             full_log += msg + '\n'
             continue
         # Embedded clipboard reading. Example command:-r Define this word: # -r #
-        elif prompt.startswith('-r'): # Amnesic mode
+        elif prompt.startswith('-r'): # Amnesic
             args = prompt.split(' ')
             args_count = len(args)
-            if args_count == 1:
-                if args[0] == '-r':
-                    print('Reading clipboard. Working on response...')
-                else:
-                    print('Syntax for -r strings is `-r [prefix text] -r [optional suffix text]`')
-                    continue
-                replace_input = True
-                replace_input_text = clipboard.paste()
-                # Cache history here
-                cached_history = history
-                history = ''
-
-                amnesia = True
+            if args[0] != '-r': # Just reads clipboard
+                print('Syntax for -r strings is `-r [prefix text] -r [optional suffix text]`')
                 continue
-            else:
-                if '-r' not in args[1:]:
-                    print('Format with a second -r, such as in: `-r Define this word: # -r #`')
-                    continue
-                else:
-                    args = args[1:]
-                    n = args.index('-r')
-                    prefix = ' '.join(args[:n])
-                    suffix = ' '.join(args[n+1:])
-                    replace_input = True
-                    replace_input_text = set_prompt(clipboard.paste(), prefix, suffix)
-                    print('Reading clipboard and formatting. Working on response...')
+
+            if '-r' not in args[1:]: # single -r = suffix mode
+                suffix = ' '.join(args[1:])
+                print(f'Suffix: {suffix}')
+                
+            else: # Prefix and suffix mode
+                args = args[1:]
+                n = args.index('-r')
+                prefix = ' '.join(args[:n])
+                suffix = ' '.join(args[n+1:])
+                print(f'Prefix: {prefix}, Suffix: {suffix}')
+
+            print('Reading clipboard. Working on response...')
+            replace_input = True
+            replace_input_text = clipboard.paste()
+            # Cache history here
             cached_history = history
             history = ''
 
             amnesia = True
             continue
+            
         elif prompt == 'help': # Show list of commands
             print('For the full manual of commands and descriptions, type tan')
             print(list(cmd_dict.keys()))
@@ -550,7 +551,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 logging_on = True
         elif prompt == 'read': # Responds to text_prompt.txt
             # Amnesic reading
-            if path.isfile(f'{filepath}/text_prompt.txt'):
+            if os.path.isfile(f'{filepath}/text_prompt.txt'):
                 text_prompt = read_text_prompt()
                 if text_prompt:
                     print('Reading text_prompt.txt')
@@ -592,10 +593,9 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             # This is used to perform a completion using the text in one's clipboard. Check the below prompt framing.
             replace_input = True
             if prompt == '-cs': #clipboard summary? I think -cs kinda works
-                prefix = '# Provide a brief summary of the following text:\n#'
+                prefix = 'Provide a brief summary of the following text:\n'
                 suffix = '\n#'
-                replace_input_text = set_prompt(clipboard.paste(), 
-                                prefix = 'Please provide a brief summary of the following text:\n#', suffix = '\n#')
+                replace_input_text = clipboard.paste(), 
                 print('Summarizing clipboard text...')
                 cached_history = history
                 history = ''
@@ -613,7 +613,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             # Responds to codex_prompt.txt using codex engine
             
             # If file exists, read it. Else, write a template.
-            if path.isfile(f'{filepath}/codex_prompt.txt'):
+            if os.path.isfile(f'{filepath}/codex_prompt.txt'):
                 print(f'Reading codex!')
             else:
                 print('You have not written a codex_prompt.txt file for me to read. I gotchu.')
@@ -691,6 +691,9 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             if prefix:
                 prompt = prefix + prompt
                 prefix = ''
+            if suffix:
+                prompt += suffix
+                suffix = ''
             # All valid non-command inputs to the bot go through here.
             if debug: print('beep, about to try generating response')
             if dev:
@@ -736,8 +739,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 #add a marker to distinguish from user text
                 RT = round(time_taken, 1)
                 response_time_marker = f'(*{RT}s)' # (*1.2s) is the marker for 1.2 seconds
-                engine_id = engine.split('-')
-                engine_marker = engine_id[0][0] + engine_id[1][0] + engine_id[2][-1]
+                engine_marker = format_engine_string(engine)
                 response_count += 1
                 # Log the response and response time
                 full_log += f'({response_count}.)' + prompt + '\n' + response_time_marker + response + '\n'
@@ -786,6 +788,7 @@ def main(engine, max_tokens, debug):
     if openai_key == None:
         print('Please set your OpenAI key in config.py')
         return
+    check_directories()
     try:
         logs = interactive_chat(slow_status, engine, max_tokens, debug)
     except KeyboardInterrupt:
@@ -810,6 +813,13 @@ def main(engine, max_tokens, debug):
         print('Error. Cannot set conversation and response time logfiles.')
         return
 
+def check_directories():
+    if not os.path.exists(filepath):
+        os.path.makedirs(filepath)
+    if not os.path.exists(filepath + '/TrainingData'):
+        os.path.makedirs(filepath + '/TrainingData')
+    return True
+
 # Allows execution from python environment with `import chatbot` to run like default script execution from CLI
 def main_from_args(args):
     try:
@@ -825,3 +835,15 @@ def main_from_args(args):
 if __name__ == '__main__':
     args = sys.argv
     main_from_args(args)
+
+def make_folder(folder_path):
+    try:
+        os.mkdir(folder_path)
+    except FileExistsError:
+        pass
+        # print(f'No worries: The folder at {folder_path} already exists')
+    # Have to sanitize folder name first!!
+    except:
+        print('Filepath not found!')
+        raise TanSaysNoNo
+
