@@ -125,6 +125,7 @@ def make_folder(folder_path):
         os.mkdir(folder_path)
     except FileExistsError:
         print(f'No worries: The folder {folder_name} already exists')
+    # Have to sanitize folder name first!!
     except:
         print('Filepath not found!')
         raise(TanSaysNoNo)
@@ -180,8 +181,8 @@ def main(folder_name):
 if __name__ == '__main__':
     arg_count = len(sys.argv)
     if arg_count > 1:
-        arg = sys.argv[1]
-        folder_name = arg
+        text = ' '.join(sys.argv[1:])
+        folder_name = sanitize_filename(text)
     else:
         print('When running from command line, please add an argument after path/to/downloader.py <RENAME_ME>')
         folder_name = 'RENAME_ME'

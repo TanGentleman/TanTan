@@ -3,6 +3,9 @@ Current issue:
 ! Functions to make all needed folders
 ! Do reddit API key check before any workflow progress
 
+!! Issues in Downloader.py if filename arg invalid (like "r/sharks")
+    - Should I just sanitize it first?
+
 In development:
 - Tokenizer using an offline, local, pretrained GPT2 Model (Need to handle log-warning better)
 - Documentation for the chatbot
