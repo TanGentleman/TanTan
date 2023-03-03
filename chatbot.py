@@ -1,3 +1,5 @@
+# Needed folders: Chatbot, Chatbot/TrainingData
+
 import openai
 import sys
 import datetime
@@ -392,7 +394,7 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
 # This function needs proper re-structuring for readability!
 def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
     completion_tokens, prompt_tokens, total_tokens, session_total_tokens = (0, 0, 0, 0)
-    history, previous_history,  = ('', '')
+    prefix, history, previous_history,  = ('','', '')
     
     full_log, response_time_log = ('','')
     logging_on = True
@@ -404,6 +406,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
     cached_engine = None
     cached_history = None
     cached_tokens = None
+    cached_response = ''
     
 
     response_count = 0
@@ -436,6 +439,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
         else:
             prompt = input('Enter a prompt: ')
 
+        
         # Start the timer
         start_time = time.time()
 
@@ -453,6 +457,11 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             # chat_ongoing = False (eventually will be updated)
             return full_log, response_time_log, logging_on
 
+        elif prompt[-2:] == '-p':
+            prefix = prompt[:-2]
+            if prefix:
+                print(f'Prefix: {prefix}')
+            continue 
         # Need to organize the below commands
         elif prompt == 'stats':
             print(f'engine: {engine}, max_tokens = {max_tokens}, temp = {temperature}, tokens used: {session_total_tokens}')
@@ -566,8 +575,8 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             try:
                 max_tokens = set_max_tokens(default, limit)
             except QuitAndSaveError:
-                    replace_input, replace_input_text = True, 'quit'
-                    continue
+                replace_input, replace_input_text = True, 'quit'
+                continue
         elif prompt == 'temp':
             try:
                 temperature = set_temperature(temperature)
@@ -652,11 +661,11 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
         # This one is just experimentation for now
         # save the current full_log to a response.txt
         elif prompt in ['-s','save']:
-            with open(f'{filepath}/conversation.txt', 'w') as file:
-                file.write(full_log)
+            with open(f'{filepath}/response.txt', 'w') as file:
+                file.write(cached_response)
             print('Saved!')
         
-        elif prompt == 'images':
+        elif prompt == '-ig':
             # image generation
             try_gen('default')
         elif dev and prompt == 'magic': 
@@ -679,6 +688,9 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 print('welp, could not read magic_string_training.txt')
                 continue
         else:
+            if prefix:
+                prompt = prefix + prompt
+                prefix = ''
             # All valid non-command inputs to the bot go through here.
             if debug: print('beep, about to try generating response')
             if dev:
@@ -717,6 +729,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                     if token_count > warning_history_count:
                         print(f'Conversation token count is growing large [{token_count}]. Please reset my memory as needed.')
                 # Record a savestate and append history
+                cached_response = response
                 previous_history = history
                 history += prompt + response + '\n'
 
@@ -784,7 +797,8 @@ def main(engine, max_tokens, debug):
     except QuitAndSaveError:
         print('You have typed quit. Your session has been terminated. Logfiles have been saved if possible.')
         return
-    except:
+    except Exception as e:
+        print(e)
         print('Debug me! I am looking for more ways to reach this point.')
     if logs:
         (convo, response_times, logging_on) = logs
@@ -796,9 +810,8 @@ def main(engine, max_tokens, debug):
         print('Error. Cannot set conversation and response time logfiles.')
         return
 
-# Default script execution from CLI, uses sys.argv arguments
-if __name__ == '__main__':
-    args = sys.argv
+# Allows execution from python environment with `import chatbot` to run like default script execution from CLI
+def main_from_args(args):
     try:
         engine, max_tokens, debug = get_args(args)
         good_args = True
@@ -808,13 +821,7 @@ if __name__ == '__main__':
     if good_args:
         main(engine, max_tokens, debug)
 
-# Manual function execution from python environment with `import chatbot`, uses a given argument list
-def py_env_main(args):
-    try:
-        engine, max_tokens, debug = get_args(args)
-        good_args = True
-    except QuitAndSaveError:
-        print('Pre-emptive quit. No logfiles saved.')
-        good_args = False
-    if good_args:
-        main(engine, max_tokens, debug)
+# Default script execution from CLI, uses sys.argv arguments
+if __name__ == '__main__':
+    args = sys.argv
+    main_from_args(args)
