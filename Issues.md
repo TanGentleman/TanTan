@@ -27,6 +27,7 @@ Chatbot.py
 - [ ] Implement completion_tokens, prompt_tokens in their appropriate use cases
 
 
+
 Reddit Link_Grabber
 - [ x ] Enable video configuration with proper safeguards for large mp4 files and total download size.
 - [ ] Enable third-party (YouTube) downloads
@@ -36,6 +37,7 @@ Reddit Link_Grabber
 - Consolidate codex + regular else condition logic
 - Handle log file exceptions
 - [ x ] Make consistent the different ways of running it (i.e no downloads when loaded from python env.)
+- Work on better codex implementation
 
 Features Added:
 - Add generate token to test_setup.py
@@ -52,8 +54,7 @@ Bugs Squashed:
 To-Do List:
 - Make var valid_flags = [-c, -cs, etc.] and organize command section accordingly
 
-- Work on better codex implementation
-    - Different OpenAI endpoints, like edits and embeddings
+- Other OpenAI endpoints: edits and text embeddings, as well as moderation endpoint
 - Comment and clean up functions in chatbot.py [ In progress ]
 - Add command to enable reddit downloading within chatbot session [ Under development ]
     - Allow calling Link_Grabber functions

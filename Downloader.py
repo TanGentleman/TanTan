@@ -124,7 +124,7 @@ def make_folder(folder_path):
     try:
         os.mkdir(folder_path)
     except FileExistsError:
-        print(f'No worries: The folder {folder_name} already exists')
+        print(f'No worries: The folder {folder_path} already exists')
     # Have to sanitize folder name first!!
     except:
         print('Filepath not found!')
