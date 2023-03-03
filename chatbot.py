@@ -13,8 +13,15 @@ if c.dev:
     import image_generation as ig
     dev = True
 else:
+    import image_generation as ig
     dev = False
-TanSaysNoNo = c.TanEx
+class TanSaysNoNo(Exception): 
+    pass
+class QuitAndSaveError(Exception): 
+    pass
+def check_quit(text):
+    if text == 'quit':
+        raise QuitAndSaveError
 
 openai_key = c.get_openai_api_key()
 filepath = f'{c.filepath}/Chatbot'
@@ -91,13 +98,13 @@ def check_truncation_and_toks(response):
             else:
                 print(f'Token value not found for {usage_vals[i]}')
                 print('Response failed.')
-                raise(TanSaysNoNo)
+                raise TanSaysNoNo
         
     try:
         response = response['choices'][0]
     except:
         print("Could not access response['choices']")
-        raise(TanSaysNoNo)
+        raise TanSaysNoNo
 
     if response['finish_reason'] == 'length':
         print('*Warning: message may be truncated. Adjust max tokens as needed.')
@@ -128,8 +135,8 @@ def read_text_prompt():
     else:
         print(f'Could not read {filename}')
 
-def read_download_template():
-    filename = 'TrainingData/download_template.txt'
+def read_magic_string_training():
+    filename = 'TrainingData/magic_string_training.txt'
     text = read_prompt(filepath, filename)
     if text:
         return text
@@ -308,6 +315,7 @@ def set_max_tokens(default, limit):
     legal_answer = False
     while legal_answer == False:
         user_input = input('Max Token count: ')
+        check_quit(user_input)
         if user_input in ['', ' ']:
             if default:
                 print(f'Max tokens [default]: {default}')
@@ -334,6 +342,7 @@ def set_temperature(default):
     legal_answer = False
     while legal_answer == False:
         user_input = input('Temperature: ')
+        check_quit(user_input)
         if user_input in ['', ' ']:
             print(f'Temperature [default]: {default}')
             return default
@@ -357,8 +366,11 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
             engine_prompt = ''
             try:
                 engine_prompt = input('[ada, curie, davinci, codex] Engine Choice: ')
+                check_quit(engine_prompt)
                 engine = engine_choice(engine_prompt, slow_status)
                 legal_answer = True
+            except QuitAndSaveError:
+                raise QuitAndSaveError
             except:
                 print('Not recognized. Try again.')
     else:
@@ -369,8 +381,12 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
     if ask_token:
         default = default_max_tokens
         limit = max_token_limit
-        max_tokens = set_max_tokens(default, limit)
+        try:
+            max_tokens = set_max_tokens(default, limit)
+        except QuitAndSaveError:
+            raise QuitAndSaveError
     return engine, max_tokens
+
 
 
 # This function needs proper re-structuring for readability!
@@ -449,7 +465,11 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 print('Did you mean to type a config command? Format is: config [engine] [tokens] [-d]')
                 continue
             else:
-                engine, max_tokens, debug = parse_args(args, slow_status, engine, max_tokens, debug)
+                try:
+                    engine, max_tokens, debug = parse_args(args, slow_status, engine, max_tokens, debug)
+                except QuitAndSaveError:
+                    replace_input, replace_input_text = True, 'quit'
+                    continue
             msg = f'Engine set to: {engine}, {max_tokens} Max Tokens'
             print(msg + '\n')
             full_log += msg + '\n'
@@ -539,13 +559,23 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 with open(f'{filepath}/text_prompt.txt', 'w') as file:
                     file.write('Insert text prompt here')
                 print('Try adding something!')
+                
         elif prompt == 'tok':
             default = max_tokens
             limit = max_token_limit
-            max_tokens = set_max_tokens(default, limit)
+            try:
+                max_tokens = set_max_tokens(default, limit)
+            except QuitAndSaveError:
+                    replace_input, replace_input_text = True, 'quit'
+                    continue
         elif prompt == 'temp':
-            temperature = set_temperature(temperature)
-            print(f'Temperature set to {temperature}')
+            try:
+                temperature = set_temperature(temperature)
+                print(f'Temperature set to {temperature}')
+                continue
+            except QuitAndSaveError:
+                    replace_input, replace_input_text = True, 'quit'
+                    continue
         elif prompt in ['-c','-cs']: 
             # -c is a NON-amnesic clipboard reader
             # -cs is an amnesic clipboard summarizer.
@@ -585,8 +615,11 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             # Set tokens (persistent until valid chosen!)
             default = None
             limit = max_codex
-            codex_tokens = set_max_tokens(default, limit)
-            
+            try:
+                codex_tokens = set_max_tokens(default, limit)
+            except QuitAndSaveError:
+                replace_input, replace_input_text = True, 'quit'
+                continue
             # Set prompt
             codex_text = read_codex_prompt()
 
@@ -622,28 +655,29 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             with open(f'{filepath}/conversation.txt', 'w') as file:
                 file.write(full_log)
             print('Saved!')
-        elif dev and prompt == 'download': 
+        
+        elif prompt == 'images':
             # image generation
-            try_gen('default') 
+            try_gen('default')
+        elif dev and prompt == 'magic': 
             # Experimenting with a magic string generator for Link_Grabber.py to use
+            user_input = input('Throw something at me. Magic string headed back your way:\n')
+            prefix = read_magic_string_training()
+            if prefix:
+                suffix = '\nOutput:'
+                replace_input = True
+                replace_input_text = set_prompt(user_input, prefix, suffix)
 
-            # user_input = input('Throw something at me. Magic string headed back your way:\n')
-            # template = read_download_template()
-            # if template:
-            #     replace_input = True
-            #     prefix = template
-            #     suffix = '\nOutput:'
-            #     replace_input_text = set_prompt(user_input, prefix, suffix)
-            #     history = ''
-            #     max_tokens = 15
-            #     cached_history = history
-            #     history = ''
+                cached_tokens = max_tokens
+                cached_history = history
+                max_tokens = 15
+                history = ''
 
-            #     amnesia = True
-            #     continue
-            # else:
-            #     print('welp, could not read download_template.txt')
-            #     continue
+                amnesia = True
+                continue
+            else:
+                print('welp, could not read magic_string_training.txt')
+                continue
         else:
             # All valid non-command inputs to the bot go through here.
             if debug: print('beep, about to try generating response')
@@ -710,30 +744,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 print('Blocked or truncated')
                 full_log += '*x*'
                 continue
-def main(engine, max_tokens, debug):
-    if openai_key == None:
-        print('Please set your OpenAI key in config.py')
-        return
-    try:
-        logs = interactive_chat(slow_status, engine, max_tokens, debug)
-    except KeyboardInterrupt:
-        print('You have interrupted your session. It has been terminated, with no logfiles saved.')
-        return
-    except EOFError:
-        print('You have interrupted your session. It has been terminated, with no logfiles saved.')
-        return
-    except:
-        print('Debug me! I am looking for more ways to reach this point.')
-    if logs:
-        (convo, response_times, logging_on) = logs
-        if logging_on:
-            write_to_log_file(convo, response_times)
-        else:
-            print('This conversation was not logged. Have a nice day.')
-    else:
-        print('Error. Cannot set conversation and response time logfiles.')
-        return
-
+            
 def get_args(args):
     if slow_status == True: 
         engine = default_slow_engine
@@ -752,18 +763,58 @@ def get_args(args):
         debug = False
     
     if arg_count > 1:
-        engine, max_tokens, debug = parse_args(args, slow_status, engine, max_tokens, debug)
-
+        try:
+            engine, max_tokens, debug = parse_args(args, slow_status, engine, max_tokens, debug)
+        except QuitAndSaveError:
+            raise QuitAndSaveError
     return engine, max_tokens, debug
+
+def main(engine, max_tokens, debug):
+    if openai_key == None:
+        print('Please set your OpenAI key in config.py')
+        return
+    try:
+        logs = interactive_chat(slow_status, engine, max_tokens, debug)
+    except KeyboardInterrupt:
+        print('You have interrupted your session. It has been terminated, with no logfiles saved.')
+        return
+    except EOFError:
+        print('You have interrupted your session. It has been terminated, with no logfiles saved.')
+        return
+    except QuitAndSaveError:
+        print('You have typed quit. Your session has been terminated. Logfiles have been saved if possible.')
+        return
+    except:
+        print('Debug me! I am looking for more ways to reach this point.')
+    if logs:
+        (convo, response_times, logging_on) = logs
+        if logging_on:
+            write_to_log_file(convo, response_times)
+        else:
+            print('This conversation was not logged. Have a nice day.')
+    else:
+        print('Error. Cannot set conversation and response time logfiles.')
+        return
 
 # Default script execution from CLI, uses sys.argv arguments
 if __name__ == '__main__':
-    import sys
     args = sys.argv
-    engine, max_tokens, debug = get_args(args)
-    main(engine, max_tokens, debug)
+    try:
+        engine, max_tokens, debug = get_args(args)
+        good_args = True
+    except QuitAndSaveError:
+        print('Pre-emptive quit. No logfiles saved.')
+        good_args = False
+    if good_args:
+        main(engine, max_tokens, debug)
 
 # Manual function execution from python environment with `import chatbot`, uses a given argument list
 def py_env_main(args):
-    engine, max_tokens, debug = get_args(args)
-    main(engine, max_tokens, debug)
+    try:
+        engine, max_tokens, debug = get_args(args)
+        good_args = True
+    except QuitAndSaveError:
+        print('Pre-emptive quit. No logfiles saved.')
+        good_args = False
+    if good_args:
+        main(engine, max_tokens, debug)
