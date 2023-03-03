@@ -175,14 +175,16 @@ def main(folder_name):
     DELIMITER = c.DELIMITER
     reddit_folder_name = c.reddit_folder_name
     filepath = f'{c.filepath}/{reddit_folder_name}'
+
+    folder_name = sanitize_filename(folder_name)
     download_folder_path = f'{filepath}/{folder_name}'
     run_downloader(DELIMITER, filepath, download_folder_path)   
 
 if __name__ == '__main__':
     arg_count = len(sys.argv)
     if arg_count > 1:
-        text = ' '.join(sys.argv[1:])
-        folder_name = sanitize_filename(text)
+        args_as_string = ' '.join(sys.argv[1:])
+        folder_name = args_as_string #not yet sanitized
     else:
         print('When running from command line, please add an argument after path/to/downloader.py <RENAME_ME>')
         folder_name = 'RENAME_ME'

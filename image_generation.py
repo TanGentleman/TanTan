@@ -9,7 +9,7 @@ import Downloader
 
 max_limit = 10
 default_size = '256x256'
-filepath = c.filepath + '/DallE'
+filepath = c.filepath
 
 size_dict = {'small': '256x256', 'medium': '512x512', 'large': '1024x1024', 'default': default_size}
 
@@ -134,17 +134,17 @@ def generate_images_from_prompts(filepath, image_size, prompts = None):
 
 def main():
     # Option 1
-    generate_images_from_prompts(filepath, 'default')
+    generate_images_from_prompts(filepath + '/DallE', 'default')
     # Option 2
-    # source_filepath, destination_filepath = None, None
-    # generate_variant(source_filepath, destination_filepath)
+    # needs a better helper function to clarify filename/filepath
+    #source_filepath, destination_filepath = (f'{filepath}/something' + '/example_image.png'), filepath + '/new_image_name.png'
+    # generate_variant(source_filepath, destination_filepath, 'medium')
     
 
-if __name__ == '__main__':
-    main()
 
-def generate_variant(source_filepath, destination_filepath):
-    image_url = image_url_from_image(source_filepath)
+
+def generate_variant(source_filepath, destination_filepath, image_size = 'default'):
+    image_url = image_url_from_image(source_filepath, image_size)
     save_file_from_url(destination_filepath, image_url)
     
 def save_file_from_url(filepath, url):
@@ -155,4 +155,6 @@ def save_file_from_url(filepath, url):
             f.write(res.content)
     else:
         print('nay')
-    
+
+if __name__ == '__main__':
+    main()
