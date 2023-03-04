@@ -12,7 +12,7 @@ In Progress:
 - Better checks for valid filepaths
 - MacOS Shortcuts Integration
 
-Hi there! I'm new to creating tools for other people, and right now this is a cluttered mess, but as it comes together, I would love the feedback on aspects that don't feel natural. This work in progress is just for friends, but as it progresses, it's intended to be a more versatile tool to harness ChatGPT's engines and design neat browserless shortcuts to complete various tasks.
+Hi there! I'm new to creating tools for other people, and right now this is a cluttered mess, but as it comes together, I would love the feedback on aspects that don't feel natural. This work in progress is just for friends, but as it progresses, it's intended to be a more versatile tool to harness the power of AI and design neat browserless shortcuts to complete various tasks.
 
 I have to decide whether I want this to be a program that lets you feel like a developer, changing the names around and having fun adding new functionality, or if I want to have established presets that just make it seem like something neat that someone made. I'm now leaning towards prioritizing making it accessible and not clunky to type in terminal each session. Built-in shortcuts app integration and the like, perhaps.
 
@@ -76,6 +76,32 @@ The following steps assume you have all the required dependencies.
 
 - Please check out Chatbot/Chatbot_README.md for documentation and alternate setup environments.
 
+
+
+# Using MacOS Shortcuts to automate running Link_Grabber.py and Downloader.py:
+- Ask for Text with "Format Query as {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}"
+- Run Shell Script
+    - `python3 Documents/TanTan/Link_Grabber.py -s {PROVIDED_INPUT}`
+- Text = Shell Script Result
+- If <Text> <contains> <*shortcut_failure*>
+    - Run this shortcut again (Link Grab + Download)
+- Otherwise
+    - Show Alert "Would you like to Download?"
+    - Ask for Text with Folder Name:
+    - Run Shell Script
+    - `python3 Documents/TanTan/Downloader.py {PROVIDED_INPUT}`
+- End If
+
+
+Using Chatbot from scratch (still in development):
+1. install homebrew
+2. install python
+3. install pip
+4. install dependencies
+5. install readline
+6. Run chatbot
+
+# Note: The below is entirely optional and not needed for chatbot.py. It will soon be integrated for cleaner workflows.
 # Setting up the Reddit Image Fetcher:
 
 (Pre-req: Create a reddit account)
@@ -117,26 +143,3 @@ The following steps assume you have all the required dependencies.
 1. Run command in terminal from your home directory.
     - `python3 Documents/TanTan/Downloader.py Folder_For_Collected_Images`
 - The above example would save the images to TanTan/{reddit_folder_name}/Folder_For_Collected_Images
-
-# Using MacOS Shortcuts to automate running Link_Grabber.py and Downloader.py:
-- Ask for Text with "Format Query as {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}"
-- Run Shell Script
-    - `python3 Documents/TanTan/Link_Grabber.py -s {PROVIDED_INPUT}`
-- Text = Shell Script Result
-- If <Text> <contains> <*shortcut_failure*>
-    - Run this shortcut again (Link Grab + Download)
-- Otherwise
-    - Show Alert "Would you like to Download?"
-    - Ask for Text with Folder Name:
-    - Run Shell Script
-    - `python3 Documents/TanTan/Downloader.py {PROVIDED_INPUT}`
-- End If
-
-
-Using Chatbot from scratch (still in development):
-1. install homebrew
-2. install python
-3. install pip
-4. install dependencies
-5. install readline
-6. Run chatbot

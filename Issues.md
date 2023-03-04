@@ -2,13 +2,11 @@ Current issue:
 ! Checks to see if directories valid first.
 ! Functions to make all needed folders
 ! Do reddit API key check before any workflow progress
-! 
-
-!! Issues in Downloader.py if filename arg invalid (like "r/sharks")
-    - Should I just sanitize it first?
+! Make a more readable README
 
 In development:
 - Tokenizer using an offline, local, pretrained GPT2 Model (Need to handle log-warning better)
+    - Also want to run some tests to see of computation ends up being a limiting factor, I should be able run it in parallel with response generation in the existing code if needbe.
 - Documentation for the chatbot
 - Documentation for the reddit scraper
 - Presets for chatbot. (i.e. debugging code, essay organization, fact checking, general advice, summarization, link analysis)
@@ -39,6 +37,7 @@ Reddit Link_Grabber
 - [ x ] Make consistent the different ways of running it (i.e no downloads when loaded from python env.)
 - Work on better codex implementation
 
+
 Features Added:
 - Add generate token to test_setup.py
 - Logic for adding smart config strings like <config curie -d> or <config davinci 400> to the function interactive_chat()
@@ -52,7 +51,9 @@ Bugs Squashed:
 - Filename from CLI arg sanitized in Downloader.py
 
 To-Do List:
-- Make var valid_flags = [-c, -cs, etc.] and organize command section accordingly
+- Make all non-responses “continue” in the while loop.
+- The else condition will be the main one, and continues into the body of interactive_chat()
+- Body of interactive_chat will report that response is True
 
 - Other OpenAI endpoints: edits and text embeddings, as well as moderation endpoint
 - Comment and clean up functions in chatbot.py [ In progress ]
