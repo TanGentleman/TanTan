@@ -76,11 +76,10 @@ cmd_dict = {
             'tok': 'Configure max tokens for the response',
             '-c': 'Respond to clipboard text (Uses conversation history)',
             '-cs': 'Summarize clipboard text (Amnesic)',
-            '-r': 'Amnesic command, as lone command it uses clipboard contents as prompt\n' +
-                    'To format: Replace second instance of -r with contents of clipboard:\n' + 
-                    'Syntax: `-r [prefix text] -r [optional suffix text]`\n' +
-                    'Example Usage: `-r Define this word: # -r #`\n' +
-                    'Replaces prompt with: Define this word: #clipboard_contents#'
+            '-r': 'Replace flag, a versatile amnesic formatter, here is example usage:\n' +
+                    '`-r` => Uses clipboard as prompt, like -c\n' +
+                    '`-r is an idea that represents` => New prompt replaces -r with contents of clipboard\n' + 
+                    '`-r Where can I find fun things to do in the town of -r with with my friends?\n'
             }
 
 
@@ -94,32 +93,45 @@ def set_prompt(prompt, prefix = None,  suffix = None):
     return prompt
 
 # Needs comments and clearer error handling after response fails
-def check_truncation_and_toks(response):
+def check_truncation_and_toks(response_struct):
     completion_tokens, prompt_tokens, total_tokens = (0,0,0)
     usage_vals = ['completion_tokens', 'prompt_tokens', 'total_tokens']
     # Check for other potential issues here
     for i in range(len(usage_vals)):
+         
         try:
-            tok_val = response['usage'][usage_vals[i]]
-            if i == 0: completion_tokens = tok_val
-            elif i == 1: prompt_tokens = tok_val
-            elif i == 2: total_tokens = tok_val
+            tok_val = response_struct['usage'][usage_vals[i]]
         except:
-            if i == 0: completion_tokens = 0
+            if i == 0: 
+                tok_val = 0
             else:
                 print(f'Token value not found for {usage_vals[i]}')
                 print('Response failed.')
                 raise TanSaysNoNo
-        
+        if i == 0:
+            completion_tokens = tok_val
+        elif i == 1: 
+            assert(tok_val > 0)
+            prompt_tokens = tok_val
+        elif i == 2: 
+            assert(tok_val > 0)
+            total_tokens = tok_val
     try:
-        response = response['choices'][0]
+        response_struct = response_struct['choices'][0]
     except:
         print("Could not access response['choices']")
         raise TanSaysNoNo
 
-    if response['finish_reason'] == 'length':
+    if response_struct['finish_reason'] == 'length':
         print('*Warning: message may be truncated. Adjust max tokens as needed.')
-    return response['text'], completion_tokens, prompt_tokens, total_tokens
+
+    # To Debug:
+    # print(f'{response_struct["finish_reason"]} boo! {response_struct["text"]}<-response')
+    response_string = response_struct['text']
+
+    if response_string == '':
+        print('Huh, it do be blank')
+    return response_string, completion_tokens, prompt_tokens, total_tokens
 
 def read_prompt(filepath, filename):
     try:
@@ -168,7 +180,8 @@ def generate_text(debug, prompt, engine, max_tokens, temperature):
         # testing this 2000 thing for a sec
         max_tokens = 2000 if (max_tokens > 2000 and 'davinci' not in engine) else max_tokens,
         temperature = 0 if 'code' in engine else temperature,
-        frequency_penalty = frequency_penalty_val
+        frequency_penalty = frequency_penalty_val,
+        stop = None #['\n'] # Just for birds.txt
         )
     except openai.error.OpenAIError as e:
         status = e.http_status
@@ -411,7 +424,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
     cached_engine = None
     cached_history = None
     cached_tokens = None
-    cached_response = ''
+    cached_prompt, cached_response = ('', '')
     
 
     response_count = 0
@@ -421,6 +434,8 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
     config_info = config_msg(engine, max_tokens, session_total_tokens)
     full_log += config_info
     print(config_info)
+    input_time = -1
+    got_response = None
     while chat_ongoing:
         # Amnesia mode saves current configuration and history for next prompt
         if amnesia:
@@ -436,24 +451,26 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             if cached_tokens:
                 max_tokens = cached_tokens # Restore the max_tokens
                 cached_tokens = None
-
+        
+        
+        
         # Get prompt
         if replace_input:
-            prompt = replace_input_text # Use the replacement text
+            user_input = replace_input_text # Use the replacement text
             replace_input = False
         else:
-            prompt = input('Enter a prompt: ')
+            # Implement cooldown if needed
+            user_input = input('Enter a prompt: ')
 
-        
         # Start the timer
         start_time = time.time()
-
         # If Blank Space
-        if len(prompt) < 1:
+        if len(user_input) < 1:
             print('Taylor Swift, I like it!')
+            continue
 
         # Quit Chat
-        elif prompt == 'quit':
+        elif user_input == 'quit':
             if session_total_tokens == 0:
                 logging_on = False
                 print('This was not logged.')
@@ -462,20 +479,22 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             # chat_ongoing = False (eventually will be updated)
             return full_log, response_time_log, logging_on
 
-        elif prompt[-2:] == '-p':
-            prefix = prompt[:-2]
+        elif user_input[-2:] == '-p':
+            prefix = user_input[:-2]
             if prefix:
                 print(f'Prefix: {prefix}')
             continue 
         # Need to organize the below commands
-        elif prompt == 'stats':
+        elif user_input == 'stats':
             config_info = config_msg(engine, max_tokens, session_total_tokens)
             print(config_info)
-        elif prompt in ['-d', 'debug']:
+            continue
+        elif user_input in ['-d', 'debug']:
             debug = not(debug)
-        elif prompt.startswith('config'):
+            continue
+        elif user_input.startswith('config'):
             # Fix this to make it a bit more like -r
-            args = prompt.split(' ')
+            args = user_input.split(' ')
             args_count = len(args)
             if args_count > 4:
                 print('Did you mean to type a config command? Format is: config [engine] [tokens] [-d]')
@@ -491,23 +510,28 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             full_log += msg + '\n'
             continue
         # Embedded clipboard reading. Example command:-r Define this word: # -r #
-        elif prompt.startswith('-r'): # Amnesic
-            args = prompt.split(' ')
+        elif user_input.startswith('-r'): # Amnesic
+            args = user_input.split(' ')
             args_count = len(args)
-            if args[0] != '-r': # Just reads clipboard
-                print('Syntax for -r strings is `-r [prefix text] -r [optional suffix text]`')
-                continue
+            if user_input == '-r':
+                pass
+            else:
+                # if -r... written without space
+                if user_input[2]!= ' ':
+                    print('Syntax for -r strings is `-r [prefix text] -r [optional suffix text]`')
+                    continue
 
-            if '-r' not in args[1:]: # single -r = suffix mode
-                suffix = ' '.join(args[1:])
-                print(f'Suffix: {suffix}')
+                if '-r' not in args[1:]: # single -r = suffix mode
+                    suffix = user_input[2:]
+                    print(f'Suffix: {suffix}')
                 
-            else: # Prefix and suffix mode
-                args = args[1:]
-                n = args.index('-r')
-                prefix = ' '.join(args[:n])
-                suffix = ' '.join(args[n+1:])
-                print(f'Prefix: {prefix}, Suffix: {suffix}')
+                else: # Prefix and suffix mode
+                    args = args[1:]
+                    n = args.index('-r')
+                    prefix = ' '.join(args[:n]) + ' #'
+                    # adding a space to the suffix for readable formatting
+                    suffix = '#' + ' '.join(args[n+1:])
+                    print(f'Prefix: {prefix}, Suffix: {suffix}')
 
             print('Reading clipboard. Working on response...')
             replace_input = True
@@ -519,20 +543,23 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             amnesia = True
             continue
             
-        elif prompt == 'help': # Show list of commands
+        elif user_input == 'help': # Show list of commands
             print('For the full manual of commands and descriptions, type tan')
             print(list(cmd_dict.keys()))
-        elif prompt == 'history': # Show convo history
+            continue
+        elif user_input == 'history': # Show convo history
             if history:
                 print(f'Conversation in memory shown below:\n\n{(history)}')
             else:
                 print('No conversation history in memory.')
-        elif prompt in ['-f','forget']: # Erase convo history
+            continue
+        elif user_input in ['-f','forget']: # Erase convo history
             history = ''
             msg = '<History has been erased. Please continue the conversation fresh :)>\n'
             print(msg)
             full_log += msg
-        elif prompt == 'del': # Delete last exchange
+            continue
+        elif user_input == 'del': # Delete last exchange
             if history == previous_history:
                 print('No previous exchange to delete.')
                 continue
@@ -540,7 +567,8 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             msg = '<I have deleted the last exchange from my memory>\n'
             print(msg)
             full_log += msg
-        elif prompt == 'log': # Toggle logging
+            continue
+        elif user_input == 'log': # Toggle logging
             if logging_on:
                 msg = '<Logging disabled> Conversation will not be stored.\n'
                 print(msg)
@@ -549,7 +577,8 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 msg = '<Logging enabled> Conversation WILL be stored.\n'
                 print(msg)
                 logging_on = True
-        elif prompt == 'read': # Responds to text_prompt.txt
+            continue
+        elif user_input == 'read': # Responds to text_prompt.txt
             # Amnesic reading
             if os.path.isfile(f'{filepath}/text_prompt.txt'):
                 text_prompt = read_text_prompt()
@@ -569,30 +598,30 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 with open(f'{filepath}/text_prompt.txt', 'w') as file:
                     file.write('Insert text prompt here')
                 print('Try adding something!')
-                
-        elif prompt == 'tok':
+            continue
+        elif user_input == 'tok':
             default = max_tokens
             limit = max_token_limit
             try:
                 max_tokens = set_max_tokens(default, limit)
             except QuitAndSaveError:
                 replace_input, replace_input_text = True, 'quit'
-                continue
-        elif prompt == 'temp':
+            continue
+        elif user_input == 'temp':
             try:
                 temperature = set_temperature(temperature)
                 print(f'Temperature set to {temperature}')
                 continue
             except QuitAndSaveError:
                     replace_input, replace_input_text = True, 'quit'
-                    continue
-        elif prompt in ['-c','-cs']: 
+            continue
+        elif user_input in ['-c','-cs']: 
             # -c is a NON-amnesic clipboard reader
             # -cs is an amnesic clipboard summarizer.
 
             # This is used to perform a completion using the text in one's clipboard. Check the below prompt framing.
             replace_input = True
-            if prompt == '-cs': #clipboard summary? I think -cs kinda works
+            if user_input == '-cs': #clipboard summary? I think -cs kinda works
                 prefix = 'Provide a brief summary of the following text:\n'
                 suffix = '\n#'
                 replace_input_text = clipboard.paste(), 
@@ -602,13 +631,13 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
 
                 amnesia = True
                 continue
-            elif prompt == '-c':
+            elif user_input == '-c':
                 # I think I will keep this non-amnesic, as it may be useful to use -c to keep convo but with text selections.
                 replace_input_text = clipboard.paste()
                 print('Responding to clipboard text...')
                 continue # No amnesia, so it will use the current history.
-
-        elif prompt == 'codex':
+            
+        elif user_input == 'codex':
             # Amnesic command, will not affect current configuration or history
             # Responds to codex_prompt.txt using codex engine
             
@@ -629,11 +658,10 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             except QuitAndSaveError:
                 replace_input, replace_input_text = True, 'quit'
                 continue
-            # Set prompt
             codex_text = read_codex_prompt()
-
+            
             if codex_text:
-                # Replace prompt text with the text from codex_prompt.txt
+                # Replace user_input text with the text from codex_prompt.txt
                 replace_input = True
                 replace_input_text = codex_text
 
@@ -652,23 +680,27 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             else:
                 print('No readable text in codex_prompt.txt')
                 continue
-        elif prompt in ['tan', 'tanman']:
+        elif user_input in ['tan', 'tanman']:
             
             text = '\nTanManual Opened! Available commands:\n\n' 
             for i in range(len(cmd_dict)):
                 text += f'{list(cmd_dict.keys())[i]}: {list(cmd_dict.values())[i]}\n'
-            print(text)      
+            print(text)
+            continue      
         # This one is just experimentation for now
         # save the current full_log to a response.txt
-        elif prompt in ['-s','save']:
+        elif user_input in ['-s','save']:
+            text = f'PROMPT:\n{cached_prompt}\nRESPONSE:\n{cached_response}'
             with open(f'{filepath}/response.txt', 'w') as file:
-                file.write(cached_response)
+                file.write(text)
             print('Saved!')
+            continue
         
-        elif prompt == '-ig':
+        elif user_input == '-ig':
             # image generation
             try_gen('default')
-        elif dev and prompt == 'magic': 
+            continue
+        elif dev and user_input == 'magic': 
             # Experimenting with a magic string generator for Link_Grabber.py to use
             user_input = input('Throw something at me. Magic string headed back your way:\n')
             prefix = read_magic_string_training()
@@ -687,15 +719,22 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             else:
                 print('welp, could not read magic_string_training.txt')
                 continue
+
+        # All valid non-command inputs pass through here.    
         else:
+            assert (user_input)
+            prompt = user_input
+            # If there is a prefix or suffix, add it to the prompt
             if prefix:
                 prompt = prefix + prompt
                 prefix = ''
             if suffix:
                 prompt += suffix
                 suffix = ''
-            # All valid non-command inputs to the bot go through here.
+            
             if debug: print('beep, about to try generating response')
+
+            # Tokenize the prompt to check length
             if dev:
                 tokenized_text = tokenize(prompt)
                 token_count = len(tokenized_text)
@@ -704,61 +743,67 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                     print('WARNING: prompt is too long. I will try to generate a response, but it may be truncated.')
                     print(f'max_tokens would need to be set to roughly {4000-token_count}')
                 print(f'prompt is {token_count} tokens')
+
+            # Try getting an output response (This is not yet text)
             try:
-                # Continues the conversation (Doesn't add newline if no history)
-                response = generate_text(debug, history + '\n' + prompt if history else prompt, engine, max_tokens, temperature)
+                # by default, continues the conversation (Doesn't add newline if no history)
+                response_struct = generate_text(debug, history + '\n' + prompt if history else prompt, engine, max_tokens, temperature)
             except:
                 print('Response not generated. See above error. Try again?')
                 continue
             try:
-                response, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response)
+                response_string, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response_struct)
             except:
                 print('check_truncation_and_toks failure, fix incoming')
                 continue
-            if response is None:
+            if response_string is None:
                 print('Blocked or truncated')
                 full_log += '*x*'
                 continue
-            if response == '':
+            elif response_string == '':
                 print('Blank Space (no response)')
                 full_log += '*x*'
-            if response is not None:
-                time_taken = time.time()-start_time
-                if debug: print('beep, we got a response!')
-                # Dev tokenization check
-                if dev:
-                    tokenized_text = tokenize(history)
-                    token_count = len(tokenized_text)
-                    if token_count > warning_history_count:
-                        print(f'Conversation token count is growing large [{token_count}]. Please reset my memory as needed.')
-                # Record a savestate and append history
-                cached_response = response
-                previous_history = history
-                history += prompt + response + '\n'
-
-                #add a marker to distinguish from user text
-                RT = round(time_taken, 1)
-                response_time_marker = f'(*{RT}s)' # (*1.2s) is the marker for 1.2 seconds
-                engine_marker = format_engine_string(engine)
-                response_count += 1
-                # Log the response and response time
-                full_log += f'({response_count}.)' + prompt + '\n' + response_time_marker + response + '\n'
-                response_time_log += f'[#{response_count}, RT:{RT}, T:{total_tokens}, E:{engine_marker}]'
-
-                # Print the response and response time
-                print(f'Response {response_count}: {response}\n\n')
-                print(f'response time: {round(time_taken, 1)} seconds')
-
-                session_total_tokens += total_tokens
-                
-                if session_total_tokens > max_session_total_tokens:
-                    print(f'Conversation is very lengthy. Session total tokens: {session_total_tokens}')
-                if debug: print(f'This completion was {round(100*total_tokens/4096)}% of the davinci maximum')
                 continue
             else:
-                print('Blocked or truncated')
-                full_log += '*x*'
-                continue
+                response = response_string
+                # Valid response!
+
+            # Only if non-command, it has successfully passed through else clause.    
+            assert(len(response) > 0)
+            time_taken = time.time()-start_time
+            if debug: print('beep, we got a response!')
+            # Dev tokenization check
+            if dev:
+                tokenized_text = tokenize(history)
+                token_count = len(tokenized_text)
+                if token_count > warning_history_count:
+                    print(f'Conversation token count is growing large [{token_count}]. Please reset my memory as needed.')
+            # Record a savestate and append history
+            cached_prompt = prompt
+            cached_response = response
+            previous_history = history
+            history += prompt + response + '\n'
+
+            #add a marker to distinguish from user text
+            RT = round(time_taken, 1)
+            response_time_marker = f'(*{RT}s)' # (*1.2s) is the marker for 1.2 seconds
+            engine_marker = format_engine_string(engine)
+            response_count += 1
+            # Log the response and response time
+            full_log += f'({response_count}.)' + prompt + '\n' + response_time_marker + response + '\n'
+            response_time_log += f'[#{response_count}, RT:{RT}, T:{total_tokens}, E:{engine_marker}]'
+
+            # Print the response and response time
+            print(f'Response {response_count}: {response}\n\n')
+            print(f'response time: {round(time_taken, 1)} seconds')
+
+            session_total_tokens += total_tokens
+            
+            if session_total_tokens > max_session_total_tokens:
+                print(f'Conversation is very lengthy. Session total tokens: {session_total_tokens}')
+            if debug: print(f'This completion was {round(100*total_tokens/4096)}% of the davinci maximum')
+            continue
+
             
 def get_args(args):
     if slow_status == True: 
