@@ -75,14 +75,12 @@ cmd_dict = {
             'temp': 'Configure temperature (0.0-1.0)',
             'tok': 'Configure max tokens for the response',
             '-c': 'Respond to clipboard text (Uses conversation history)',
-            '-cs': 'Summarize clipboard text (Amnesic)',
-            '-r': 'Replace flag, a versatile amnesic formatter, here is example usage:\n' +
-                    '`-r` => Uses clipboard as prompt, like -c\n' +
-                    '`-r is an idea that represents` => New prompt replaces -r with contents of clipboard\n' + 
-                    '`-r Where can I find fun things to do in the town of -r with with my friends?\n'
+            '-rs': 'Amnesic clipboard summarizer',
+            '-r': 'Versatile Amnesic Formatter, here is example usage:\n' +
+                    'Case 1: `-r` => Uses clipboard as prompt, like -c\n' +
+                    'Case 2: `-r is an example using a suffix!` => Replaces -r with contents of clipboard\n' +
+                    'Case 3: `-r Words go here, but do they -r ?` => Replaces second -r with contents of clipboard\n'
             }
-
-
 
 def set_prompt(prompt, prefix = None,  suffix = None):
     if prefix is None:
@@ -93,7 +91,7 @@ def set_prompt(prompt, prefix = None,  suffix = None):
     return prompt
 
 # Needs comments and clearer error handling after response fails
-def check_truncation_and_toks(response_struct):
+def get_response_string(response_struct):
     completion_tokens, prompt_tokens, total_tokens = (0,0,0)
     usage_vals = ['completion_tokens', 'prompt_tokens', 'total_tokens']
     # Check for other potential issues here
@@ -491,6 +489,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             continue
         elif user_input in ['-d', 'debug']:
             debug = not(debug)
+            print(f'Debug mode: {debug}')
             continue
         elif user_input.startswith('config'):
             # Fix this to make it a bit more like -r
@@ -513,25 +512,32 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
         elif user_input.startswith('-r'): # Amnesic
             args = user_input.split(' ')
             args_count = len(args)
-            if user_input == '-r':
-                pass
-            else:
-                # if -r... written without space
-                if user_input[2]!= ' ':
-                    print('Syntax for -r strings is `-r [prefix text] -r [optional suffix text]`')
-                    continue
+            
+            # Logic
 
-                if '-r' not in args[1:]: # single -r = suffix mode
-                    suffix = user_input[2:]
-                    print(f'Suffix: {suffix}')
-                
-                else: # Prefix and suffix mode
-                    args = args[1:]
-                    n = args.index('-r')
-                    prefix = ' '.join(args[:n]) + ' #'
-                    # adding a space to the suffix for readable formatting
-                    suffix = '#' + ' '.join(args[n+1:])
-                    print(f'Prefix: {prefix}, Suffix: {suffix}')
+            # If -r used alone, no need to set prefix or suffix
+            if user_input != '-r':
+                # If invalid formatting
+                if user_input[2] not in [' ', 's']:
+                    print('Check formatting. Type tan to check the documentation for clipboard commands.')
+                    continue
+                else:
+                    if user_input[2] == 's':
+                        # clipboard summmary (previously -cs)
+                        prefix = '#Provide a brief summary of the following text:\n'
+                        suffix = '\n#'
+
+                    elif '-r' not in args[1:]: # single -r = suffix mode
+                        suffix = user_input[2:]
+                        print(f'Suffix: {suffix}')
+                    
+                    else: # Prefix and suffix mode
+                        args = args[1:]
+                        n = args.index('-r')
+                        prefix = ' '.join(args[:n]) + ' #'
+                        # adding a space to the suffix for readable formatting
+                        suffix = '#' + ' '.join(args[n+1:])
+                        print(f'Prefix: {prefix}, Suffix: {suffix}')
 
             print('Reading clipboard. Working on response...')
             replace_input = True
@@ -615,27 +621,12 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             except QuitAndSaveError:
                     replace_input, replace_input_text = True, 'quit'
             continue
-        elif user_input in ['-c','-cs']: 
+        elif user_input == '-c': 
             # -c is a NON-amnesic clipboard reader
-            # -cs is an amnesic clipboard summarizer.
-
-            # This is used to perform a completion using the text in one's clipboard. Check the below prompt framing.
             replace_input = True
-            if user_input == '-cs': #clipboard summary? I think -cs kinda works
-                prefix = 'Provide a brief summary of the following text:\n'
-                suffix = '\n#'
-                replace_input_text = clipboard.paste(), 
-                print('Summarizing clipboard text...')
-                cached_history = history
-                history = ''
-
-                amnesia = True
-                continue
-            elif user_input == '-c':
-                # I think I will keep this non-amnesic, as it may be useful to use -c to keep convo but with text selections.
-                replace_input_text = clipboard.paste()
-                print('Responding to clipboard text...')
-                continue # No amnesia, so it will use the current history.
+            replace_input_text = clipboard.paste()
+            print('Responding to clipboard text...')
+            continue # No amnesia, so it will use the current history.
             
         elif user_input == 'codex':
             # Amnesic command, will not affect current configuration or history
@@ -752,12 +743,13 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 print('Response not generated. See above error. Try again?')
                 continue
             try:
-                response_string, completion_tokens, prompt_tokens, total_tokens = check_truncation_and_toks(response_struct)
+                response_string, completion_tokens, prompt_tokens, total_tokens = get_response_string(response_struct)
             except:
-                print('check_truncation_and_toks failure, fix incoming')
+                print('get_response_string failure, fix incoming')
                 continue
+            # Clarify what the response is
             if response_string is None:
-                print('Blocked or truncated')
+                print('Blocked')
                 full_log += '*x*'
                 continue
             elif response_string == '':
@@ -801,7 +793,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             
             if session_total_tokens > max_session_total_tokens:
                 print(f'Conversation is very lengthy. Session total tokens: {session_total_tokens}')
-            if debug: print(f'This completion was {round(100*total_tokens/4096)}% of the davinci maximum')
+            print(f'This completion was {round(100*total_tokens/4096)}% of the davinci maximum')
             continue
 
             
