@@ -28,6 +28,7 @@ If anything goes wrong before this point, let me know. Should be smooth sailing 
 4. install dependencies
     - `pip install openai`
     - `pip install clipboard`
+    - `pip install pillow`
     - `pip install requests`
 5. Run chatbot from your home directory in terminal:
     - `python -i -m chat`
@@ -37,7 +38,7 @@ The following steps assume you have all the required dependencies.
 
 # Using the TanTan chatbot:
 1. Paste your secret openai key to mysecrets.py
-2. After completing the prerequisites above, and moving chat to your home directory:
+2. After completing the prerequisites above, and moving chat.py to your home directory:
     - `python -m -i chat`
     To see the manual of commands and descriptions:
     - `tan` or `tanman`
@@ -45,8 +46,9 @@ The following steps assume you have all the required dependencies.
 - Please check out Chatbot/Chatbot_README.md for documentation and alternate setup environments. (Currently not too helpful)
 
 
+# Note: The below is entirely optional and not needed for chatbot.py. It will soon be integrated for cleaner workflows.
 
-# Using MacOS Shortcuts to automate running Link_Grabber.py and Downloader.py:
+# Using MacOS Shortcuts to automate running Link_Grabber.py and Downloader.py: OUTDATED BUT WORKS
 - Ask for Text with "Format Query as {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}"
 - Run Shell Script
     - `python3 Documents/TanTan/Link_Grabber.py -s {PROVIDED_INPUT}`
@@ -60,10 +62,6 @@ The following steps assume you have all the required dependencies.
     - `python3 Documents/TanTan/Downloader.py {PROVIDED_INPUT}`
 - End If
 
-
-
-
-# Note: The below is entirely optional and not needed for chatbot.py. It will soon be integrated for cleaner workflows.
 # Setting up the Reddit Image Fetcher:
 
 (Pre-req: Create a reddit account)
