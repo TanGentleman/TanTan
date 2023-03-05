@@ -838,10 +838,10 @@ def get_args(args):
     return engine, max_tokens, debug
 
 def main(engine, max_tokens, debug):
+    check_directories()
     if openai_key == None:
         print('Please set your OpenAI key in config.py')
         return
-    check_directories()
     try:
         logs = interactive_chat(slow_status, engine, max_tokens, debug)
     except KeyboardInterrupt:
@@ -868,11 +868,12 @@ def main(engine, max_tokens, debug):
         return
 
 def check_directories():
-    if not os.path.exists(filepath):
-        os.path.makedirs(filepath)
-    if not os.path.exists(filepath + '/TrainingData'):
-        os.path.makedirs(filepath + '/TrainingData')
-    return True
+    chatbot_filepath = filepath
+    training_data_filepath = filepath + '/TrainingData'
+    if not os.path.exists(chatbot_filepath):
+        os.path.makedirs(chatbot_filepath)
+    if not os.path.exists(training_data_filepath):
+        os.path.makedirs(training_data_filepath)
 
 # Allows execution from python environment with `import chatbot` to run like default script execution from CLI
 def main_from_args(args):

@@ -1,17 +1,4 @@
-# Chatbot Documentation:
-- Work in Progress.
-
-
-Workaround to run from within a python environment:
-- `cd`
-- `python3`
-- `import sys`
-- `sys.path.append('/path/to/TanTan')`
-- `import chatbot`
-- `args = ['python_env', 'config', 'ada', '24']`
-- `chatbot.main2(args)`
-
-New way to run the chatbot from within a python environment:
+# New way to run the chatbot from within a python environment:
 1. Move chat.py to your home directory and configure default.
 2. Run terminal command:
 - `python -i -m chat`
