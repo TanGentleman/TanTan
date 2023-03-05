@@ -22,16 +22,13 @@ Pre-R Chatbot from scratch (still in development):
     - `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
 2. install python
     - `brew install python`
-
 If anything goes wrong before this point, let me know. Should be smooth sailing from here.
-3. install pip
-    - `brew install pip`
+3. install readline
     - `brew install readline`
 4. install dependencies
     - `pip install openai`
     - `pip install clipboard`
     - `pip install requests`
-    - `pip install readline`
 5. Run chatbot from your home directory in terminal:
     - `python -i -m chat`
 *Strong avisory: I recommend using a VPN when using the internet, especially over unsecure networks*
@@ -39,14 +36,13 @@ If anything goes wrong before this point, let me know. Should be smooth sailing 
 The following steps assume you have all the required dependencies.
 
 # Using the TanTan chatbot:
-(Pre-req: Create an openai account)
 1. Paste your secret openai key to mysecrets.py
 2. After completing the prerequisites above, and moving chat to your home directory:
     - `python -m -i chat`
     To see the manual of commands and descriptions:
-    - `tanman`
+    - `tan` or `tanman`
 
-- Please check out Chatbot/Chatbot_README.md for documentation and alternate setup environments.
+- Please check out Chatbot/Chatbot_README.md for documentation and alternate setup environments. (Currently not too helpful)
 
 
 
