@@ -7,6 +7,7 @@ import time
 import os
 import config as c
 import clipboard
+
 if c.dev:
     from os import environ
     from transformers import GPT2TokenizerFast
@@ -40,38 +41,42 @@ full_logfile = 'logfile.txt'
 response_time_logfile = 'response_time_log.txt'
 
 slow_status = False # slow_status = False defaults to davinci - True defaults to curie + disables davinci
-default_engine = 'text-davinci-003'
-default_slow_engine = 'text-curie-001'
 
-default_max_tokens = 300
-max_tokens = default_max_tokens
 
+DEFAULT_ENGINE = 'text-davinci-003'
+DEFAULT_MAX_TOKENS = 300
+DEFAULT_TEMPERATURE = 0.3
+
+EMPTY_RESPONSE_DELIMITER = '.'
 # You can increase the following values after playing around a bit
-max_codex = 4000
-max_token_limit = 4000
-max_session_total_tokens = 4000
-warning_history_count = 3000
+MAX_CODEX = 4000
+MAX_TOKEN_LIMIT = 4000
+MAX_SESSION_TOTAL_TOKENS = 4000
+WARNING_HISTORY_COUNT = 3000
 
-# These will be configurable variables in future updates. Presets need to be added first.
-default_temperature = 0.3
-frequency_penalty_val = 1.0
+# Configurable variables in future updates. Presets need to be added first.
+
+DEFAULT_SLOW_ENGINE = 'text-curie-001'
+
+
+frequency_penalty_val = 1.0 # This is not currently configurable within interactive_chat
 
 
 debug = False
 
 cmd_dict = {
-            'config': 'Prompts configuration of engine and max_tokens. `config [engine] [tokens] [-d]`',
-            'codex': 'Generate code from codex_prompt.txt',
+            'config': 'Set the engine and max_tokens. `config [engine] [tokens] [-d]`',
+            'codex': 'Generate a code completion from codex_prompt.txt',
             'debug': 'Toggle debug mode. Alias -d',
             'del': 'Delete the last exchange from memory',
             'forget': 'Forget the past conversation. Alias -f',
             'help': 'Display the list of commands',
-            'history': 'The current conversation in memory', 
+            'his': 'The current conversation in memory. Alias history', 
             'log': 'Toggle to enable or disable logging of conversation + response times', 
             'read': 'Respond to text_prompt.txt', 
-            'save': 'Save the current conversation log to conversation.txt. Alias -s',
+            'save': 'Save the recent prompt/response exchange to response.txt. Alias -s',
             'stats': 'Prints the current configuration and session total tokens.',
-            'tanman': 'brings up the TanManual (commands with their descriptions). Alias tan',
+            'tanman': 'Bring up the TanManual (commands with their descriptions). Alias tan',
             'temp': 'Configure temperature (0.0-1.0)',
             'tok': 'Configure max tokens for the response',
             '-c': 'Respond to clipboard text (Uses conversation history)',
@@ -79,8 +84,18 @@ cmd_dict = {
             '-r': 'Versatile Amnesic Formatter, here is example usage:\n' +
                     'Case 1: `-r` => Uses clipboard as prompt, like -c\n' +
                     'Case 2: `-r is an example using a suffix!` => Replaces -r with contents of clipboard\n' +
-                    'Case 3: `-r Words go here, but do they -r ?` => Replaces second -r with contents of clipboard\n'
+                    'Case 3: `-r Analyze this url: -r Analysis:` => Replace "-r " with #clipboard_contents#\n'
             }
+def make_folder(folder_path):
+    try:
+        os.mkdir(folder_path)
+    except FileExistsError:
+        pass
+        # print(f'No worries: The folder at {folder_path} already exists')
+    # Have to sanitize folder name first!!
+    except:
+        print('Filepath not found!')
+        raise TanSaysNoNo
 
 def set_prompt(prompt, prefix = None,  suffix = None):
     if prefix is None:
@@ -120,15 +135,21 @@ def get_response_string(response_struct):
         print("Could not access response['choices']")
         raise TanSaysNoNo
 
-    if response_struct['finish_reason'] == 'length':
+    if response_struct['finish_reason'] == 'stop':
+        pass
+    elif response_struct['finish_reason'] == 'length':
         print('*Warning: message may be truncated. Adjust max tokens as needed.')
-
+    else:
+        print(f'Warning -- Finish reason: {response_struct["finish_reason"]}')
     # To Debug:
     # print(f'{response_struct["finish_reason"]} boo! {response_struct["text"]}<-response')
     response_string = response_struct['text']
 
     if response_string == '':
-        print('Huh, it do be blank')
+        print('Blank Space (no response)')
+        response_string = EMPTY_RESPONSE_DELIMITER
+
+    assert(len(response_string) > 0)
     return response_string, completion_tokens, prompt_tokens, total_tokens
 
 def read_prompt(filepath, filename):
@@ -265,9 +286,9 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
                 engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
                 break
             if engine == 'code-davinci-002':
-                temp_tok_limit = max_codex # Set the max tokens limit to the codex limit
+                temp_tok_limit = MAX_CODEX # Set the max tokens limit to the codex limit
             else:
-                temp_tok_limit = max_token_limit # Set the max tokens limit to the normal limit
+                temp_tok_limit = MAX_TOKEN_LIMIT # Set the max tokens limit to the normal limit
 
             if (test_toks > 0) and (test_toks <= temp_tok_limit):
                 max_tokens = test_toks # Set the max tokens to the new value
@@ -396,15 +417,27 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
         except:
             print('config():Welp, seems your engine appears invalid to engine_choice(). I shall leave it alone.')
     if ask_token:
-        default = default_max_tokens
-        limit = max_token_limit
+        default = DEFAULT_MAX_TOKENS
+        limit = MAX_TOKEN_LIMIT
         try:
             max_tokens = set_max_tokens(default, limit)
         except QuitAndSaveError:
             raise QuitAndSaveError
     return engine, max_tokens
 
-
+def prompt_to_response(debug, history, prompt, engine, max_tokens, temperature, full_log):
+    assert(prompt is not None)
+    try: # continues the conversation by default
+        response_struct = generate_text(debug, history + '\n' + prompt if history else prompt, engine, max_tokens, temperature)
+    except:
+        print('Response not generated. See above error. Try again?')
+    try:
+        response_string, completion_tokens, prompt_tokens, total_tokens = get_response_string(response_struct)
+    except:
+        print('get_response_string failure, fix incoming')
+        assert(False) # I think I have ensured safety of get_response_string()!
+        # Valid response!
+    return response_string, completion_tokens, prompt_tokens, total_tokens
 
 # This function needs proper re-structuring for readability!
 def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
@@ -428,12 +461,11 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
     response_count = 0
     chat_ongoing = True
 
-    temperature = default_temperature
+    temperature = DEFAULT_TEMPERATURE
     config_info = config_msg(engine, max_tokens, session_total_tokens)
     full_log += config_info
     print(config_info)
-    input_time = -1
-    got_response = None
+    prompts_and_responses = []
     while chat_ongoing:
         # Amnesia mode saves current configuration and history for next prompt
         if amnesia:
@@ -474,7 +506,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 print('This was not logged.')
             else:
                 full_log += f'Tokens used: {session_total_tokens}'
-            # chat_ongoing = False (eventually will be updated)
+                print(prompts_and_responses)            
             return full_log, response_time_log, logging_on
 
         elif user_input[-2:] == '-p':
@@ -541,7 +573,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
 
             print('Reading clipboard. Working on response...')
             replace_input = True
-            replace_input_text = clipboard.paste()
+            replace_input_text = (clipboard.paste()).strip()
             # Cache history here
             cached_history = history
             history = ''
@@ -553,7 +585,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             print('For the full manual of commands and descriptions, type tan')
             print(list(cmd_dict.keys()))
             continue
-        elif user_input == 'history': # Show convo history
+        elif user_input in ['his','history']: # Show convo history
             if history:
                 print(f'Conversation in memory shown below:\n\n{(history)}')
             else:
@@ -607,7 +639,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             continue
         elif user_input == 'tok':
             default = max_tokens
-            limit = max_token_limit
+            limit = MAX_TOKEN_LIMIT
             try:
                 max_tokens = set_max_tokens(default, limit)
             except QuitAndSaveError:
@@ -624,7 +656,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
         elif user_input == '-c': 
             # -c is a NON-amnesic clipboard reader
             replace_input = True
-            replace_input_text = clipboard.paste()
+            replace_input_text = (clipboard.paste()).strip()
             print('Responding to clipboard text...')
             continue # No amnesia, so it will use the current history.
             
@@ -643,7 +675,7 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             
             # Set tokens (persistent until valid chosen!)
             default = None
-            limit = max_codex
+            limit = MAX_CODEX
             try:
                 codex_tokens = set_max_tokens(default, limit)
             except QuitAndSaveError:
@@ -686,30 +718,34 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                 file.write(text)
             print('Saved!')
             continue
-        
+        elif user_input == '-sr':
+            clipboard.copy(cached_response.strip())
+            print('Copied response to clipboard.')
+            continue
+        elif user_input == '-sh':
+            clipboard.copy(cached_response.strip())
+            print('Copied history to clipboard.')
+            continue
         elif user_input == '-ig':
             # image generation
             try_gen('default')
             continue
         elif dev and user_input == 'magic': 
             # Experimenting with a magic string generator for Link_Grabber.py to use
-            user_input = input('Throw something at me. Magic string headed back your way:\n')
+            raw_magic_string = input('Throw something at me. Magic string headed back your way:\n')
             prefix = read_magic_string_training()
-            if prefix:
-                suffix = '\nOutput:'
-                replace_input = True
-                replace_input_text = set_prompt(user_input, prefix, suffix)
+            suffix = '\nOutput:'
+            replace_input = True
+            replace_input_text = raw_magic_string
 
-                cached_tokens = max_tokens
-                cached_history = history
-                max_tokens = 15
-                history = ''
+            cached_tokens = max_tokens
+            cached_history = history
+            max_tokens = 15
+            history = ''
 
-                amnesia = True
-                continue
-            else:
-                print('welp, could not read magic_string_training.txt')
-                continue
+            amnesia = True
+            continue
+        
 
         # All valid non-command inputs pass through here.    
         else:
@@ -734,76 +770,56 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
                     print('WARNING: prompt is too long. I will try to generate a response, but it may be truncated.')
                     print(f'max_tokens would need to be set to roughly {4000-token_count}')
                 print(f'prompt is {token_count} tokens')
+            response_string, completion_tokens, prompt_tokens, total_tokens = prompt_to_response(
+                                                                debug, history, prompt, engine, max_tokens, temperature, full_log)
+            # End of else clause
 
-            # Try getting an output response (This is not yet text)
-            try:
-                # by default, continues the conversation (Doesn't add newline if no history)
-                response_struct = generate_text(debug, history + '\n' + prompt if history else prompt, engine, max_tokens, temperature)
-            except:
-                print('Response not generated. See above error. Try again?')
-                continue
-            try:
-                response_string, completion_tokens, prompt_tokens, total_tokens = get_response_string(response_struct)
-            except:
-                print('get_response_string failure, fix incoming')
-                continue
-            # Clarify what the response is
-            if response_string is None:
-                print('Blocked')
-                full_log += '*x*'
-                continue
-            elif response_string == '':
-                print('Blank Space (no response)')
-                full_log += '*x*'
-                continue
-            else:
-                response = response_string
-                # Valid response!
+        # Successfully passed through else clause and response string obtained
+        assert(len(response_string) > 0)
+        response = response_string
+        # Only if non-command, it has successfully passed through else clause.
+        time_taken = time.time()-start_time
+        if debug: print('beep, we got a response!')
+        # Dev tokenization check
+        if dev:
+            tokenized_text = tokenize(history)
+            token_count = len(tokenized_text)
+            if token_count > WARNING_HISTORY_COUNT:
+                print(f'Conversation token count is growing large [{token_count}]. Please reset my memory as needed.')
+        # Record a savestate and append history
+        prompts_and_responses.append((prompt, response))
+        cached_prompt = prompt
+        cached_response = response
+        previous_history = history
+        history += prompt + response + '\n'
 
-            # Only if non-command, it has successfully passed through else clause.    
-            assert(len(response) > 0)
-            time_taken = time.time()-start_time
-            if debug: print('beep, we got a response!')
-            # Dev tokenization check
-            if dev:
-                tokenized_text = tokenize(history)
-                token_count = len(tokenized_text)
-                if token_count > warning_history_count:
-                    print(f'Conversation token count is growing large [{token_count}]. Please reset my memory as needed.')
-            # Record a savestate and append history
-            cached_prompt = prompt
-            cached_response = response
-            previous_history = history
-            history += prompt + response + '\n'
+        #add a marker to distinguish from user text
+        RT = round(time_taken, 1)
+        response_time_marker = f'(*{RT}s)' # (*1.2s) is the marker for 1.2 seconds
+        engine_marker = format_engine_string(engine)
+        
+        # Log the response and response time
+        response_count += 1
+        full_log += f'({response_count}.)' + prompt + '\n' + response_time_marker + response + '\n'
+        response_time_log += f'[#{response_count}, RT:{RT}, T:{total_tokens}, E:{engine_marker}]'
 
-            #add a marker to distinguish from user text
-            RT = round(time_taken, 1)
-            response_time_marker = f'(*{RT}s)' # (*1.2s) is the marker for 1.2 seconds
-            engine_marker = format_engine_string(engine)
-            response_count += 1
-            # Log the response and response time
-            full_log += f'({response_count}.)' + prompt + '\n' + response_time_marker + response + '\n'
-            response_time_log += f'[#{response_count}, RT:{RT}, T:{total_tokens}, E:{engine_marker}]'
-
-            # Print the response and response time
-            print(f'Response {response_count}: {response}\n\n')
-            print(f'response time: {round(time_taken, 1)} seconds')
-
-            session_total_tokens += total_tokens
-            
-            if session_total_tokens > max_session_total_tokens:
-                print(f'Conversation is very lengthy. Session total tokens: {session_total_tokens}')
-            print(f'This completion was {round(100*total_tokens/4096)}% of the davinci maximum')
-            continue
+        # Print the response and response time
+        print(f'Response {response_count}: {response}\n\n')
+        print(f'response time: {round(time_taken, 1)} seconds')
+        session_total_tokens += total_tokens
+        
+        if session_total_tokens > MAX_SESSION_TOTAL_TOKENS:
+            print(f'Conversation is very lengthy. Session total tokens: {session_total_tokens}')
+        print(f'This completion was {round(100*total_tokens/4096)}% of the davinci maximum')
 
             
 def get_args(args):
     if slow_status == True: 
-        engine = default_slow_engine
+        engine = DEFAULT_SLOW_ENGINE
     else:
-        engine = default_engine
+        engine = DEFAULT_ENGINE
 
-    max_tokens = default_max_tokens
+    max_tokens = DEFAULT_MAX_TOKENS
    
     arg_count = len(args)
     if '-d' in args:
@@ -840,6 +856,7 @@ def main(engine, max_tokens, debug):
     except Exception as e:
         print(e)
         print('Debug me! I am looking for more ways to reach this point.')
+        return
     if logs:
         (convo, response_times, logging_on) = logs
         if logging_on:
@@ -859,6 +876,8 @@ def check_directories():
 
 # Allows execution from python environment with `import chatbot` to run like default script execution from CLI
 def main_from_args(args):
+    # interactive_ui(True, 'text-curie-001', 50, False)
+    # return
     try:
         engine, max_tokens, debug = get_args(args)
         good_args = True
@@ -867,20 +886,9 @@ def main_from_args(args):
         good_args = False
     if good_args:
         main(engine, max_tokens, debug)
-
 # Default script execution from CLI, uses sys.argv arguments
 if __name__ == '__main__':
     args = sys.argv
     main_from_args(args)
-
-def make_folder(folder_path):
-    try:
-        os.mkdir(folder_path)
-    except FileExistsError:
-        pass
-        # print(f'No worries: The folder at {folder_path} already exists')
-    # Have to sanitize folder name first!!
-    except:
-        print('Filepath not found!')
-        raise TanSaysNoNo
+    pass
 

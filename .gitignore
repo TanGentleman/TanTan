@@ -10,3 +10,4 @@ whisper.py
 conversation_generation.py
 DallE/*
 Chatbot/DallE
+graphics.py
