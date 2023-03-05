@@ -871,9 +871,9 @@ def check_directories():
     chatbot_filepath = filepath
     training_data_filepath = filepath + '/TrainingData'
     if not os.path.exists(chatbot_filepath):
-        os.path.makedirs(chatbot_filepath)
+        os.mkdir(chatbot_filepath)
     if not os.path.exists(training_data_filepath):
-        os.path.makedirs(training_data_filepath)
+        os.mkdir(training_data_filepath)
 
 # Allows execution from python environment with `import chatbot` to run like default script execution from CLI
 def main_from_args(args):
