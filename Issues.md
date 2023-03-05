@@ -1,10 +1,8 @@
 Current issue:
-! Checks to see if directories valid first.
-! Functions to make all needed folders
-! Do reddit API key check before any workflow progress
-! Make a more readable README
 
 In development:
+- A more readable README
+
 - Tokenizer using an offline, local, pretrained GPT2 Model (Need to handle log-warning better)
     - Also want to run some tests to see of computation ends up being a limiting factor, I should be able run it in parallel with response generation in the existing code if needbe.
 - Documentation for the chatbot
@@ -16,6 +14,10 @@ In development:
 
 [ x ] : fix being tested
 # Active Issues:
+[ x ] Checks to see if directories valid first.
+! Functions to make all needed folders
+! Do reddit API key check before any workflow progress
+!! Make a datatype that holds engine configuration (Should it be passed slow_status?)
 
 Chatbot.py
 - [ ! ] Debug statements/variables that don't clutter, and have purpose.
@@ -41,14 +43,17 @@ Reddit Link_Grabber
 Features Added:
 - Add generate token to test_setup.py
 - Logic for adding smart config strings like <config curie -d> or <config davinci 400> to the function interactive_chat()
-- Add cache variables to store engine/token/history
+- Add cache variables to store current engine/token/history
 - Expanded 'tanman' command documentation
 - Be able to save current convo to conversation.txt at any time.
+- Tidies up clipboard manipulation, allowing for powerful use in copying and pasting, without spaces or newlines being annoying
+
 
 Bugs Squashed:
 - Slow_Status needs to always apply, even if 'config arg' string shortcut used
 - Pesky bugfix for empty string response not storing original prompt in history
 - Filename from CLI arg sanitized in Downloader.py
+- Empty string response not handled currectly (Changed response string to same delimiter as logs)
 
 To-Do List:
 - Make all non-responses “continue” in the while loop.

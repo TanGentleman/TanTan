@@ -17,4 +17,4 @@ tokens = '100'
 args = ['python_env','config', engine, tokens]
 
 #run 
-chatbot.py_env_main(args)
+chatbot.main_from_args(args)
