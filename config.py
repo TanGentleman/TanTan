@@ -1,7 +1,7 @@
 '''Hi there! Hopefully these don't look too scary. The filepath is the location 
-where you installed this repository. I recommend Documents/TanTan'''
+where you installed this repository. I recommend the Desktop, so ~/Desktop/TanTan'''
 
-filepath = 'Documents/TanTan'
+filepath = 'Desktop/TanTan'
 reddit_folder_name = 'ScrapeAndSpreddit'
 
 ### REDDIT CONFIG

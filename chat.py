@@ -11,7 +11,8 @@
 import sys
 # Add our repository to our path, so the chatbot can be imported correctly.
 
-sys.path.append('documents/tantan') # Make sure to tweak this path! This is just where I keep the repository on my machine.
+sys.path.append('Desktop/Tantan') # Make sure to tweak this path! This is just where I keep the repository on my machine.
+
 import chatbot
 
 if __name__ == '__main__':

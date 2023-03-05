@@ -79,6 +79,8 @@ cmd_dict = {
             'tanman': 'Bring up the TanManual (commands with their descriptions). Alias tan',
             'temp': 'Configure temperature (0.0-1.0)',
             'tok': 'Configure max tokens for the response',
+            '-sr': 'Save Response: Copies response to clipboard',
+            '-sh': 'Save History: Copies history to clipboard',
             '-c': 'Respond to clipboard text (Uses conversation history)',
             '-rs': 'Amnesic clipboard summarizer',
             '-r': 'Versatile Amnesic Formatter, here is example usage:\n' +
@@ -723,12 +725,21 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             print('Copied response to clipboard.')
             continue
         elif user_input == '-sh':
-            clipboard.copy(cached_response.strip())
+            clipboard.copy(history.strip())
             print('Copied history to clipboard.')
             continue
         elif user_input == '-ig':
+            size_input = input('Pick a size: small (s), medium (m), large (l)\n')
             # image generation
-            try_gen('default')
+            if size_input in ['s', 'small']:
+                size = 'small'
+            elif size_input in ['m', 'medium']:
+                size = 'medium'
+            elif size_input in ['l', 'large']:
+                size = 'large'
+            else:
+                size = 'default'
+            try_gen(size)
             continue
         elif dev and user_input == 'magic': 
             # Experimenting with a magic string generator for Link_Grabber.py to use
@@ -870,10 +881,13 @@ def main(engine, max_tokens, debug):
 def check_directories():
     chatbot_filepath = filepath
     training_data_filepath = filepath + '/TrainingData'
+    dalle_downloads_filepath = filepath + '/DallE'
     if not os.path.exists(chatbot_filepath):
         os.mkdir(chatbot_filepath)
     if not os.path.exists(training_data_filepath):
         os.mkdir(training_data_filepath)
+    if not os.path.exists(training_data_filepath):
+        os.mkdir(dalle_downloads_filepath)
 
 # Allows execution from python environment with `import chatbot` to run like default script execution from CLI
 def main_from_args(args):

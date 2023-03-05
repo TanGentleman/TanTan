@@ -13,23 +13,22 @@ I have to decide whether I want this to be a program that lets you feel like a d
 # Getting this onto your computer (MacOS only):
 1. Go the the github page > Code > Download Zip
 2. Download TanTan-Main
-3. Rename to TanTan and move to ~/Documents on your computer.
+3. Rename to TanTan and move to the home directory on your computer.
 4. This location is the filepath variable in config.py
 5. Move chat.py to your home directory instead
 
-Pre-R Chatbot from scratch (still in development):
+Getting the Chatbot up and running from scratch (still in development):
+Note that steps 1 and 2 require following the error message(s) and running the appropriate commands (like chmod for file permissions)
 1. install homebrew
     - `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
 2. install python
     - `brew install python`
 If anything goes wrong before this point, let me know. Should be smooth sailing from here.
-3. install readline
-    - `brew install readline`
-4. install dependencies
-    - `pip install openai`
-    - `pip install clipboard`
-    - `pip install pillow`
-    - `pip install requests`
+3. install dependencies
+    - `pip3 install openai`
+    - `pip3 install clipboard`
+    - `pip3 install pillow`
+    - `pip3 install requests`
 5. Run chatbot from your home directory in terminal:
     - `python3 -i -m chat`
 
@@ -48,7 +47,7 @@ If anything goes wrong before this point, let me know. Should be smooth sailing 
 # Using MacOS Shortcuts to automate running Link_Grabber.py and Downloader.py: OUTDATED BUT WORKS
 - Ask for Text with "Format Query as {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}"
 - Run Shell Script
-    - `python3 Documents/TanTan/Link_Grabber.py -s {PROVIDED_INPUT}`
+    - `python3 Desktop/TanTan/Link_Grabber.py -s {PROVIDED_INPUT}`
 - Text = Shell Script Result
 - If <Text> <contains> <*shortcut_failure*>
     - Run this shortcut again (Link Grab + Download)
@@ -56,7 +55,7 @@ If anything goes wrong before this point, let me know. Should be smooth sailing 
     - Show Alert "Would you like to Download?"
     - Ask for Text with Folder Name:
     - Run Shell Script
-    - `python3 Documents/TanTan/Downloader.py {PROVIDED_INPUT}`
+    - `python3 Desktop/TanTan/Downloader.py {PROVIDED_INPUT}`
 - End If
 
 # Setting up the Reddit Image Fetcher:
@@ -76,7 +75,7 @@ If anything goes wrong before this point, let me know. Should be smooth sailing 
 11. Set token_needed to True, and leave reddit_token as None for now.
 12. Triple check that all the required fields are entered correctly.
 13. Run test_setup.py with the below command and note the printed string.
-    - `python3 Documents/TanTan/test_setup.py`
+    - `python3 Desktop/TanTan/test_setup.py`
     - If this does not work, please let me know, I am working on some better safeguards.
     - The printed outcome value is reddit_token, please set it accordingly in mysecrets.py
 14. You're all done with the essentials! You should now be able to run Link_Grabber.py and Downloader.py
@@ -90,13 +89,13 @@ If anything goes wrong before this point, let me know. Should be smooth sailing 
 2. Set the 5 query variables in config.py, or add the Magic String in the command line for step 3.
 - [MAGIC STRING] = {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}
 3. Run either command in terminal from your home directory.
-    - `python3 Documents/TanTan/Link_Grabber.py`
-    - `python3 Documents/TanTan/Link_Grabber.py r/houseplants 50 top year -d`
+    - `python3 Desktop/TanTan/Link_Grabber.py`
+    - `python3 Desktop/TanTan/Link_Grabber.py r/houseplants 50 top year -d`
 - This should generate a contents.txt file in the {reddit_folder_name} directory (Documents/TanTan/{reddit_folder_name})
 
 # Downloading from contents.txt:
 - The format in the file should be [Title + DELIMITER(something like '_||_' to separate them) + URL] for each entry
 - The only argument following Downloader.py is the desired folder name.
 1. Run command in terminal from your home directory.
-    - `python3 Documents/TanTan/Downloader.py Folder_For_Collected_Images`
+    - `python3 Desktop/TanTan/Downloader.py Folder_For_Collected_Images`
 - The above example would save the images to TanTan/{reddit_folder_name}/Folder_For_Collected_Images
