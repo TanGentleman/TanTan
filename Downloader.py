@@ -5,7 +5,7 @@ from hashlib import sha256
 import sys
 import config as c
 
-TanSaysNoNo = c.TanEx
+class TanSaysNoNo(Exception): pass
 
 # Given a filepath:s to a contents.txt file, returns the internal text as a string.
 def read_content(contents_path):
@@ -15,7 +15,7 @@ def read_content(contents_path):
                 return file_contents
         except FileNotFoundError:
             print('No contents.txt in this directory found')
-            raise(TanSaysNoNo)
+            raise TanSaysNoNo
 
 # Takes a filename, returns a safely-formatted filename
 def sanitize_filename(filename):
@@ -30,24 +30,29 @@ def sanitize_filename(filename):
         return filename
 
 # Given content as a string, plus the delimiter to parse it, return arrays of titles and links
+# Content must be formatted TITLE + DELIMITER + URL where empty string values are not permitted
+# IGNORES lines without the given delimiter
 def content_to_arrays(content, DELIMITER):
     titles = []
     links = []
     for line in content.splitlines():
-        if DELIMITER not in line:
+        count = line.count(DELIMITER)
+        if count == 0:
             continue
-        try: # Extracting the title and url from each line
-            tit, url = line.split(DELIMITER)
-        except:
-            print('wow, you broke my delimiter!')
-            raise(ValueError)
+        if count > 1:
+            print('Only one delimiter per line allowed.')
+            raise TanSaysNoNo
+        tit, url = line.split(DELIMITER)
+        if tit == '':
+            print('Empty title found.')
+            tit = 'tantitled'
         titles.append(tit)
         links.append(url)
     try: # Double checking formatting (list lengths)
         assert(len(titles) == len(links))
     except:
         print(f'Format must be TITLE + {DELIMITER} + URL')
-        raise(TanSaysNoNo)
+        raise TanSaysNoNo
     return titles, links
 
 # Takes image content, returns its hashed value as a string.
@@ -60,7 +65,7 @@ def get_image_hash(image_content):
 def save_images(titles, links, folder_path):
     if len(titles) == 0:
         print('List invalid.')
-        raise(TanSaysNoNo)
+        raise TanSaysNoNo
     duplicates = ''
     count = 0
     total_count = 0
@@ -104,7 +109,7 @@ def save_images(titles, links, folder_path):
                 total_count+=1
         except:
             print('Welp, unable to save the image')
-            raise(TanSaysNoNo)
+            raise TanSaysNoNo
     return total_count, duplicates
 
 # runs content_to_arrays with error handling
@@ -115,7 +120,7 @@ def try_content_to_arrays(content, DELIMITER):
             return titles, links
         except:
             print('Error! Traces back to: content_to_arrays')
-            raise(TanSaysNoNo)
+            raise TanSaysNoNo
     else:
         print('Error? Content empty.')
         return [], []
@@ -128,7 +133,7 @@ def make_folder(folder_path):
     # Have to sanitize folder name first!!
     except:
         print('Filepath not found!')
-        raise(TanSaysNoNo)
+        raise TanSaysNoNo
     
 # runs save_images with error handling, then prints output results
 def try_saving_images(titles, links, folder_path):
@@ -139,20 +144,20 @@ def try_saving_images(titles, links, folder_path):
         total_count, duplicates = save_images(titles, links, folder_path)
     except:
         print('Error. Output of save_images is faulty.')
-        raise(TanSaysNoNo)
+        raise TanSaysNoNo
 
     print(f'There are {len(links)} title*;;*url formatted images')
     print(f'Total unique images: {total_count}')
     return total_count, duplicates
 
-
+# Saves results to a results.txt file
 def try_saving_results(filepath, total_count, folder_name, duplicates = None):
     try:
         with open(f'{filepath}/results.txt', 'w') as file:
             file.write(f'Total unique images saved to {folder_name}: {total_count}\nDupe Log:\n{duplicates or "None detected"}')
     except:
         print('Welp, unable to save results.txt')
-        raise(TanSaysNoNo)
+        raise TanSaysNoNo
 
 # Given the filepath of the main reddit folder, the new folder to download to, and the delimiter, runs the downloader
 def run_downloader(DELIMITER, filepath, download_folder_path):

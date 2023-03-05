@@ -7,22 +7,23 @@ import time
 import os
 import config as c
 import clipboard
-
 if c.dev:
-    from os import environ
+    dev = True
+    import logging
+    logging.disable(logging.ERROR) # Ignore a warning that doesn't apply to our use of GPT-2
+
+    # Use a local copy of the pretrained GPT-2 model to reliably tokenize prompt before passing it to OpenAI function
     from transformers import GPT2TokenizerFast
     tokenize = GPT2TokenizerFast.from_pretrained("gpt2", local_files_only = True).tokenize
-    environ["TOKENIZERS_PARALLELISM"] = "false"
-    import image_generation as ig
-    dev = True
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
 else:
-    import image_generation as ig
     dev = False
-class TanSaysNoNo(Exception): 
-    pass
-class QuitAndSaveError(Exception): 
-    pass
-def check_quit(text):
+
+import image_generation as ig
+class TanSaysNoNo(Exception): pass
+class QuitAndSaveError(Exception): pass
+
+def check_quit(text): # You should be able to quit from any input() call
     if text == 'quit':
         raise QuitAndSaveError
 
@@ -40,14 +41,17 @@ filepath = f'{c.filepath}/Chatbot'
 full_logfile = 'logfile.txt'
 response_time_logfile = 'response_time_log.txt'
 
-slow_status = False # slow_status = False defaults to davinci - True defaults to curie + disables davinci
 
+slow_status = False # When True, engine defaults to DEFAULT_SLOW_ENGINE
+debug = False
 
 DEFAULT_ENGINE = 'text-davinci-003'
+DEFAULT_SLOW_ENGINE = 'text-curie-001'
+
 DEFAULT_MAX_TOKENS = 300
 DEFAULT_TEMPERATURE = 0.3
 
-EMPTY_RESPONSE_DELIMITER = '.'
+EMPTY_RESPONSE_DELIMITER = '.' # Replaces the response when blocked or empty
 # You can increase the following values after playing around a bit
 MAX_CODEX = 4000
 MAX_TOKEN_LIMIT = 4000
@@ -56,13 +60,8 @@ WARNING_HISTORY_COUNT = 3000
 
 # Configurable variables in future updates. Presets need to be added first.
 
-DEFAULT_SLOW_ENGINE = 'text-curie-001'
-
 
 frequency_penalty_val = 1.0 # This is not currently configurable within interactive_chat
-
-
-debug = False
 
 cmd_dict = {
             'config': 'Set the engine and max_tokens. `config [engine] [tokens] [-d]`',
@@ -88,6 +87,9 @@ cmd_dict = {
                     'Case 2: `-r is an example using a suffix!` => Replaces -r with contents of clipboard\n' +
                     'Case 3: `-r Analyze this url: -r Analysis:` => Replace "-r " with #clipboard_contents#\n'
             }
+
+
+
 def make_folder(folder_path):
     try:
         os.mkdir(folder_path)
@@ -491,9 +493,11 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             user_input = replace_input_text # Use the replacement text
             replace_input = False
         else:
-            # Implement cooldown if needed
             user_input = input('Enter a prompt: ')
-
+            # I want to avoid spam user inputs. 
+            # I can lstrip/rstrip, but I want to allow for niche use cases in weird workflows.
+            # Planning to implement a cooldown of sorts, but I want to allow a use allow for individually processed list items.
+        
         # Start the timer
         start_time = time.time()
         # If Blank Space
@@ -728,7 +732,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             clipboard.copy(history.strip())
             print('Copied history to clipboard.')
             continue
-        elif user_input == '-ig':
+        elif user_input == '-images':
             size_input = input('Pick a size: small (s), medium (m), large (l)\n')
             # image generation
             if size_input in ['s', 'small']:
@@ -742,7 +746,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             try_gen(size)
             continue
         elif dev and user_input == 'magic': 
-            # Experimenting with a magic string generator for Link_Grabber.py to use
+            # Experimenting with a magic string generator for reddit_fetcher.py to use
             raw_magic_string = input('Throw something at me. Magic string headed back your way:\n')
             prefix = read_magic_string_training()
             suffix = '\nOutput:'

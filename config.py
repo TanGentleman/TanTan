@@ -10,10 +10,10 @@ max_count = 500 # Please keep this to a reasonable value (I recommend < 1000 unl
 max_file_size = 10000 # This is in KB, only filters valid .gif and .mp4 filetypes.
 
 
-# The following variables can also optionally be set when running link_grabber.py via the command line
+# The following variables can also optionally be set when running reddit_fetcher.py via the command line
 # [MAGIC STRING] = {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}
 # The terminal command for the following configuration would be:
-# python3 path/to/TanTan/Link_Grabber.py r/anarchychess 69 top year
+# python3 path/to/TanTan/reddit_fetcher.py r/anarchychess 69 top year
 user_input = 'r/anarchychess'
 limit_qty = 69
 
@@ -23,7 +23,6 @@ debug = False
 
 # Do not touch. 
 DELIMITER = '_||_' # Change only if you're certain it won't be affected by text in title/url pairs.
-TanEx = Exception(ValueError)
 
 try: # This is a hacky way to allow for a dev environment. Please do not touch.
     import tansecrets as m

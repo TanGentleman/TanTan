@@ -38,7 +38,7 @@ reddit_fetcher.py
 - Handle log file exceptions
 - [ x ] Make consistent the different ways of running it (i.e no downloads when loaded from python env.)
 - Work on better codex implementation
-
+- Make all non-responses “continue” in the while loop.
 
 Features Added:
 - Add generate token to test_setup.py
@@ -46,7 +46,8 @@ Features Added:
 - Add cache variables to store current engine/token/history
 - Expanded 'tanman' command documentation
 - Be able to save current convo to conversation.txt at any time.
-- Tidies up clipboard manipulation, allowing for powerful use in copying and pasting, without spaces or newlines being annoying
+- Escape string 'quit' can be used in any input() call, and it saves whenever possible
+- Tidy up clipboard manipulation, allowing for powerful use in copying and pasting, without spaces or newlines being annoying
 
 
 Bugs Squashed:
@@ -56,8 +57,7 @@ Bugs Squashed:
 - Empty string response not handled currectly (Changed response string to same delimiter as logs)
 
 To-Do List:
-- Make all non-responses “continue” in the while loop.
-- The else condition will be the main one, and continues into the body of interactive_chat()
+- The else condition will be the only one that directly calls generate_text, and exits the clause when the response string obtained.
 - Body of interactive_chat will report that response is True
 
 - Other OpenAI endpoints: edits and text embeddings, as well as moderation endpoint

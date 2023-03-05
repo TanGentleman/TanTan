@@ -46,7 +46,7 @@ If anything goes wrong before this point, let me know. Should be smooth sailing 
 # Note: The below is entirely optional and not needed for chatbot.py. It will soon be integrated for cleaner workflows.
 
 # Using MacOS Shortcuts to automate running reddit_fetcher.py and Downloader.py:
-- Ask for Text with "Format Query as {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}"
+- Ask for Text with "Format: {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour}"
 - Run Shell Script
     - `python3 Desktop/TanTan/reddit_fetcher.py -s {PROVIDED_INPUT}`
 - Text = Shell Script Result

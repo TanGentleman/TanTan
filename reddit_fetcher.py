@@ -1,7 +1,7 @@
 import requests
 import config as c
 from os import mkdir
-TanSaysNoNo = c.TanEx
+class TanSaysNoNo(Exception): pass
 
 # Given valid argument strings for sort_type and time_period, returns formatted sort_string
 def get_sort_string(sort_type, time_period):
@@ -264,7 +264,7 @@ def check_args(args, arg_count, max_count, allow_input):
                 return check_args(args, arg_count, max_count, allow_input)
             else:
                 # Using MacOS Shortcuts, re-prompting there')
-                raise(TanSaysNoNo)
+                raise TanSaysNoNo
     return args, arg_count
 
 # Takes the arguments from the command line and sets the input variables for main()
@@ -277,7 +277,7 @@ def set_vars_from_args(max_count, args, arg_count, allow_input):
         args, arg_count = check_args(args, arg_count, max_count, allow_input)
     except: # Error - possibly -s flagged invalid magic string
         print("Error. Likely using a shortcut with error in args.")
-        raise(TanSaysNoNo)
+        raise TanSaysNoNo
    
     print(f'Arguments: {args[1:]}') # prints the list of arguments
     arg_count = len(args) # sets arg_count to the number of arguments in args
@@ -326,7 +326,7 @@ try:
             try:
                 user_input, limit_qty, sort_type, time_period = set_vars_from_args(max_count, args, arg_count, allow_input)
             except:
-                raise(TanSaysNoNo)
+                raise TanSaysNoNo
         else:
             user_input = c.user_input
             limit_qty = c.limit_qty

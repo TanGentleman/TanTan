@@ -7,11 +7,11 @@ from io import BytesIO
 from PIL import Image
 import Downloader
 
-max_limit = 10
-default_size = '256x256'
+MAX_LIMIT = 10
+DEFAULT_SIZE = '256x256'
 filepath = c.filepath
 
-size_dict = {'small': '256x256', 'medium': '512x512', 'large': '1024x1024', 'default': default_size}
+size_dict = {'small': '256x256', 'medium': '512x512', 'large': '1024x1024', 'default': DEFAULT_SIZE}
 
 
 openai_key = c.get_openai_api_key()
@@ -76,8 +76,8 @@ def prompts_from_input():
             limit_qty = int(user_input)
         except:
             print('Please format correctly. Enter an integer value.')    
-        if (limit_qty < 0) or (limit_qty > max_limit):
-            print(f'Please enter a value between 0 and {max_limit}.')
+        if (limit_qty < 0) or (limit_qty > MAX_LIMIT):
+            print(f'Please enter a value between 0 and {MAX_LIMIT}.')
         elif limit_qty == 0:
             print('No images saved.')
             return []
