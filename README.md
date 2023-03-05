@@ -31,15 +31,12 @@ If anything goes wrong before this point, let me know. Should be smooth sailing 
     - `pip install pillow`
     - `pip install requests`
 5. Run chatbot from your home directory in terminal:
-    - `python -i -m chat`
-*Strong avisory: I recommend using a VPN when using the internet, especially over unsecure networks*
-
-The following steps assume you have all the required dependencies.
+    - `python3 -i -m chat`
 
 # Using the TanTan chatbot:
 1. Paste your secret openai key to mysecrets.py
 2. After completing the prerequisites above, and moving chat.py to your home directory:
-    - `python -m -i chat`
+    - `python3 -m -i chat`
     To see the manual of commands and descriptions:
     - `tan` or `tanman`
 
@@ -47,7 +44,7 @@ The following steps assume you have all the required dependencies.
 
 
 # Note: The below is entirely optional and not needed for chatbot.py. It will soon be integrated for cleaner workflows.
-
+*Strong avisory: I recommend using a VPN when using the internet, especially over unsecure networks*
 # Using MacOS Shortcuts to automate running Link_Grabber.py and Downloader.py: OUTDATED BUT WORKS
 - Ask for Text with "Format Query as {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}"
 - Run Shell Script
