@@ -26,7 +26,7 @@ def check_quit(text):
     if text == 'quit':
         raise QuitAndSaveError
 
-def format_engine_string(engine:str):
+def format_engine_string(engine):
     engine_id = engine.split('-')
     engine_marker = engine_id[0][0].upper() + engine_id[1][0].upper() + engine_id[2][-1]
     return engine_marker
@@ -440,7 +440,7 @@ def prompt_to_response(debug, history, prompt, engine, max_tokens, temperature, 
     return response_string, completion_tokens, prompt_tokens, total_tokens
 
 # This function needs proper re-structuring for readability!
-def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
+def interactive_chat(slow_status, engine, max_tokens, debug):
     completion_tokens, prompt_tokens, total_tokens, session_total_tokens = (0, 0, 0, 0)
     prefix, suffix = ('', '')
     history, previous_history,  = ('', '')
@@ -500,13 +500,13 @@ def interactive_chat(slow_status:bool, engine:str, max_tokens:int, debug:bool):
             continue
 
         # Quit Chat
-        elif user_input == 'quit':
+        elif user_input in ['-q', 'quit']:
             if session_total_tokens == 0:
                 logging_on = False
                 print('This was not logged.')
             else:
                 full_log += f'Tokens used: {session_total_tokens}'
-                print(prompts_and_responses)            
+                #print(prompts_and_responses)            
             return full_log, response_time_log, logging_on
 
         elif user_input[-2:] == '-p':
