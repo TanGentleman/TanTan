@@ -15,7 +15,7 @@ if c.dev:
     # Use a local copy of the pretrained GPT-2 model to reliably tokenize prompt before passing it to OpenAI function
     from transformers import GPT2TokenizerFast
     tokenize = GPT2TokenizerFast.from_pretrained("gpt2", local_files_only = True).tokenize
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    os.environ["TOKENIZERS_PARALLELISM"] = "false" # Disable parallelism to avoid a warning
 else:
     dev = False
 
@@ -43,7 +43,6 @@ response_time_logfile = 'response_time_log.txt'
 
 
 slow_status = False # When True, engine defaults to DEFAULT_SLOW_ENGINE
-debug = False
 
 DEFAULT_ENGINE = 'text-davinci-003'
 DEFAULT_SLOW_ENGINE = 'text-curie-001'
@@ -55,8 +54,8 @@ EMPTY_RESPONSE_DELIMITER = '.' # Replaces the response when blocked or empty
 # You can increase the following values after playing around a bit
 MAX_CODEX = 4000
 MAX_TOKEN_LIMIT = 4000
-MAX_SESSION_TOTAL_TOKENS = 4000
-WARNING_HISTORY_COUNT = 3000
+MAX_SESSION_TOTAL_TOKENS = 5000 # This measures all tokens used in this session
+WARNING_HISTORY_COUNT = 3000 # History only includes the conversation currently in memory
 
 # Configurable variables in future updates. Presets need to be added first.
 
@@ -156,6 +155,7 @@ def get_response_string(response_struct):
     assert(len(response_string) > 0)
     return response_string, completion_tokens, prompt_tokens, total_tokens
 
+# Reads the prompt from the given file
 def read_prompt(filepath, filename):
     try:
         contents_path = f'{filepath}/{filename}'
@@ -165,6 +165,7 @@ def read_prompt(filepath, filename):
     except FileNotFoundError:
         print(f'No {filename} in this directory found')
 
+# Returns text from codex_prompt.txt
 def read_codex_prompt():
     filename = 'codex_prompt.txt'
     text = read_prompt(filepath, filename)
@@ -173,6 +174,7 @@ def read_codex_prompt():
     else:
         print('Could not read codex_prompt.txt')
 
+# Returns text from text_prompt.txt
 def read_text_prompt():
     filename = 'text_prompt.txt'
     text = read_prompt(filepath, filename)
@@ -181,6 +183,7 @@ def read_text_prompt():
     else:
         print(f'Could not read {filename}')
 
+# Returns text from magic_string_training.txt
 def read_magic_string_training():
     filename = 'TrainingData/magic_string_training.txt'
     text = read_prompt(filepath, filename)
@@ -190,14 +193,14 @@ def read_magic_string_training():
         print(f'Could not read {filename}')
 
 
-# Needs comments
+# takes in a string prompt and returns a response struncture
 def generate_text(debug, prompt, engine, max_tokens, temperature):
     # Set the API key
     openai.api_key = openai_key
     
     # Generate responses using the model
     try:
-       response = openai.Completion.create(
+       response_struct = openai.Completion.create(
         engine=engine,
         prompt=prompt,
         # testing this 2000 thing for a sec
@@ -221,8 +224,8 @@ def generate_text(debug, prompt, engine, max_tokens, temperature):
         else:
             print(error_dict)
         return
-    if debug: print(response)
-    return response
+    if debug: print(response_struct)
+    return response_struct
 
 # In development
 def try_gen(image_size, prompts = None):
