@@ -11,11 +11,12 @@ Hi there! I'm new to creating tools for other people, and right now this is a cl
 I have to decide whether I want this to be a program that lets you feel like a developer, changing the names around and having fun adding new functionality, or if I want to have established presets that just make it seem like something neat that someone made. I'm now leaning towards prioritizing making it accessible and not clunky to type in terminal each session. Built-in shortcuts app integration and the like, perhaps.
 
 # Getting this onto your computer (MacOS only):
-1. Go the the github page > Code > Download Zip
-2. Download TanTan-Main
-3. Rename to TanTan and move to the home directory on your computer.
+1. Go the the main github page @ github.com/TanGentleman/TanTan > Code > Download Zip
+2. Download TanTan-Main (Should be in ~/Downloads)
+3. Rename to TanTan and move the folder to the Desktop on your computer.
 4. This location is the filepath variable in config.py
-5. Move chat.py to your home directory instead
+5. Move chat.py to your home directory instead, and ensure the filepath matches in chat.py and config.py
+    - If you wish the install the repository anywhere else, just be sure to change it in these two files and you should be all good
 
 Getting the Chatbot up and running from scratch (still in development):
 Note that steps 1 and 2 require following the error message(s) and running the appropriate commands (like chmod for file permissions)
@@ -41,13 +42,13 @@ If anything goes wrong before this point, let me know. Should be smooth sailing 
 
 - Please check out Chatbot/Chatbot_README.md for documentation and alternate setup environments. (Currently not too helpful)
 
-
+*Advisory: I recommend using a VPN, especially when connected to public networks*
 # Note: The below is entirely optional and not needed for chatbot.py. It will soon be integrated for cleaner workflows.
-*Strong avisory: I recommend using a VPN when using the internet, especially over unsecure networks*
-# Using MacOS Shortcuts to automate running Link_Grabber.py and Downloader.py: OUTDATED BUT WORKS
+
+# Using MacOS Shortcuts to automate running reddit_fetcher.py and Downloader.py:
 - Ask for Text with "Format Query as {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}"
 - Run Shell Script
-    - `python3 Desktop/TanTan/Link_Grabber.py -s {PROVIDED_INPUT}`
+    - `python3 Desktop/TanTan/reddit_fetcher.py -s {PROVIDED_INPUT}`
 - Text = Shell Script Result
 - If <Text> <contains> <*shortcut_failure*>
     - Run this shortcut again (Link Grab + Download)
@@ -62,23 +63,12 @@ If anything goes wrong before this point, let me know. Should be smooth sailing 
 
 (Pre-req: Create a reddit account)
 
-1. Locate your Reddit username and password
-2. Go to api prefs (https://www.reddit.com/prefs/apps), and log in
-3. (Near the bottom) Create another app 
-4. Set name to whatever you'd like, this will be your user agent when filling out mysecrets.py
-5. Select script (Not web app or installed app)
-6. Description: (What it does - i.e. "Fetches")
-7. You can leave about url blank, and set redirect to a dummy url: http://localhost should do fine.
-8. Locate the client id: String of characters written to the right of the icon under personal use script
-9. Locate the client secret: String of characters written next to 'secret'
-10. You should be all done using your browser! Paste these into their respective fields in mysecrets.py
-11. Set token_needed to True, and leave reddit_token as None for now.
-12. Triple check that all the required fields are entered correctly.
-13. Run test_setup.py with the below command and note the printed string.
-    - `python3 Desktop/TanTan/test_setup.py`
-    - If this does not work, please let me know, I am working on some better safeguards.
-    - The printed outcome value is reddit_token, please set it accordingly in mysecrets.py
-14. You're all done with the essentials! You should now be able to run Link_Grabber.py and Downloader.py
+Follow these steps to set up the Reddit Image Fetcher: 
+1. Log in to your Reddit account and go to api prefs (https://www.reddit.com/prefs/apps).
+2. Scroll down and create a new app with a name of your choice - this will be used as the user agent when filling out mysecrets.py later on. 
+3. Select 'script' as the type of app, then leave the 'about url' blank and set redirect to http://localhost - this is just a dummy URL for now so you can move on with setup. 
+4. Locate the client id (string of characters written next to an icon under 'personal use script') and client secret (string of characters written next to 'secret'). Copy these into their respective fields in mysecrets.py file, then set token_needed to True. Leave reddit_token as None for now - that's what we're trying to get!  
+5. Double check that all required fields are entered correctly, then run test_setup by entering `python3 Desktop/TanTan/test_setup` into your terminal window - if it doesn't work let me know so I can help you troubleshoot! Hint: Make sure your repository is in the correct place, and you are running this terminal command from your *home directory*. The printed outcome value is reddit_token, you should enter that as a string into mysecrets.py accordingly before running functions from reddit_fetcher.py
 
 # Running the Reddit Link Grabber:
 1. Set the config.py variables filepath and reddit_folder_name
@@ -89,9 +79,9 @@ If anything goes wrong before this point, let me know. Should be smooth sailing 
 2. Set the 5 query variables in config.py, or add the Magic String in the command line for step 3.
 - [MAGIC STRING] = {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}
 3. Run either command in terminal from your home directory.
-    - `python3 Desktop/TanTan/Link_Grabber.py`
-    - `python3 Desktop/TanTan/Link_Grabber.py r/houseplants 50 top year -d`
-- This should generate a contents.txt file in the {reddit_folder_name} directory (Documents/TanTan/{reddit_folder_name})
+    - `python3 Desktop/TanTan/reddit_fetcher.py`
+    - `python3 Desktop/TanTan/reddit_fetcher.py r/houseplants 50 top year -d`
+- This should generate a contents.txt file in the {reddit_folder_name} directory (TanTan/{reddit_folder_name})
 
 # Downloading from contents.txt:
 - The format in the file should be [Title + DELIMITER(something like '_||_' to separate them) + URL] for each entry

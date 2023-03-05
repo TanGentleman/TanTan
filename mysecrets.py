@@ -4,7 +4,7 @@
 openai_key = None # Your OpenAI Api Key
 
 
-# The below is only to utilize functions from Link_Grabber.py, you should be able to safely ignore it if you're not using that file.
+# The below is only to utilize functions from reddit_fetcher.py, you should be able to safely ignore it if you're not using that file.
 
 ### SECRET REDDIT CONFIG
 token_needed = None

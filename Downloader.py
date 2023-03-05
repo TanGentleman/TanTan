@@ -160,7 +160,7 @@ def run_downloader(DELIMITER, filepath, download_folder_path):
     try:
         content = read_content(filepath)
     except:
-        print('Add a contents.txt file! I recommend running the link_grabber :D')
+        print('Add a contents.txt file! I recommend running the reddit_fetcher :D')
         print('Exiting.')
         return
     # Set arrays and make folder

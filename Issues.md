@@ -28,7 +28,7 @@ Chatbot.py
 
 
 
-Reddit Link_Grabber
+reddit_fetcher.py
 - [ x ] Enable video configuration with proper safeguards for large mp4 files and total download size.
 - [ ] Enable third-party (YouTube) downloads
 - [ ] Fetch more meaningful data alongside the generated list
@@ -63,7 +63,7 @@ To-Do List:
 - Other OpenAI endpoints: edits and text embeddings, as well as moderation endpoint
 - Comment and clean up functions in chatbot.py [ In progress ]
 - Add command to enable reddit downloading within chatbot session [ Under development ]
-    - Allow calling Link_Grabber functions
+    - Allow calling reddit_fetcher functions
     - Use prompt engineering on an OpenAI engine to generate magic strings from natural language and keywords
         - Create a dataset of natural language queries and corresponding magic strings [ In testing ]
 - Work on image generation [ In development ]
