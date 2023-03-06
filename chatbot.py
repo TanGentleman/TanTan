@@ -72,6 +72,7 @@ MAX_TOKEN_LIMIT = 4000
 MAX_SESSION_TOTAL_TOKENS = 5000 # This measures all tokens used in this session
 WARNING_HISTORY_COUNT = 3000 # History only includes the conversation currently in memory
 STOP = None
+
 # Configurable variables in future updates. Presets need to be added first.
 
 
@@ -442,10 +443,14 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
 def prompt_to_response(debug, history, prompt, engine, max_tokens, temperature):
     try: # continues the conversation by default
         response_struct = generate_text(debug, history + prompt, engine, max_tokens, temperature)
+    except KeyboardInterrupt:
+        raise KeyboardInterrupt
     except:
         print('Response not generated. See above error. Try again?')
     try:
         response_string, completion_tokens, prompt_tokens, total_tokens = get_response_string(response_struct)
+    except KeyboardInterrupt:
+        raise KeyboardInterrupt
     except:
         print('get_response_string failure, fix incoming')
         raise TanSaysNoNo('get_response_string man') # I think I have ensured safety of get_response_string()!
@@ -743,13 +748,12 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 text += f'{list(cmd_dict.keys())[i]}: {list(cmd_dict.values())[i]}\n'
             print(text)
             continue      
-        # This one is just experimentation for now
-        # save the current full_log to a response.txt
+        # Save the recent prompt/response exchange to response.txt
         elif user_input in ['-s','save']:
             text = f'PROMPT:\n{cached_prompt}\nRESPONSE:\n{cached_response}'
             with open(f'{filepath}/response.txt', 'w') as file:
                 file.write(text)
-            print('Saved!')
+            print('Saved most recent exchange to response.txt!')
             continue
         elif user_input == '-sr':
             clipboard.copy(cached_response.strip())
@@ -793,29 +797,34 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
 
         # All valid non-command inputs pass through here.    
         else:
-            prompt = user_input
-            # If there is a prefix or suffix, add it to the prompt
-            if prefix:
-                prompt = prefix + prompt
-                prefix = ''
-            if suffix:
-                prompt += suffix
-                suffix = ''
+            try:
+                prompt = user_input
+                # If there is a prefix or suffix, add it to the prompt
+                if prefix:
+                    prompt = prefix + prompt
+                    prefix = ''
+                if suffix:
+                    prompt += suffix
+                    suffix = ''
 
-            # Tokenize the prompt to check length
-            if dev:
-                tokenized_text = tokenize(prompt)
-                token_count = len(tokenized_text)
-                # This 4000 is a hard cap for the full completion. I'll work it in better soon. 
-                if token_count + max_tokens > 4000:
-                    print('WARNING: prompt is too long. I will try to generate a response, but it may be truncated.')
-                    print(f'max_tokens would need to be set to roughly {4000-token_count}')
-                print(f'prompt is {token_count} tokens')
+                # Tokenize the prompt to check length
+                if dev:
+                    tokenized_text = tokenize(prompt)
+                    token_count = len(tokenized_text)
+                    # This 4000 is a hard cap for the full completion. I'll work it in better soon. 
+                    if token_count + max_tokens > 4000:
+                        print('WARNING: prompt is too long. I will try to generate a response, but it may be truncated.')
+                        print(f'max_tokens would need to be set to roughly {4000-token_count}')
+                    print(f'prompt is {token_count} tokens')
 
-            if debug: print('beep, about to try generating response')  
-
-            response_string, completion_tokens, prompt_tokens, total_tokens = prompt_to_response(
-                                                    debug, history, prompt, engine, max_tokens, temperature)
+                if debug: print('beep, about to try generating response')  
+                
+                response_string, completion_tokens, prompt_tokens, total_tokens = prompt_to_response(
+                                                        debug, history, prompt, engine, max_tokens, temperature)
+            except KeyboardInterrupt:
+                print('KeyboardInterrupt. Interrupting this prompt. Try again :D')
+                continue
+                # I can format the two above lines better byr
             # End of else clause
 
         # Successfully passed through else clause and response string obtained
@@ -832,6 +841,8 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
         else: # If amnesia is True, don't add it to the conversation_in_memory
             amnesia = False
         prompts_and_responses.append((prompt, response))
+        if response != EMPTY_RESPONSE_DELIMITER:
+            cached_response = response
          # Dev tokenization check
         if dev:
             tokenized_text = tokenize(history)
@@ -866,7 +877,7 @@ def get_args(args):
         engine = DEFAULT_ENGINE
 
     max_tokens = DEFAULT_MAX_TOKENS
-   
+    temperature = DEFAULT_TEMPERATURE
     arg_count = len(args)
     if '-d' in args:
         args.remove('-d')
@@ -881,6 +892,7 @@ def get_args(args):
             engine, max_tokens, debug = parse_args(args, slow_status, engine, max_tokens, debug)
         except QuitAndSaveError:
             raise QuitAndSaveError
+    config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature, 'debug': debug}
     return engine, max_tokens, debug
 
 def main(engine, max_tokens, debug):
