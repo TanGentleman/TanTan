@@ -7,6 +7,7 @@ import time
 import os
 import config as c
 import clipboard
+import image_generation as ig
 if c.dev:
     dev = True
     import logging
@@ -19,7 +20,7 @@ if c.dev:
 else:
     dev = False
 
-import image_generation as ig
+
 class TanSaysNoNo(Exception): pass
 class QuitAndSaveError(Exception): pass
 
@@ -70,7 +71,7 @@ MAX_CODEX = 4000
 MAX_TOKEN_LIMIT = 4000
 MAX_SESSION_TOTAL_TOKENS = 5000 # This measures all tokens used in this session
 WARNING_HISTORY_COUNT = 3000 # History only includes the conversation currently in memory
-
+STOP = None
 # Configurable variables in future updates. Presets need to be added first.
 
 
@@ -84,6 +85,7 @@ cmd_dict = {
             'forget': 'Forget the past conversation. Alias -f',
             'help': 'Display the list of commands',
             'his': 'The current conversation in memory. Alias history', 
+            '-images': 'Generate images! Fully built in Dall-E with size customization',
             'log': 'Toggle to enable or disable logging of conversation + response times', 
             'read': 'Respond to text_prompt.txt', 
             'save': 'Save the recent prompt/response exchange to response.txt. Alias -s',
@@ -126,25 +128,19 @@ def set_prompt(prompt, prefix = None,  suffix = None):
 def get_response_string(response_struct):
     completion_tokens, prompt_tokens, total_tokens = (0,0,0)
     usage_vals = ['completion_tokens', 'prompt_tokens', 'total_tokens']
-    # Check for other potential issues here
     for i in range(len(usage_vals)):
-         
         try:
             tok_val = response_struct['usage'][usage_vals[i]]
         except:
-            if i == 0: 
-                tok_val = 0
-            else:
+            tok_val = 0
+            if i in [1, 2]:
                 print(f'Token value not found for {usage_vals[i]}')
-                print('Response failed.')
-                raise TanSaysNoNo
+                print(f'I need to investigate these cases more. Is it only {usage_vals[i]}?')
         if i == 0:
             completion_tokens = tok_val
         elif i == 1: 
-            assert(tok_val > 0)
             prompt_tokens = tok_val
         elif i == 2: 
-            assert(tok_val > 0)
             total_tokens = tok_val
     try:
         response_struct = response_struct['choices'][0]
@@ -158,10 +154,7 @@ def get_response_string(response_struct):
         print('*Warning: message may be truncated. Adjust max tokens as needed.')
     else:
         print(f'Warning -- Finish reason: {response_struct["finish_reason"]}')
-    # To Debug:
-    # print(f'{response_struct["finish_reason"]} boo! {response_struct["text"]}<-response')
     response_string = response_struct['text']
-
     if response_string == '':
         print('Blank Space (no response)')
         response_string = EMPTY_RESPONSE_DELIMITER
@@ -221,7 +214,7 @@ def generate_text(debug, prompt, engine, max_tokens, temperature):
         max_tokens = 2000 if (max_tokens > 2000 and 'davinci' not in engine) else max_tokens,
         temperature = 0 if 'code' in engine else temperature,
         frequency_penalty = frequency_penalty_val,
-        stop = None #['\n'] # Just for birds.txt
+        stop = STOP # I use ['\n'] for one line responses, you can use a custom symbol like ['###'] or ['$$']
         )
     except openai.error.OpenAIError as e:
         status = e.http_status
@@ -610,12 +603,14 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             continue
         elif user_input in ['his','history']: # Show convo history
             if conversation_in_memory:
+                conversation_string = ''
                 convo_length = len(conversation_in_memory)
+                res_count = 0
                 print(f'{convo_length} exchanges in memory shown below:\n\n')
-                # for (prompt, response) in conversation_in_memory:
-                #     print(f'P:\n{prompt}\n')
-                #     print(f'R:\n{response}\n')
-                print(history)
+                for (p, r) in conversation_in_memory:
+                    res_count += 1
+                    conversation_string += f'({res_count}.)' + p + '\n' + '(*)' + r + '\n'
+                print(conversation_string)
             else:
                 print('No conversation history in memory.')
             continue
