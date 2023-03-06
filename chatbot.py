@@ -36,6 +36,20 @@ def config_msg(engine, max_tokens, session_total_tokens):
     engine_marker = format_engine_string(engine)
     return f'Engine: {engine_marker} | Max Tokens: {max_tokens} | Tokens Used: {session_total_tokens}\n'
 
+def conversation_to_string(conversation_in_memory):
+    if conversation_in_memory == []:
+        return '' # Should I only get non-empty arrays to come to this function?
+    conversation_string = ''
+    response_count = 0
+    convo_length = len(conversation_in_memory)
+    for exchange in conversation_in_memory:
+        prompt, response = exchange
+        response_count += 1
+        conversation_string += prompt + response + '\n\n'
+    assert(response_count == convo_length)
+    return conversation_string
+
+
 openai_key = c.get_openai_api_key()
 filepath = f'{c.filepath}/Chatbot'
 full_logfile = 'logfile.txt'
@@ -432,17 +446,16 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
             raise QuitAndSaveError
     return engine, max_tokens
 
-def prompt_to_response(debug, history, prompt, engine, max_tokens, temperature, full_log):
-    assert(prompt is not None)
+def prompt_to_response(debug, history, prompt, engine, max_tokens, temperature):
     try: # continues the conversation by default
-        response_struct = generate_text(debug, history + '\n' + prompt if history else prompt, engine, max_tokens, temperature)
+        response_struct = generate_text(debug, history + prompt, engine, max_tokens, temperature)
     except:
         print('Response not generated. See above error. Try again?')
     try:
         response_string, completion_tokens, prompt_tokens, total_tokens = get_response_string(response_struct)
     except:
         print('get_response_string failure, fix incoming')
-        assert(False) # I think I have ensured safety of get_response_string()!
+        raise TanSaysNoNo('get_response_string man') # I think I have ensured safety of get_response_string()!
         # Valid response!
     return response_string, completion_tokens, prompt_tokens, total_tokens
 
@@ -450,8 +463,8 @@ def prompt_to_response(debug, history, prompt, engine, max_tokens, temperature, 
 def interactive_chat(slow_status, engine, max_tokens, debug):
     completion_tokens, prompt_tokens, total_tokens, session_total_tokens = (0, 0, 0, 0)
     prefix, suffix = ('', '')
-    history, previous_history,  = ('', '')
-    
+    history  = ''
+
     full_log, response_time_log = ('','')
     logging_on = True
     replace_input = False
@@ -473,11 +486,10 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
     full_log += config_info
     print(config_info)
     prompts_and_responses = []
+    conversation_in_memory = []
     while chat_ongoing:
-        # Amnesia mode saves current configuration and history for next prompt
-        if amnesia:
-            amnesia = False
-        else:
+        # Amnesia uses a sandboxed environment, saving the current configuration and history for next prompt
+        if amnesia == False:
             # The following 3 assume correctness of cached vars
             if cached_engine:
                 engine = cached_engine # Restore the engine
@@ -489,8 +501,9 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 max_tokens = cached_tokens # Restore the max_tokens
                 cached_tokens = None
         
-        
-        
+        # When non-amnesic, history should always be consistent with the conversation in memory
+        assert(amnesia or (history == conversation_to_string(conversation_in_memory)))
+
         # Get prompt
         if replace_input:
             user_input = replace_input_text # Use the replacement text
@@ -543,6 +556,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                 try:
                     engine, max_tokens, debug = parse_args(args, slow_status, engine, max_tokens, debug)
                 except QuitAndSaveError:
+                    print('Quitting...')
                     replace_input, replace_input_text = True, 'quit'
                     continue
             msg = f'Engine set to: {engine}, {max_tokens} Max Tokens'
@@ -595,26 +609,40 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             print(list(cmd_dict.keys()))
             continue
         elif user_input in ['his','history']: # Show convo history
-            if history:
-                print(f'Conversation in memory shown below:\n\n{(history)}')
+            if conversation_in_memory:
+                convo_length = len(conversation_in_memory)
+                print(f'{convo_length} exchanges in memory shown below:\n\n')
+                # for (prompt, response) in conversation_in_memory:
+                #     print(f'P:\n{prompt}\n')
+                #     print(f'R:\n{response}\n')
+                print(history)
             else:
                 print('No conversation history in memory.')
             continue
         elif user_input in ['-f','forget']: # Erase convo history
+            conversation_in_memory = []
             history = ''
             msg = '<History has been erased. Please continue the conversation fresh :)>\n'
             print(msg)
             full_log += msg
             continue
         elif user_input == 'del': # Delete last exchange
-            if history == previous_history:
+            if conversation_in_memory == []:
                 print('No previous exchange to delete.')
                 continue
-            history = previous_history
-            msg = '<I have deleted the last exchange from my memory>\n'
-            print(msg)
-            full_log += msg
-            continue
+            else:
+                # THIS DOES NOT EASILY ADJUST THE HISTORY VARIABLE. 
+                # I can also ensure that history is never used evaluated before conversation_in_memory, right?
+                conversation_in_memory.pop()
+                # For now, I will do a slightly expensive operation to redefine history
+                if conversation_in_memory:
+                    history = conversation_to_string(conversation_in_memory)
+                else:
+                    history = ''
+                msg = '<I have deleted the last exchange from my memory>\n'
+                print(msg)
+                full_log += msg
+                continue
         elif user_input == 'log': # Toggle logging
             if logging_on:
                 msg = '<Logging disabled> Conversation will not be stored.\n'
@@ -640,6 +668,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                     continue
                 else:
                     print('text_prompt.txt is empty. Try adding something!')
+                    continue
             else:
                 print('You have not written a text_prompt.txt file for me to read. I gotchu.')
                 with open(f'{filepath}/text_prompt.txt', 'w') as file:
@@ -732,6 +761,8 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             print('Copied response to clipboard.')
             continue
         elif user_input == '-sh':
+            # I don't think I need the below step currently.
+            # history = conversation_to_string(conversation_in_memory)
             clipboard.copy(history.strip())
             print('Copied history to clipboard.')
             continue
@@ -767,7 +798,6 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
 
         # All valid non-command inputs pass through here.    
         else:
-            assert (user_input)
             prompt = user_input
             # If there is a prefix or suffix, add it to the prompt
             if prefix:
@@ -776,8 +806,6 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             if suffix:
                 prompt += suffix
                 suffix = ''
-            
-            if debug: print('beep, about to try generating response')
 
             # Tokenize the prompt to check length
             if dev:
@@ -788,8 +816,11 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
                     print('WARNING: prompt is too long. I will try to generate a response, but it may be truncated.')
                     print(f'max_tokens would need to be set to roughly {4000-token_count}')
                 print(f'prompt is {token_count} tokens')
+
+            if debug: print('beep, about to try generating response')  
+
             response_string, completion_tokens, prompt_tokens, total_tokens = prompt_to_response(
-                                                                debug, history, prompt, engine, max_tokens, temperature, full_log)
+                                                    debug, history, prompt, engine, max_tokens, temperature)
             # End of else clause
 
         # Successfully passed through else clause and response string obtained
@@ -798,18 +829,20 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
         # Only if non-command, it has successfully passed through else clause.
         time_taken = time.time()-start_time
         if debug: print('beep, we got a response!')
-        # Dev tokenization check
+
+        # Record a savestate and append history
+        if amnesia == False:
+            conversation_in_memory.append((prompt, response))
+            history += prompt + response + '\n\n'
+        else: # If amnesia is True, don't add it to the conversation_in_memory
+            amnesia = False
+        prompts_and_responses.append((prompt, response))
+         # Dev tokenization check
         if dev:
             tokenized_text = tokenize(history)
             token_count = len(tokenized_text)
             if token_count > WARNING_HISTORY_COUNT:
                 print(f'Conversation token count is growing large [{token_count}]. Please reset my memory as needed.')
-        # Record a savestate and append history
-        prompts_and_responses.append((prompt, response))
-        cached_prompt = prompt
-        cached_response = response
-        previous_history = history
-        history += prompt + response + '\n'
 
         #add a marker to distinguish from user text
         RT = round(time_taken, 1)
