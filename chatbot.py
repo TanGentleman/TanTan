@@ -79,7 +79,7 @@ STOP = None
 frequency_penalty_val = 1.0 # This is not currently configurable within interactive_chat
 
 cmd_dict = {
-            'config': 'Set the engine and max_tokens. `config [engine] [tokens] [-d]`',
+            'config': 'Set engine and max_tokens using `config <engine> <max_tokens>` (opt: -d for debug)',
             'codex': 'Generate a code completion from codex_prompt.txt',
             'debug': 'Toggle debug mode. Alias -d',
             'del': 'Delete the last exchange from memory',
@@ -263,7 +263,7 @@ def write_to_log_file(convo, response_times):
 
 def parse_args(args, slow_status, engine, max_tokens, debug):
     '''
-    This function parses the command line arguments and returns the engine, max_tokens, and debug values.
+    This function parses config string arguments and returns the desired engine, max_tokens, and debug values.
     '''
 
     if args == []: # No arguments provided, return default values
@@ -458,7 +458,14 @@ def prompt_to_response(debug, history, prompt, engine, max_tokens, temperature):
     return response_string, completion_tokens, prompt_tokens, total_tokens
 
 # This function needs proper re-structuring for readability!
-def interactive_chat(slow_status, engine, max_tokens, debug):
+def interactive_chat(config_vars):
+    # Unpack config_vars
+    # config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature, 'slow_status': slow_status, 'debug': debug}
+    engine = config_vars['engine']
+    max_tokens = config_vars['max_tokens']
+    temperature = config_vars['temperature']
+    slow_status = config_vars['slow_status']
+    debug = config_vars['debug']
     completion_tokens, prompt_tokens, total_tokens, session_total_tokens = (0, 0, 0, 0)
     prefix, suffix = ('', '')
     history  = ''
@@ -479,7 +486,6 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
     response_count = 0
     chat_ongoing = True
 
-    temperature = DEFAULT_TEMPERATURE
     config_info = config_msg(engine, max_tokens, session_total_tokens)
     full_log += config_info
     print(config_info)
@@ -548,7 +554,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
             args = user_input.split(' ')
             args_count = len(args)
             if args_count > 4:
-                print('Did you mean to type a config command? Format is: config [engine] [tokens] [-d]')
+                print('Did you mean to type a config command? Format is: `config <engine> <max_tokens>')
                 continue
             else:
                 try:
@@ -870,7 +876,7 @@ def interactive_chat(slow_status, engine, max_tokens, debug):
         print(f'This completion was {round(100*total_tokens/4096)}% of the davinci maximum')
 
             
-def get_args(args):
+def get_config_from_args(args):
     if slow_status == True: 
         engine = DEFAULT_SLOW_ENGINE
     else:
@@ -892,16 +898,15 @@ def get_args(args):
             engine, max_tokens, debug = parse_args(args, slow_status, engine, max_tokens, debug)
         except QuitAndSaveError:
             raise QuitAndSaveError
-    config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature, 'debug': debug}
-    return engine, max_tokens, debug
+    config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature, 'slow_status': slow_status, 'debug': debug}
+    return config_vars
 
-def main(engine, max_tokens, debug):
-    check_directories()
+def main(config_vars):
     if openai_key == None:
         print('Please set your OpenAI key in config.py')
         return
     try:
-        logs = interactive_chat(slow_status, engine, max_tokens, debug)
+        logs = interactive_chat(config_vars)
     except KeyboardInterrupt:
         print('You have interrupted your session. It has been terminated, with no logfiles saved.')
         return
@@ -941,13 +946,13 @@ def main_from_args(args):
     # interactive_ui(True, 'text-curie-001', 50, False)
     # return
     try:
-        engine, max_tokens, debug = get_args(args)
+        config_vars = get_config_from_args(args)
         good_args = True
     except QuitAndSaveError:
         print('Pre-emptive quit. No logfiles saved.')
         good_args = False
     if good_args:
-        main(engine, max_tokens, debug)
+        main(config_vars)
 # Default script execution from CLI, uses sys.argv arguments
 if __name__ == '__main__':
     args = sys.argv

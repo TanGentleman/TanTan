@@ -39,6 +39,10 @@ If anything goes wrong before this point, let me know. Should be smooth sailing 
     - `python3 -m -i chat`
     To see the manual of commands and descriptions:
     - `tan` or `tanman`
+3. You're in! Have fun feeling like a computer whiz with the world of knowledge at your fintertips. 
+- FYI: You can follow `python3 -m -i chat` with `config <engine> <max_tokens> <debug>`
+- For instance `python3 -m -i chat config curie 30` for short, fast, simple responses with low latency.
+- Or even ...`config codex` for a simple, default-token value codex response generator (great for basic function-making, needs basic prompt engineering)
 
 - Please check out Chatbot/Chatbot_README.md for documentation and alternate setup environments. (Currently not too helpful)
 

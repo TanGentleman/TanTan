@@ -1,4 +1,5 @@
 Current issue:
+- Clarify engine types and allow friendly choosing using config strings
 
 In development:
 - A more readable README
