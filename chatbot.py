@@ -82,7 +82,7 @@ CHAT_INIT = {"role": "system", "content": "You are a helpful assistant."}
 # Configurable variables in future updates. Presets need to be added first.
 
 
-frequency_penalty_val = 1.0 # This is not currently configurable within interactive_chat
+frequency_penalty_val = 0.5 # This is not currently configurable within interactive_chat
 
 cmd_dict = {
             'config': 'Set engine and max_tokens using `config <engine> <max_tokens>` (opt: -d for debug)',
@@ -234,7 +234,7 @@ def generate_text(debug, engine, max_tokens, temperature, prompt, conversation_m
             messages=conversation_messages,
             # testing this 2000 thing for a sec
             max_tokens = max_tokens,
-            temperature = 0 if 'code' in engine else temperature,
+            temperature = temperature,
             frequency_penalty = frequency_penalty_val,
             stop = STOP # I use ['\n'] for one line responses, you can use a custom symbol like ['###'] or ['$$']
             )
@@ -951,6 +951,11 @@ def get_config_from_args(args):
 def main(config_vars):
     if openai_key == None:
         print('Please set your OpenAI key in config.py')
+        return
+    try:
+        check_directories()
+    except:
+        print('Error. Cannot create directories. Check that filepath in config.py and chat.py matches the repo location.')
         return
     try:
         logs = interactive_chat(config_vars)
