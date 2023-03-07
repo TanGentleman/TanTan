@@ -59,11 +59,11 @@ response_time_logfile = 'response_time_log.txt'
 
 slow_status = False # When True, engine defaults to DEFAULT_SLOW_ENGINE
 
-DEFAULT_ENGINE = 'text-davinci-003'
+DEFAULT_ENGINE = 'gpt-3.5-turbo'
 DEFAULT_SLOW_ENGINE = 'text-curie-001'
 
-DEFAULT_MAX_TOKENS = 300
-DEFAULT_TEMPERATURE = 0.3
+DEFAULT_MAX_TOKENS = 200
+DEFAULT_TEMPERATURE = 0.5
 
 EMPTY_RESPONSE_DELIMITER = '.' # Replaces the response when blocked or empty
 # You can increase the following values after playing around a bit
@@ -72,6 +72,12 @@ MAX_TOKEN_LIMIT = 4000
 MAX_SESSION_TOTAL_TOKENS = 5000 # This measures all tokens used in this session
 WARNING_HISTORY_COUNT = 3000 # History only includes the conversation currently in memory
 STOP = None
+
+
+### NEW GPT-3.5-TURBO ENGINE CONFIGURATION ###
+CHAT_INIT = {"role": "system", "content": "You are a helpful assistant."}
+# Maybe I can add "Empty or blocked responses are marked with DELIMITER" to CHAT_INIT
+
 
 # Configurable variables in future updates. Presets need to be added first.
 
@@ -155,7 +161,11 @@ def get_response_string(response_struct):
         print('*Warning: message may be truncated. Adjust max tokens as needed.')
     else:
         print(f'Warning -- Finish reason: {response_struct["finish_reason"]}')
-    response_string = response_struct['text']
+
+    try:
+        response_string = response_struct['text']
+    except:
+        response_string = response_struct['message']['content']
     if response_string == '':
         print('Blank Space (no response)')
         response_string = EMPTY_RESPONSE_DELIMITER
@@ -202,21 +212,32 @@ def read_magic_string_training():
 
 
 # takes in a string prompt and returns a response struncture
-def generate_text(debug, prompt, engine, max_tokens, temperature):
+def generate_text(debug, engine, max_tokens, temperature, prompt, conversation_messages = None):
     # Set the API key
     openai.api_key = openai_key
     
     # Generate responses using the model
     try:
-       response_struct = openai.Completion.create(
-        engine=engine,
-        prompt=prompt,
-        # testing this 2000 thing for a sec
-        max_tokens = 2000 if (max_tokens > 2000 and 'davinci' not in engine) else max_tokens,
-        temperature = 0 if 'code' in engine else temperature,
-        frequency_penalty = frequency_penalty_val,
-        stop = STOP # I use ['\n'] for one line responses, you can use a custom symbol like ['###'] or ['$$']
+        if prompt:
+            response_struct = openai.Completion.create(
+            engine=engine,
+            prompt=prompt,
+            # testing this 2000 thing for a sec
+            max_tokens = 2000 if (max_tokens > 2000 and 'davinci' not in engine) else max_tokens,
+            temperature = 0 if 'code' in engine else temperature,
+            frequency_penalty = frequency_penalty_val,
+            stop = STOP # I use ['\n'] for one line responses, you can use a custom symbol like ['###'] or ['$$']
         )
+        else:
+            response_struct = openai.ChatCompletion.create(
+            model=engine,
+            messages=conversation_messages,
+            # testing this 2000 thing for a sec
+            max_tokens = max_tokens,
+            temperature = 0 if 'code' in engine else temperature,
+            frequency_penalty = frequency_penalty_val,
+            stop = STOP # I use ['\n'] for one line responses, you can use a custom symbol like ['###'] or ['$$']
+            )
     except openai.error.OpenAIError as e:
         status = e.http_status
         error_dict = e.error
@@ -232,6 +253,8 @@ def generate_text(debug, prompt, engine, max_tokens, temperature):
         else:
             print(error_dict)
         return
+    except Exception as e:
+        print(e)
     if debug: print(response_struct)
     return response_struct
 
@@ -341,6 +364,9 @@ def engine_choice(engine_prompt, slow_status):
     elif (engine_prompt == 'text-curie-001') or ('curie'.startswith(engine_prompt)):
         engine = 'text-curie-001'
         return engine
+    elif (engine_prompt == 'gpt-3.5-turbo') or ('turbo'.startswith(engine_prompt)):
+        engine = 'gpt-3.5-turbo'
+        return engine
 
     elif (engine_prompt == 'code-davinci-002') or ('codex'.startswith(engine_prompt)):
         if slow_status == True:
@@ -440,9 +466,13 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
             raise QuitAndSaveError
     return engine, max_tokens
 
-def prompt_to_response(debug, history, prompt, engine, max_tokens, temperature):
+def prompt_to_response(debug, history, engine, max_tokens, temperature, prompt, conversation_messages = None):
     try: # continues the conversation by default
-        response_struct = generate_text(debug, history + prompt, engine, max_tokens, temperature)
+        if conversation_messages:
+            # Conversation_messages should ALWAYS be passed to this function when 'turbo' in engine
+            response_struct = generate_text(debug, engine, max_tokens, temperature, None, conversation_messages)
+        else:
+            response_struct = generate_text(debug, engine, max_tokens, temperature, history + prompt)
     except KeyboardInterrupt:
         raise KeyboardInterrupt
     except:
@@ -475,6 +505,7 @@ def interactive_chat(config_vars):
     replace_input = False
     replace_input_text = ''
     
+    
 
     amnesia = False
     cached_engine = None
@@ -491,6 +522,8 @@ def interactive_chat(config_vars):
     print(config_info)
     prompts_and_responses = []
     conversation_in_memory = []
+
+    # NEW for GPT-3.5 using Chat endpoint
     while chat_ongoing:
         # Amnesia uses a sandboxed environment, saving the current configuration and history for next prompt
         if amnesia == False:
@@ -824,9 +857,23 @@ def interactive_chat(config_vars):
                     print(f'prompt is {token_count} tokens')
 
                 if debug: print('beep, about to try generating response')  
+                if 'turbo' in engine:
+                    conversation_messages = [CHAT_INIT] # initiate conversation
+                    if amnesia == False: # Should this check amnesia instead? 
+                                    # I should make assert statements and make SURE that they're consistent
+                        for p, r in conversation_in_memory: # add conversation history
+                            conversation_messages += [{"role": "user", "content": p},
+                                                      {"role": "assistant", "content": r}]
+                        # add prompt
+                    conversation_messages += [{"role": "user", "content": prompt}] 
+
+                    response_string, completion_tokens, prompt_tokens, total_tokens = prompt_to_response(
+                    debug, history, engine, max_tokens, temperature, None, conversation_messages)
+
+                else:
+                    response_string, completion_tokens, prompt_tokens, total_tokens = prompt_to_response(
+                    debug, history, engine, max_tokens, temperature, prompt)
                 
-                response_string, completion_tokens, prompt_tokens, total_tokens = prompt_to_response(
-                                                        debug, history, prompt, engine, max_tokens, temperature)
             except KeyboardInterrupt:
                 print('KeyboardInterrupt. Interrupting this prompt. Try again :D')
                 continue
