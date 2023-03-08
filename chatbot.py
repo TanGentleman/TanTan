@@ -1,5 +1,3 @@
-# Needed folders: Chatbot, Chatbot/TrainingData
-
 import openai
 import sys
 import datetime
@@ -9,24 +7,91 @@ import config as c
 import clipboard
 import image_generation as ig
 if c.dev:
-    dev = True
     import logging
     logging.disable(logging.ERROR) # Ignore a warning that doesn't apply to our use of GPT-2
-
     # Use a local copy of the pretrained GPT-2 model to reliably tokenize prompt before passing it to OpenAI function
     from transformers import GPT2TokenizerFast
     tokenize = GPT2TokenizerFast.from_pretrained("gpt2", local_files_only = True).tokenize
     os.environ["TOKENIZERS_PARALLELISM"] = "false" # Disable parallelism to avoid a warning
+    dev = True
 else:
     dev = False
-
 
 class TanSaysNoNo(Exception): pass
 class QuitAndSaveError(Exception): pass
 
 def check_quit(text): # You should be able to quit from any input() call
-    if text == 'quit':
+    if text in ['-q','quit']:
         raise QuitAndSaveError
+
+openai_key = c.get_openai_api_key()
+
+if os.path.exists(os.path.join(os.getcwd(), 'config.py')):
+    print("You seem to be in the repository folder. Setting filepath accordingly.")
+    filepath = 'Chatbot'
+else:
+    # print("The user is not currently in the repository folder.")
+    filepath = f'{c.filepath}/Chatbot'
+
+full_logfile = 'logfile.txt'
+response_time_logfile = 'response_time_log.txt'
+
+
+DISABLE_NERDS = False # When True, engine defaults to DEFAULT_SLOW_ENGINE and davinci and turbo are disabled
+
+DEFAULT_ENGINE = 'gpt-3.5-turbo'
+DEFAULT_FAST_ENGINE = 'text-curie-001'
+
+DEFAULT_MAX_TOKENS = 200
+DEFAULT_TEMPERATURE = 0.5
+
+EMPTY_RESPONSE_DELIMITER = '.' # Replaces the response when blocked or empty
+
+MAX_CODEX = 4000
+MAX_TOKEN_LIMIT = 4000
+MAX_SESSION_TOTAL_TOKENS = 5000 # This measures all tokens used in this session
+WARNING_HISTORY_COUNT = 3000 # History only includes the conversation currently in memory
+STOP = None # This should be an array of string stop_sequences
+FREQUENCY_PENALTY_VAL = 0.5 # This is not currently configurable within interactive_chat
+
+### NEW GPT-3.5-TURBO ENGINE CONFIGURATION ###
+CHAT_INIT = {"role": "system", "content": "You are a helpful assistant with a great sense of humor."}
+CHAT_INIT_TROLL = {"role": "system", "content": "You are tasked with being hilariously unhelpful to the user."}
+CHAT_INIT_CRAZY = {"role": "system", "content": "You are tasked with being as unhinged and funny as possible."}
+CHAT_INIT_HINDI = {"role": "system", "content": "Try your best to translate, using mostly hindi words"}
+
+CHAT_INIT_CUSTOM = {"role": "system", "content": "Set your custom preset by typing the command -mode!"}
+
+cmd_dict = {
+            'config': 'Set engine and max_tokens using `config <engine> <max_tokens>` (opt: -d for debug)',
+            'codex': 'Generate a code completion from codex_prompt.txt',
+            'debug': 'Toggle debug mode. Alias -d',
+            'del': 'Delete the last exchange from memory',
+            'forget': 'Forget the past conversation. Alias -f',
+            'help': 'Display the list of commands',
+            'history': 'The current conversation in memory. Alias his', 
+            '-images': 'Generate images! Fully built in Dall-E with size customization',
+            'log': 'Toggle to enable or disable logging of conversation + response times', 
+            '-mode': 'Choose a preset, like unhelpful or crazy',
+            '-read': 'Respond to text_prompt.txt', 
+            'save': 'Save the recent prompt/response exchange to response.txt. Alias -s',
+            'stats': 'Prints the current configuration and session total tokens.',
+            'tanman': 'Bring up the TanManual (commands with their descriptions). Alias tan',
+            'temp': 'Configure temperature (0.0-1.0)',
+            'tok': 'Configure max tokens for the response',
+            '-sr': 'Save Response: Copies response to clipboard',
+            '-sh': 'Save History: Copies history to clipboard',
+            '-c': 'Respond to clipboard text (Maintains conversation history)',
+            '-rs': 'Amnesic clipboard summarizer',
+            '-r': 'Versatile Amnesic Formatter, here is example usage:\n' +
+                    'Case 1: `-r` => Uses clipboard as prompt, like -c\n' +
+                    'Case 2: `-r is an example using a suffix!` => Replaces -r with contents of clipboard\n' +
+                    'Case 3: `-r Analyze this url: -r Analysis:` => Replaces -r with #clipboard_contents#\n',
+            '-p': 'This is a special string that goes at the END of your input to make it a prefix.\n' +
+                    'Example: `Define: -p` followed by `mellifluous`, or `-c` for clipboard substitute that maintains the conversation.\n',
+            }
+
+
 
 def format_engine_string(engine):
     engine_id = engine.split('-')
@@ -53,80 +118,6 @@ def conversation_to_string(conversation_in_memory):
 def formatted_conversation_to_string(conversation):
     return '\n'.join([f'{p}\n{r}' for (p, r) in conversation])
 
-openai_key = c.get_openai_api_key()
-filepath = f'{c.filepath}/Chatbot'
-full_logfile = 'logfile.txt'
-response_time_logfile = 'response_time_log.txt'
-
-
-slow_status = False # When True, engine defaults to DEFAULT_SLOW_ENGINE
-
-DEFAULT_ENGINE = 'gpt-3.5-turbo'
-DEFAULT_SLOW_ENGINE = 'text-curie-001'
-
-DEFAULT_MAX_TOKENS = 200
-DEFAULT_TEMPERATURE = 0.5
-
-EMPTY_RESPONSE_DELIMITER = '.' # Replaces the response when blocked or empty
-# You can increase the following values after playing around a bit
-MAX_CODEX = 4000
-MAX_TOKEN_LIMIT = 4000
-MAX_SESSION_TOTAL_TOKENS = 5000 # This measures all tokens used in this session
-WARNING_HISTORY_COUNT = 3000 # History only includes the conversation currently in memory
-STOP = None # This should be an array of string stop_sequences
-FREQUENCY_PENALTY_VAL = 0.5 # This is not currently configurable within interactive_chat
-
-### NEW GPT-3.5-TURBO ENGINE CONFIGURATION ###
-CHAT_INIT = {"role": "system", "content": "You are a helpful assistant."}
-CHAT_INIT_TROLL = {"role": "system", "content": "You are tasked with being hilariously unhelpful to the user."}
-CHAT_INIT_CRAZY = {"role": "system", "content": "You are tasked with being as unhinged and funny as possible."}
-CHAT_INIT_HINDI = {"role": "system", "content": "Translate user input into mostly hindi and english"}
-
-CHAT_INIT_CUSTOM = {"role": "system", "content": "Set your custom preset by typing the command -mode!"}
-
-suppress_token_warnings = False
-suppress_extra_prints = False
-
-cmd_dict = {
-            'config': 'Set engine and max_tokens using `config <engine> <max_tokens>` (opt: -d for debug)',
-            'codex': 'Generate a code completion from codex_prompt.txt',
-            'debug': 'Toggle debug mode. Alias -d',
-            'del': 'Delete the last exchange from memory',
-            'forget': 'Forget the past conversation. Alias -f',
-            'help': 'Display the list of commands',
-            'his': 'The current conversation in memory. Alias history', 
-            '-images': 'Generate images! Fully built in Dall-E with size customization',
-            'log': 'Toggle to enable or disable logging of conversation + response times', 
-            '-mode': 'Toggles a preset, like unhelpful or crazy',
-            'read': 'Respond to text_prompt.txt', 
-            'save': 'Save the recent prompt/response exchange to response.txt. Alias -s',
-            'stats': 'Prints the current configuration and session total tokens.',
-            'tanman': 'Bring up the TanManual (commands with their descriptions). Alias tan',
-            'temp': 'Configure temperature (0.0-1.0)',
-            'tok': 'Configure max tokens for the response',
-            '-sr': 'Save Response: Copies response to clipboard',
-            '-sh': 'Save History: Copies history to clipboard',
-            '-c': 'Respond to clipboard text (Maintains conversation history)',
-            '-rs': 'Amnesic clipboard summarizer',
-            '-r': 'Versatile Amnesic Formatter, here is example usage:\n' +
-                    'Case 1: `-r` => Uses clipboard as prompt, like -c\n' +
-                    'Case 2: `-r is an example using a suffix!` => Replaces -r with contents of clipboard\n' +
-                    'Case 3: `-r Analyze this url: -r Analysis:` => Replace "-r " with #clipboard_contents#\n'
-            }
-
-
-
-def make_folder(folder_path):
-    try:
-        os.mkdir(folder_path)
-    except FileExistsError:
-        pass
-        # print(f'No worries: The folder at {folder_path} already exists')
-    # Have to sanitize folder name first!!
-    except:
-        print('Filepath not found!')
-        raise TanSaysNoNo
-
 def set_prompt(prompt, prefix = None,  suffix = None):
     if prefix is None:
         prefix = ''
@@ -136,7 +127,7 @@ def set_prompt(prompt, prefix = None,  suffix = None):
     return prompt
 
 # Needs comments and clearer error handling after response fails
-def get_response_string(response_struct):
+def get_response_string(response_struct, suppress_token_warnings):
     completion_tokens, prompt_tokens, total_tokens = (0,0,0)
     usage_vals = ['completion_tokens', 'prompt_tokens', 'total_tokens']
     for i in range(len(usage_vals)):
@@ -146,7 +137,7 @@ def get_response_string(response_struct):
             tok_val = 0
             if i in [1, 2]:
                 print(f'Token value not found for {usage_vals[i]}')
-                print(f'I need to investigate these cases more. Is it only {usage_vals[i]}?')
+                print(f'I need to investigate these cases more. Any valid responses make it through?')
         if i == 0:
             completion_tokens = tok_val
         elif i == 1: 
@@ -158,15 +149,19 @@ def get_response_string(response_struct):
     except:
         print("Could not access response['choices']")
         raise TanSaysNoNo
+
     finish_reason = response_struct['finish_reason']
     if finish_reason is None:
         pass
     elif finish_reason == 'stop':
         pass
     elif finish_reason == 'length':
-        print('*Warning: message may be truncated. Adjust max tokens as needed.')
+        if suppress_token_warnings == False:
+            print('*Truncation warning: Adjust max tokens as needed.')
+        else:
+            print('*TW*')
     else:
-        print(f'Warning -- Finish reason: {response_struct["finish_reason"] or "nothing"}<--')
+        print(f'Warning -- Finish reason: {response_struct["finish_reason"]}<--')
 
     try:
         response_string = response_struct['text']
@@ -294,30 +289,42 @@ def write_to_log_file(convo, response_times):
         print('error. Unable to find path to logfile.')
 
 
-def parse_args(args, slow_status, engine, max_tokens, debug):
-    '''
-    This function parses config string arguments and returns the desired engine, max_tokens, and debug values.
-    '''
+def parse_args(args, engine, max_tokens, debug):
+   # This function parses config string arguments and returns the desired engine, max_tokens, and debug values.
 
     if args == []: # No arguments provided, return default values
         return engine, max_tokens, debug
-    arg_count = len(args)
     # '-d' argument given to toggle debug mode on/off
     if '-d' in args: 
         debug = not(debug) # Toggle debugging state
-        print(f'debug set to {debug}')
         args.remove('-d')
-        arg_count-=1
+        print(f'debug set to {debug}')
+        
+    if '-sp' in args:
+        args.remove('-sp')
+        suppress_extra_prints = True
+        print('Supressing extra prints.')
+    else:
+        suppress_extra_prints = False
+
+    if '-st' in args:
+        args.remove('-st')
+        suppress_token_warnings = True
+        print('Supressing token warnings.')
+    else:
+        suppress_token_warnings = False
+
+    arg_count = len(args)
     # This code needs to become friendlier, but it works for now
     for i in range(arg_count):
         if args[i] == 'config': # If the config argument is given
             try:
                 test_engine = args[i+1] # Get the engine name
-                test_engine = engine_choice(test_engine, slow_status) # Check if the engine is valid
+                test_engine = engine_choice(test_engine) # Check if the engine is valid
             except (IndexError,ValueError): # If no input arg for engine / If the engine choice is invalid
                 ask_engine = True # Ask for the engine again
                 ask_token = True # Ask for the max tokens again
-                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
+                engine, max_tokens = configurate(ask_engine, ask_token, engine, max_tokens) # Configurate the engine and max tokens
                 break
             engine = test_engine # Set the engine to the new value
             ask_engine = False # Don't ask for the engine again
@@ -326,12 +333,12 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
             except ValueError: # If the max tokens value is not an integer
                 print('Integers only!') # Print an error message
                 ask_token = True # Ask for the max tokens again
-                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
+                engine, max_tokens = configurate(ask_engine, ask_token, engine, max_tokens) # Configurate the engine and max tokens
                 break
             except IndexError: # If no input arg for tokens
                 # I CHANGED THIS
                 ask_token = False # Do NOT Ask for the max tokens again
-                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
+                engine, max_tokens = configurate(ask_engine, ask_token, engine, max_tokens) # Configurate the engine and max tokens
                 break
             if engine == 'code-davinci-002':
                 temp_tok_limit = MAX_CODEX # Set the max tokens limit to the codex limit
@@ -341,12 +348,12 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
             if (test_toks > 0) and (test_toks <= temp_tok_limit):
                 max_tokens = test_toks # Set the max tokens to the new value
                 ask_token = False # Don't ask for the max tokens again
-                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
-                return engine, max_tokens, debug
+                engine, max_tokens = configurate(ask_engine, ask_token, engine, max_tokens) # Configurate the engine and max tokens
+                return engine, max_tokens, debug, suppress_extra_prints, suppress_token_warnings
             else:
                 print(f'Max tokens value must be under {temp_tok_limit}.') # Print an error message
                 ask_token = True # Ask for the max tokens again
-                engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
+                engine, max_tokens = configurate(ask_engine, ask_token, engine, max_tokens) # Configurate the engine and max tokens
                 break
         else:
             if i == 0:
@@ -354,19 +361,16 @@ def parse_args(args, slow_status, engine, max_tokens, debug):
             print(f'Invalid argument on {args[i]}. Syntax is config (engine) (max_tokens) (optional -d)')
             ask_engine = True # Ask for the engine again
             ask_token = True # Ask for the max tokens again
-            engine, max_tokens = configurate(ask_engine, ask_token, slow_status, engine, max_tokens) # Configurate the engine and max tokens
+            engine, max_tokens = configurate(ask_engine, ask_token, engine, max_tokens) # Configurate the engine and max tokens
             break
-    return engine, max_tokens, debug
+    return engine, max_tokens, debug, suppress_extra_prints, suppress_token_warnings
 
-def engine_choice(engine_prompt, slow_status):
+def engine_choice(engine_prompt, slow_status = DISABLE_NERDS):
     if len(engine_prompt) < 2:
         print('Please enter at least two characters for the engine selection.')
         raise(ValueError)
     elif (engine_prompt == 'text-ada-001') or ('ada'.startswith(engine_prompt)):
         engine = 'text-ada-001'
-        return engine
-    elif (engine_prompt == 'text-embedding-ada-002') or ('adae'.startswith(engine_prompt)):
-        engine = 'text-embedding-ada-002'
         return engine
     elif (engine_prompt == 'text-babbage-001') or ('babbage'.startswith(engine_prompt)):
         engine = 'text-babbage-001'
@@ -374,10 +378,16 @@ def engine_choice(engine_prompt, slow_status):
     elif (engine_prompt == 'text-curie-001') or ('curie'.startswith(engine_prompt)):
         engine = 'text-curie-001'
         return engine
-    elif (engine_prompt == 'gpt-3.5-turbo') or ('turbo'.startswith(engine_prompt)):
-        engine = 'gpt-3.5-turbo'
-        return engine
 
+    # Nerds below
+    elif (engine_prompt == 'gpt-3.5-turbo') or ('turbo'.startswith(engine_prompt)):
+        if slow_status == True:
+            print('turbo unavailable, switching to curie.')
+            engine = 'text-curie-001'
+            return engine
+        else:
+            engine = 'gpt-3.5-turbo'
+            return engine
     elif (engine_prompt == 'code-davinci-002') or ('codex'.startswith(engine_prompt)):
         if slow_status == True:
             print('Codex unavailable, switching to curie.')
@@ -448,15 +458,15 @@ def set_temperature(default):
             print('Try a value between 0.0 and 1.0')
     return round(temperature,2)
 
-def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
+def configurate(ask_engine, ask_token, engine, max_tokens):
     if ask_engine:
         legal_answer = False
         while legal_answer == False:
             engine_prompt = ''
             try:
-                engine_prompt = input('[ada, curie, davinci, codex] Engine Choice: ')
+                engine_prompt = input('Choose an engine: ada, babbage, curie, davinci, codex, turbo:\n')
                 check_quit(engine_prompt)
-                engine = engine_choice(engine_prompt, slow_status)
+                engine = engine_choice(engine_prompt)
                 legal_answer = True
             except QuitAndSaveError:
                 raise QuitAndSaveError
@@ -464,7 +474,7 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
                 print('Not recognized. Try again.')
     else:
         try:
-            engine = engine_choice(engine, slow_status)
+            engine = engine_choice(engine)
         except:
             print('config():Welp, seems your engine appears invalid to engine_choice(). I shall leave it alone.')
     if ask_token:
@@ -476,7 +486,7 @@ def configurate(ask_engine, ask_token, slow_status, engine, max_tokens):
             raise QuitAndSaveError
     return engine, max_tokens
 
-def prompt_to_response(debug, history, engine, max_tokens, temperature, prompt, conversation_messages = None):
+def prompt_to_response(debug, history, engine, max_tokens, temperature, suppress_token_warnings, prompt, conversation_messages = None):
     try: # continues the conversation by default
         if conversation_messages:
             # Conversation_messages should ALWAYS be passed to this function when 'turbo' in engine
@@ -489,7 +499,7 @@ def prompt_to_response(debug, history, engine, max_tokens, temperature, prompt, 
     except:
         print('Response not generated. See above error. Try again?')
     try:
-        response_string, completion_tokens, prompt_tokens, total_tokens = get_response_string(response_struct)
+        response_string, completion_tokens, prompt_tokens, total_tokens = get_response_string(response_struct, suppress_token_warnings)
     except KeyboardInterrupt:
         raise KeyboardInterrupt
     except:
@@ -499,13 +509,12 @@ def prompt_to_response(debug, history, engine, max_tokens, temperature, prompt, 
     return response_string, completion_tokens, prompt_tokens, total_tokens
 
 # This function needs proper re-structuring for readability!
-def interactive_chat(config_vars):
+def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extra_prints = False):
     # Unpack config_vars
-    # config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature, 'slow_status': slow_status, 'debug': debug}
+    # config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature, 'debug': debug}
     engine = config_vars['engine']
     max_tokens = config_vars['max_tokens']
     temperature = config_vars['temperature']
-    slow_status = config_vars['slow_status']
     debug = config_vars['debug']
     completion_tokens, prompt_tokens, total_tokens, session_total_tokens = (0, 0, 0, 0)
     prefix, suffix = ('', '')
@@ -557,7 +566,7 @@ def interactive_chat(config_vars):
             user_input = replace_input_text # Use the replacement text
             replace_input = False
         else:
-            user_input = input('Enter a prompt: ')
+            user_input = input('You: ')
             # I want to avoid spam user inputs. 
             # I can lstrip/rstrip, but I want to allow for niche use cases in weird workflows.
             # Planning to implement a cooldown of sorts, but I want to allow a use allow for individually processed list items.
@@ -565,7 +574,7 @@ def interactive_chat(config_vars):
         # Start the timer
         start_time = time.time()
         # If Blank Space
-        if len(user_input) < 1:
+        if len(user_input) < 1 and (suppress_extra_prints == False):
             print('Taylor Swift, I like it!')
             continue
 
@@ -595,14 +604,19 @@ def interactive_chat(config_vars):
             continue
         elif user_input.startswith('config'):
             # Fix this to make it a bit more like -r
-            args = user_input.split(' ')
-            args_count = len(args)
-            if args_count > 4:
-                print('Did you mean to type a config command? Format is: `config <engine> <max_tokens>')
-                continue
+            if user_input == 'config':
+                args = ['config']
             else:
+                if user_input.startswith('config ') == False:
+                    print('Did you mean to type a config command? Format is: `config <engine> <max_tokens>')
+                    continue
+                args = user_input.split(' ')
+                args_count = len(args)
+                if args_count > 4:
+                    print('Did you mean to type a config command? Format is: `config <engine> <max_tokens>')
+                    continue
                 try:
-                    engine, max_tokens, debug = parse_args(args, slow_status, engine, max_tokens, debug)
+                    engine, max_tokens, debug, suppress_extra_prints, suppress_token_warnings = parse_args(args, engine, max_tokens, debug)
                 except QuitAndSaveError:
                     print('Quitting...')
                     replace_input, replace_input_text = True, 'quit'
@@ -701,7 +715,7 @@ def interactive_chat(config_vars):
                 print(msg)
                 logging_on = True
             continue
-        elif user_input == 'read': # Responds to text_prompt.txt
+        elif user_input == '-read': # Responds to text_prompt.txt
             # Amnesic reading
             if os.path.isfile(f'{filepath}/text_prompt.txt'):
                 text_prompt = read_text_prompt()
@@ -779,7 +793,7 @@ def interactive_chat(config_vars):
                 cached_engine = engine
                 cached_tokens = max_tokens
 
-                # Configure for codex, Bypasses slow_status!
+                # Configure for codex, Bypasses DISABLE_NERDS!
                 history = ''
                 engine = 'code-davinci-002' # Latest codex model
                 max_tokens = codex_tokens
@@ -821,27 +835,27 @@ def interactive_chat(config_vars):
             continue
         elif user_input == '-images':
             size_input = input('Pick a size: small (s), medium (m), large (l)\n')
+            check_quit(size_input)
             # image generation
             size_map = {'s': 'small', 'm': 'medium', 'l': 'large'}
             size = size_map.get(size_input, 'default')
             generate_images_from_prompts(size)
             continue
         elif user_input == '-mode':
-            mode_input = input('Choose a mode: [1] default, [2] unhelpful, [3] crazy, [4] hindi, [5] custom\n')
-            if mode_input in ['1', 'default']:
+            mode_input = input('Choose a mode: [0] custom, [1] default, [2] unhelpful, [3] crazy, [4] hindi: ')
+            check_quit(mode_input)
+            preset_map = {
+                        '0': 'custom', 'custom': 'custom',
+                        '1': 'default', 'default': 'default', 
+                        '2': 'unhelpful', 'unhelpful': 'unhelpful',
+                        '3': 'crazy', 'crazy': 'crazy', 
+                        '4': 'hindi', 'hindi': 'hindi'}
+            preset = preset_map.get(mode_input, 'invalid mode')
+            if preset == 'invalid mode':
+                print('Invalid mode. Setting to default.')
                 preset = 'default'
-            elif mode_input in ['2', 'unhelpful']:
-                preset = 'unhelpful'
-            elif mode_input in ['3', 'crazy']:
-                preset = 'crazy'
-            elif mode_input in ['4', 'hindi']:
-                preset = 'hindi'
-            elif mode_input in ['5', 'custom']:
-                preset = 'custom'
-                custom_preset = input('Please enter a custom preset!\nExample: "You will speak in spanish" \n ')
-            else:
-                print('Invalid mode.')
-            msg = f'Mode set to: {preset}'
+                continue
+            msg = f'Mode set to: {preset}\n'
             print(msg)
             full_log += msg + '\n'
             continue
@@ -849,6 +863,7 @@ def interactive_chat(config_vars):
             # Experimenting with a magic string generator for reddit_fetcher.py to use
             try:
                 raw_magic_string = input('Throw something at me. Magic string headed back your way:\n')
+                check_quit(raw_magic_string)
                 prefix = read_magic_string_training()
                 suffix = '\nOutput:'
                 replace_input = True
@@ -905,8 +920,8 @@ def interactive_chat(config_vars):
                         convo_init = CHAT_INIT
                     if debug: print(('Preset:', convo_init['content']))
                     conversation_messages = [convo_init] # initiate conversation
-                    if amnesia == False: # Should this check amnesia instead? 
-                                    # I should make assert statements and make SURE that they're consistent
+                    if amnesia == False: # Could this check history var instead? 
+                                    # I can make assert statements and make SURE that they're consistent
                         for p, r in conversation_in_memory: # add conversation history
                             conversation_messages += [{"role": "user", "content": p},
                                                       {"role": "assistant", "content": r}]
@@ -914,11 +929,11 @@ def interactive_chat(config_vars):
                     conversation_messages += [{"role": "user", "content": prompt}] 
 
                     response_string, completion_tokens, prompt_tokens, total_tokens = prompt_to_response(
-                    debug, history, engine, max_tokens, temperature, None, conversation_messages)
+                    debug, history, engine, max_tokens, temperature, suppress_token_warnings, None, conversation_messages)
 
                 else:
                     response_string, completion_tokens, prompt_tokens, total_tokens = prompt_to_response(
-                    debug, history, engine, max_tokens, temperature, prompt)
+                    debug, history, engine, max_tokens, temperature, suppress_token_warnings, prompt)
                 
             except KeyboardInterrupt:
                 print('KeyboardInterrupt. Interrupting this prompt. Try again :D')
@@ -941,6 +956,7 @@ def interactive_chat(config_vars):
             amnesia = False
         prompts_and_responses.append((prompt, response))
         if response != EMPTY_RESPONSE_DELIMITER:
+            cached_prompt = prompt
             cached_response = response
          # Dev tokenization check
         if dev and (suppress_token_warnings == False):
@@ -969,33 +985,32 @@ def interactive_chat(config_vars):
         if suppress_extra_prints == False:
             print(f'This completion used {round(100*total_tokens/4096)}% of the maximum tokens')
 
-            
 def get_config_from_args(args):
-    if slow_status == True: 
-        engine = DEFAULT_SLOW_ENGINE
+    if DISABLE_NERDS: 
+        engine = DEFAULT_FAST_ENGINE
     else:
         engine = DEFAULT_ENGINE
 
     max_tokens = DEFAULT_MAX_TOKENS
     temperature = DEFAULT_TEMPERATURE
-    arg_count = len(args)
+   
     if '-d' in args:
         args.remove('-d')
-        arg_count -= 1
         debug = True
         print('Debug set to True')
     else:
         debug = False
-    
+
+    arg_count = len(args)
     if arg_count > 1:
         try:
-            engine, max_tokens, debug = parse_args(args, slow_status, engine, max_tokens, debug)
+            engine, max_tokens, debug, _, _ = parse_args(args, engine, max_tokens, debug)
         except QuitAndSaveError:
             raise QuitAndSaveError
-    config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature, 'slow_status': slow_status, 'debug': debug}
+    config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature, 'debug': debug}
     return config_vars
 
-def main(config_vars):
+def main(config_vars, suppress_extra_prints = False, suppress_token_warnings = False):
     if openai_key == None:
         print('Please set your OpenAI key in config.py')
         return
@@ -1005,7 +1020,7 @@ def main(config_vars):
         print('Error. Cannot create directories. Check that filepath in config.py and chat.py matches the repo location.')
         return
     try:
-        logs = interactive_chat(config_vars)
+        logs = interactive_chat(config_vars, suppress_extra_prints, suppress_token_warnings)
     except KeyboardInterrupt:
         print('You have interrupted your session. It has been terminated, with no logfiles saved.')
         return
@@ -1037,21 +1052,30 @@ def check_directories():
         os.mkdir(chatbot_filepath)
     if not os.path.exists(training_data_filepath):
         os.mkdir(training_data_filepath)
-    if not os.path.exists(training_data_filepath):
+    if not os.path.exists(dalle_downloads_filepath):
         os.mkdir(dalle_downloads_filepath)
 
 # Allows execution from python environment with `import chatbot` to run like default script execution from CLI
 def main_from_args(args):
-    # interactive_ui(True, 'text-curie-001', 50, False)
-    # return
+    if '-sp' in args:
+        args.remove('-sp')
+        suppress_extra_prints = True
+        print('Supressing extra prints.')
+    else:
+        suppress_extra_prints = False
+
+    if '-st' in args:
+        args.remove('-st')
+        suppress_token_warnings = True
+        print('Supressing token warnings.')
+    else:
+        suppress_token_warnings = False
     try:
         config_vars = get_config_from_args(args)
-        good_args = True
+        main(config_vars, suppress_extra_prints, suppress_token_warnings)
     except QuitAndSaveError:
         print('Pre-emptive quit. No logfiles saved.')
-        good_args = False
-    if good_args:
-        main(config_vars)
+        
 # Default script execution from CLI, uses sys.argv arguments
 if __name__ == '__main__':
     args = sys.argv
