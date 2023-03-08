@@ -2,13 +2,11 @@
 Conversational Chatbot + Speedy, (built-in) Reddit Media-Fetching
 
 What it is and what it does:
-- For now, there are separate components, the chatbot, the reddit fetcher, and the downloader, all continuing to be merged.
-- Chatbot.py incorporates OpenAI's API, allowing access to different models, utilizing the combined power of ChatGPT's knowledge, DALL-E's image creation, reddit's existing content, and more, all without the need for a browser.
-- The conversationality of chatbot.py is relatively rigid at the moment, but presets for different use cases, as well as better integration will soon be added.
+- There are many separate tools, the chatbot, the reddit fetcher, the image generator, and the downloader, all in the progress of smoothly integrating into one simple "Siri on roids" that does what you need it to do, and is always a click away.
+- Chatbot.py incorporates OpenAI's API, allowing access to different models, utilizing the combined power of ChatGPT's knowledge, DALL-E's image creation, reddit's existing content, and more, *without the need for a browser*, which in today's world, is increasingly vital for privacy from snooping third parties.
+- The capabilities of Chatbot.py are blossoming fast, and presets for different use cases, as well as better integration with new tools are continuing to be worked on. I would love feedback on presets that are still in their infancy.
 
-Hi there! I'm new to creating tools for other people, and right now this is a cluttered mess, but as it comes together, I would love the feedback on aspects that don't feel natural. This work in progress is just for friends, but as it progresses, it's intended to be a more versatile tool to harness the power of AI and design neat browserless shortcuts to complete various tasks.
-
-I have to decide whether I want this to be a program that lets you feel like a developer, changing the names around and having fun adding new functionality, or if I want to have established presets that just make it seem like something neat that someone made. I'm now leaning towards prioritizing making it accessible and not clunky to type in terminal each session. Built-in shortcuts app integration and the like, perhaps.
+This work in progress is just for friends, but as it progresses, it's intended to be a versatile tool to harness the power of AI and design neat browserless strategies to complete all sorts of tasks! Whether you use it to engage in rich conversations shaping your life perspective, to goof off with fun presets, or even to task it with niche developer work that's historically human-only, the bounds truly are limited only by your imagination.
 
 # Getting this onto your computer (MacOS only):
 1. Go the the main github page @ github.com/TanGentleman/TanTan > Code > Download Zip
@@ -17,7 +15,7 @@ I have to decide whether I want this to be a program that lets you feel like a d
 4. This location is the filepath variable in config.py
 
 OFFICIALLY OPTIONAL:
-- 5. Move chat.py to your home directory instead, and ensure the filepath matches in chat.py and config.py
+- Move chat.py to your home directory instead, and ensure the filepath matches in chat.py and config.py
     - If you wish the install the repository anywhere else, just be sure to change it in these two files and you should be all good
     - Allows running the terminal command `python3 chat.py` from the default home directory
 
@@ -28,10 +26,9 @@ Getting the Chatbot up and running from scratch (still in development):
 3. Install required command line tools if needed
 4. Install pip (Python package manager) 
 
-If needed:
-`cd`
-`curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py`
-`python3 get-pip.py`
+To install pip:
+1. `curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py`
+2. `python3 get-pip.py`
 - If you get an error saying WARNING: The scripts pip... are installed in '<.../bin>' which is not on PATH, you have to add it to path
     - For that, copy what was written in '<>', adding a /pip3 to it 
     - This will look something like 'Users/.../Library/Python/3.9/bin/pip3'
