@@ -15,36 +15,70 @@ I have to decide whether I want this to be a program that lets you feel like a d
 2. Download TanTan-Main (Should be in ~/Downloads)
 3. Rename to TanTan and move the folder to the Desktop on your computer.
 4. This location is the filepath variable in config.py
+
+OFFICIALLY OPTIONAL:
 5. Move chat.py to your home directory instead, and ensure the filepath matches in chat.py and config.py
     - If you wish the install the repository anywhere else, just be sure to change it in these two files and you should be all good
 
-Getting the Chatbot up and running from scratch (still in development):
-Note that steps 1 and 2 require following the error message(s) and running the appropriate commands (like chmod for file permissions)
-1. install homebrew
-    - `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
-2. install python
-    - `brew install python`
-If anything goes wrong before this point, let me know. Should be smooth sailing from here.
-3. install dependencies
-    - `pip3 install openai`
-    - `pip3 install clipboard`
-    - `pip3 install pillow`
-    - `pip3 install requests`
-5. Run chatbot from your home directory in terminal:
-    - `python3 -i -m chat`
 
+Getting the Chatbot up and running from scratch (still in development):
+# Step 1: Install the latest version of Python
+Option 1:
+    1. Download the latest python version from the official website: https://www.python.org/downloads/
+    2. Type python3 in terminal
+    3. Install required command line tools if needed
+    4. Install pip (Python package manager) if needed:
+        - `cd`
+        - `curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py`
+        - `python3 get-pip.py`
+        - If you get an error saying WARNING: The scripts pip... are installed in '<.../bin>' which is not on PATH, you have to add it to path
+            - For that, copy what was written in '<>', adding a /pip3 to it 
+            - This will look something like 'Users/.../Library/Python/3.9/bin/pip3'
+            - Paste that instead of MUFFIN below
+        - `sudo set PATH=%PATH%'MUFFIN'`
+
+Option 2:
+    Note that steps 1 and 2 require following the error message(s) and running the appropriate commands (like chmod for file permissions)
+    1. install homebrew
+`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
+    2. install python
+`brew install python`
+
+If anything goes wrong before this point, and you are using the latest version of python/brew, please let me know. Should be smooth sailing after step 1.
+# Step 2: Install dependencies 
+
+Paste the following commands into terminal:
+```
+pip3 install openai
+pip3 install clipboard
+pip3 install gnureadline
+pip3 install requests
+pip3 install pillow
+```
+To troubleshoot, make sure packages are updated, specifically trying `pip3 --upgrade openai`
 # Using the TanTan chatbot:
 1. Paste your secret openai key to mysecrets.py
-2. After completing the prerequisites above, and moving chat.py to your home directory:
-    - `python3 -m -i chat`
-    To see the manual of commands and descriptions:
-    - `tan` or `tanman`
+2. To test, run `python3 chatbot.py` from the TanTan repository in terminal
+2*. You can also run `python3 Desktop/TanTan/chatbot.py` from the home directory
+
+After completing the prerequisites above, and moving chat.py to your home directory:
+You can now additionally: 
+2. Run `python3 chat.py` from your home directory in terminal
+
 3. You're in! Have fun feeling like a computer whiz with the world of knowledge at your fintertips. 
-- FYI: You can follow `python3 -m -i chat` with `config <engine> <max_tokens> <debug>`
-- For instance `python3 -m -i chat config curie 30` for short, fast, simple responses with low latency.
+To see the manual of commands and descriptions:
+    - `tan` or `tanman`
+- FYI: You can follow `python3 chat.py` with `config <engine> <max_tokens> <debug>`
+- For instance `python3 chat.py config curie 30` for short, fast, simple responses with low latency.
 - Or even ...`config codex` for a simple, default-token value codex response generator (great for basic function-making, needs basic prompt engineering)
 
-- Please check out Chatbot/Chatbot_README.md for documentation and alternate setup environments. (Currently not too helpful)
+# Simplify the workflow!
+MacOS Shortcuts:
+Create a new shortcut with a name of your choice, 'Launch Chatbot' for instance. The body will only have one command.
+1. Run Shell script (replace Desktop/TanTan with path to repo if you've moved it): 
+```osascript -e 'tell application "Terminal" to do script "python3 Desktop/TanTan/chatbot.py" activate'```
+- Please check out Chatbot/Chatbot_README.md for documentation and alternate setup environments. 
+(I'll consolidate the info better as I figure out which workflow seems to work best)
 
 *Advisory: I recommend using a VPN, especially when connected to public networks*
 # Note: The below is entirely optional and not needed for chatbot.py. It will soon be integrated for cleaner workflows.

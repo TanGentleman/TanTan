@@ -179,7 +179,12 @@ def run_downloader(DELIMITER, filepath, download_folder_path):
 def main(folder_name):
     DELIMITER = c.DELIMITER
     reddit_folder_name = c.reddit_folder_name
-    filepath = f'{c.filepath}/{reddit_folder_name}'
+    if os.path.exists(os.path.join(os.getcwd(), 'config.py')):
+        print("You seem to be in the repository folder. Setting filepath accordingly.")
+        filepath = c.reddit_folder_name
+    else:
+        # print("The user is not currently in the repository folder.")
+        filepath = f'{c.filepath}/{c.reddit_folder_name}'
 
     folder_name = sanitize_filename(folder_name)
     download_folder_path = f'{filepath}/{folder_name}'

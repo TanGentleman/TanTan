@@ -6,6 +6,7 @@ import os
 import config as c
 import clipboard
 import image_generation as ig
+import gnureadline
 if c.dev:
     import logging
     logging.disable(logging.ERROR) # Ignore a warning that doesn't apply to our use of GPT-2
@@ -55,7 +56,7 @@ STOP = None # This should be an array of string stop_sequences
 FREQUENCY_PENALTY_VAL = 0.5 # This is not currently configurable within interactive_chat
 
 ### NEW GPT-3.5-TURBO ENGINE CONFIGURATION ###
-CHAT_INIT = {"role": "system", "content": "You are a helpful assistant with a great sense of humor."}
+CHAT_INIT = {"role": "system", "content": "You are a kind friend who is helpful."}
 CHAT_INIT_TROLL = {"role": "system", "content": "You are tasked with being hilariously unhelpful to the user."}
 CHAT_INIT_CRAZY = {"role": "system", "content": "You are tasked with being as unhinged and funny as possible."}
 CHAT_INIT_HINDI = {"role": "system", "content": "Try your best to translate, using mostly hindi words"}
@@ -1080,5 +1081,3 @@ def main_from_args(args):
 if __name__ == '__main__':
     args = sys.argv
     main_from_args(args)
-    pass
-

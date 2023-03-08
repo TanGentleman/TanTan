@@ -183,7 +183,6 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
 
 def main(user_input, limit_qty, sort_type, time_period, max_count, debug):
     image_only = c.image_only
-    filepath = f'{c.filepath}/{c.reddit_folder_name}'
     if os.path.exists(os.path.join(os.getcwd(), 'config.py')):
         print("You seem to be in the repository folder. Setting filepath accordingly.")
         filepath = c.reddit_folder_name

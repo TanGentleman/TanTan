@@ -1,34 +1,37 @@
-# This OPTIONAL file should be moved to your Home directory! .../chat.py instead of .../Desktop/TanTan/chatbot.py
+import sys
+import os
+
+# This OPTIONAL file can be duplicated and added to your Home directory! .../chat.py instead of .../Desktop/TanTan/chatbot.py
+# This allows for running `python3 chat.py <args>` from your home directory.
+
 # You are welcome to instead run chatbot.py from the repository folder
 
-# This file is a wrapper for the chatbot, allowing for a more user-friendly experience
-# Run chatbot in one simple line from your home directory `python3 -i -m chat`, with additional perks too!
-# Instead of executing the file as a script, it imports chat.py as a module, allowing for the user to remain in the Python environment
-# Permits arrow key functionality to see prior messages within an input() prompt, which can be an annoyance by default in the executable
-    # The above perk needs readline installed, using homebrew make things simpler.
+# This file is a wrapper for the chatbot, allowing for a simpler experience
+# Allows both executing the file as a script, or importing chat.py as a module, so the user remains in the Python environment
+# As needed down the line, this can be used to allow access to folders or files not in the repository
+
+class TanTanSaysNo(Exception): pass # Make exception class TanTanSaysNo to be used in chat.py
 
 
-# Double check file is in ~/Users/{Name}/chat.py! and you are running this from {Name}! (Afaik, the default in terminal)
-# Check Chatbot README.md for troubleshooting
 
-import sys
 # Add our repository to our path, so the chatbot can be imported correctly.
 
 # This is the path to the repository, relative to your home directory.
-filepath = 'Desktop/Tantan'
+FILEPATH = 'Desktop/Tantan'
 
-sys.path.append(filepath) # Make sure to tweak this path! This is just where I keep the repository on my machine.
+# If user is already in the repository folder
+if os.path.exists(os.path.join(os.getcwd(), 'config.py')):
+    print("You are running chat.py from the repository folder. I'll find a way to make it work.")
 
-from config import filepath as fp
+else:
+    filepath = FILEPATH
+    sys.path.append(filepath) # Make sure to tweak this path! This is just where I keep the repository on my machine.
+    from config import filepath as fp
+    try:
+        assert(filepath.lower() == fp.lower())
+    except:
+        raise TanTanSaysNo('Check that filepaths in chat.py and config.py match')
 
-# Make exception class TanTanSaysNo to be used in chat.py
-class TanTanSaysNo(Exception):
-    pass
-
-try:
-    assert(filepath == fp)
-except:
-    raise TanTanSaysNo('Check that filepaths in chat.py and config.py match')
 
 from chatbot import main_from_args as run_chatbot
 
