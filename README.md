@@ -17,32 +17,31 @@ I have to decide whether I want this to be a program that lets you feel like a d
 4. This location is the filepath variable in config.py
 
 OFFICIALLY OPTIONAL:
-5. Move chat.py to your home directory instead, and ensure the filepath matches in chat.py and config.py
+- 5. Move chat.py to your home directory instead, and ensure the filepath matches in chat.py and config.py
     - If you wish the install the repository anywhere else, just be sure to change it in these two files and you should be all good
-
+    - Allows running the terminal command `python3 chat.py` from the default home directory
 
 Getting the Chatbot up and running from scratch (still in development):
-# Step 1: Install the latest version of Python
-Option 1:
-    1. Download the latest python version from the official website: https://www.python.org/downloads/
-    2. Type python3 in terminal
-    3. Install required command line tools if needed
-    4. Install pip (Python package manager) if needed:
-        - `cd`
-        - `curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py`
-        - `python3 get-pip.py`
-        - If you get an error saying WARNING: The scripts pip... are installed in '<.../bin>' which is not on PATH, you have to add it to path
-            - For that, copy what was written in '<>', adding a /pip3 to it 
-            - This will look something like 'Users/.../Library/Python/3.9/bin/pip3'
-            - Paste that instead of MUFFIN below
-        - `sudo set PATH=%PATH%'MUFFIN'`
+# Step 1: Install the latest version of Python (Option 1:)
+1. Download the latest python version from the official website: https://www.python.org/downloads/
+2. Type python3 in terminal
+3. Install required command line tools if needed
+4. Install pip (Python package manager) 
 
-Option 2:
-    Note that steps 1 and 2 require following the error message(s) and running the appropriate commands (like chmod for file permissions)
-    1. install homebrew
-`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
-    2. install python
-`brew install python`
+If needed:
+`cd`
+`curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py`
+`python3 get-pip.py`
+- If you get an error saying WARNING: The scripts pip... are installed in '<.../bin>' which is not on PATH, you have to add it to path
+    - For that, copy what was written in '<>', adding a /pip3 to it 
+    - This will look something like 'Users/.../Library/Python/3.9/bin/pip3'
+    - Paste that instead of MUFFIN below
+- `sudo set PATH=%PATH%'MUFFIN'`
+
+# Step 1 Alternate: Install python via homebrew:
+1. install homebrew `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
+2. install python `brew install python`
+3. You may need to follow the error message(s) and run the prompted commands (like chmod for file permissions)
 
 If anything goes wrong before this point, and you are using the latest version of python/brew, please let me know. Should be smooth sailing after step 1.
 # Step 2: Install dependencies 
