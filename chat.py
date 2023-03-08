@@ -20,9 +20,23 @@ filepath = 'Desktop/Tantan'
 sys.path.append(filepath) # Make sure to tweak this path! This is just where I keep the repository on my machine.
 
 import chatbot
+from config import filepath as fp
+
+# Make exception class TanTanSaysNo to be used in chat.py
+class TanTanSaysNo(Exception):
+    pass
+
+try:
+    assert(filepath == fp)
+except:
+    raise TanTanSaysNo('Check that filepaths in chat.py and config.py match')
+
+def main():
+    chatbot.main_from_args(sys.argv)
+
 
 if __name__ == '__main__':
-    chatbot.main_from_args(sys.argv)
+    main()
 else:
     # default configuration for chatbot when used as a module
     args = ['python_env']

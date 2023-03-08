@@ -50,6 +50,8 @@ def conversation_to_string(conversation_in_memory):
     assert(response_count == convo_length)
     return conversation_string
 
+def formatted_conversation_to_string(conversation):
+    return '\n'.join([f'{p}\n{r}' for (p, r) in conversation])
 
 openai_key = c.get_openai_api_key()
 filepath = f'{c.filepath}/Chatbot'
@@ -71,18 +73,19 @@ MAX_CODEX = 4000
 MAX_TOKEN_LIMIT = 4000
 MAX_SESSION_TOTAL_TOKENS = 5000 # This measures all tokens used in this session
 WARNING_HISTORY_COUNT = 3000 # History only includes the conversation currently in memory
-STOP = None
-
+STOP = None # This should be an array of string stop_sequences
+FREQUENCY_PENALTY_VAL = 0.5 # This is not currently configurable within interactive_chat
 
 ### NEW GPT-3.5-TURBO ENGINE CONFIGURATION ###
 CHAT_INIT = {"role": "system", "content": "You are a helpful assistant."}
-# Maybe I can add "Empty or blocked responses are marked with DELIMITER" to CHAT_INIT
+CHAT_INIT_TROLL = {"role": "system", "content": "You are tasked with being hilariously unhelpful to the user."}
+CHAT_INIT_CRAZY = {"role": "system", "content": "You are tasked with being as unhinged and funny as possible."}
+CHAT_INIT_HINDI = {"role": "system", "content": "Translate user input into mostly hindi and english"}
 
+CHAT_INIT_CUSTOM = {"role": "system", "content": "Set your custom preset by typing the command -mode!"}
 
-# Configurable variables in future updates. Presets need to be added first.
-
-
-frequency_penalty_val = 0.5 # This is not currently configurable within interactive_chat
+suppress_token_warnings = False
+suppress_extra_prints = False
 
 cmd_dict = {
             'config': 'Set engine and max_tokens using `config <engine> <max_tokens>` (opt: -d for debug)',
@@ -94,6 +97,7 @@ cmd_dict = {
             'his': 'The current conversation in memory. Alias history', 
             '-images': 'Generate images! Fully built in Dall-E with size customization',
             'log': 'Toggle to enable or disable logging of conversation + response times', 
+            '-mode': 'Toggles a preset, like unhelpful or crazy',
             'read': 'Respond to text_prompt.txt', 
             'save': 'Save the recent prompt/response exchange to response.txt. Alias -s',
             'stats': 'Prints the current configuration and session total tokens.',
@@ -102,7 +106,7 @@ cmd_dict = {
             'tok': 'Configure max tokens for the response',
             '-sr': 'Save Response: Copies response to clipboard',
             '-sh': 'Save History: Copies history to clipboard',
-            '-c': 'Respond to clipboard text (Uses conversation history)',
+            '-c': 'Respond to clipboard text (Maintains conversation history)',
             '-rs': 'Amnesic clipboard summarizer',
             '-r': 'Versatile Amnesic Formatter, here is example usage:\n' +
                     'Case 1: `-r` => Uses clipboard as prompt, like -c\n' +
@@ -154,13 +158,15 @@ def get_response_string(response_struct):
     except:
         print("Could not access response['choices']")
         raise TanSaysNoNo
-
-    if response_struct['finish_reason'] == 'stop':
+    finish_reason = response_struct['finish_reason']
+    if finish_reason is None:
         pass
-    elif response_struct['finish_reason'] == 'length':
+    elif finish_reason == 'stop':
+        pass
+    elif finish_reason == 'length':
         print('*Warning: message may be truncated. Adjust max tokens as needed.')
     else:
-        print(f'Warning -- Finish reason: {response_struct["finish_reason"]}')
+        print(f'Warning -- Finish reason: {response_struct["finish_reason"] or "nothing"}<--')
 
     try:
         response_string = response_struct['text']
@@ -223,9 +229,9 @@ def generate_text(debug, engine, max_tokens, temperature, prompt, conversation_m
             engine=engine,
             prompt=prompt,
             # testing this 2000 thing for a sec
-            max_tokens = 2000 if (max_tokens > 2000 and 'davinci' not in engine) else max_tokens,
+            max_tokens = max_tokens if ('davinci' in engine or 'turbo' in engine) else min(2000, max_tokens),
             temperature = 0 if 'code' in engine else temperature,
-            frequency_penalty = frequency_penalty_val,
+            frequency_penalty = FREQUENCY_PENALTY_VAL,
             stop = STOP # I use ['\n'] for one line responses, you can use a custom symbol like ['###'] or ['$$']
         )
         else:
@@ -235,8 +241,8 @@ def generate_text(debug, engine, max_tokens, temperature, prompt, conversation_m
             # testing this 2000 thing for a sec
             max_tokens = max_tokens,
             temperature = temperature,
-            frequency_penalty = frequency_penalty_val,
-            stop = STOP # I use ['\n'] for one line responses, you can use a custom symbol like ['###'] or ['$$']
+            frequency_penalty = FREQUENCY_PENALTY_VAL,
+            stop = STOP # You can use a custom symbol like ['###'] or ['$$'], and it works esp well with custom preset.
             )
     except openai.error.OpenAIError as e:
         status = e.http_status
@@ -250,16 +256,20 @@ def generate_text(debug, engine, max_tokens, temperature, prompt, conversation_m
                 print(f'invalid_request_error: {message}')
             else:
                 print(error_dict)
+
+        elif status == 429:
+            print(error_dict['message'])
         else:
             print(error_dict)
-        return
+            
+        raise KeyboardInterrupt
     except Exception as e:
         print(e)
     if debug: print(response_struct)
     return response_struct
 
 # In development
-def try_gen(image_size, prompts = None):
+def generate_images_from_prompts(image_size, prompts = None):
     print('Starting image generation!')
     valid = False
     while valid == False:
@@ -474,6 +484,7 @@ def prompt_to_response(debug, history, engine, max_tokens, temperature, prompt, 
         else:
             response_struct = generate_text(debug, engine, max_tokens, temperature, history + prompt)
     except KeyboardInterrupt:
+        print('Read the above error. Attempting to interrupt.')
         raise KeyboardInterrupt
     except:
         print('Response not generated. See above error. Try again?')
@@ -522,8 +533,8 @@ def interactive_chat(config_vars):
     print(config_info)
     prompts_and_responses = []
     conversation_in_memory = []
-
-    # NEW for GPT-3.5 using Chat endpoint
+    preset = 'default'
+    custom_preset = None
     while chat_ongoing:
         # Amnesia uses a sandboxed environment, saving the current configuration and history for next prompt
         if amnesia == False:
@@ -645,16 +656,14 @@ def interactive_chat(config_vars):
             print('For the full manual of commands and descriptions, type tan')
             print(list(cmd_dict.keys()))
             continue
+
         elif user_input in ['his','history']: # Show convo history
             if conversation_in_memory:
                 conversation_string = ''
                 convo_length = len(conversation_in_memory)
                 res_count = 0
                 print(f'{convo_length} exchanges in memory shown below:\n\n')
-                for (p, r) in conversation_in_memory:
-                    res_count += 1
-                    conversation_string += f'({res_count}.)' + p + '\n' + '(*)' + r + '\n'
-                print(conversation_string)
+                print(formatted_conversation_to_string(conversation_in_memory))
             else:
                 print('No conversation history in memory.')
             continue
@@ -801,39 +810,61 @@ def interactive_chat(config_vars):
         elif user_input == '-sh':
             # I don't think I need the below step currently.
             # history = conversation_to_string(conversation_in_memory)
-            clipboard.copy(history.strip())
-            print('Copied history to clipboard.')
+            if history:
+                convo_length = len(conversation_in_memory)
+                msg = formatted_conversation_to_string(conversation_in_memory)
+                print(f'{convo_length} exchanges from memory copied to clipboard')
+                clipboard.copy(msg.strip())
+            else:
+                msg = 'No history to copy.'
+                print(msg)
             continue
         elif user_input == '-images':
             size_input = input('Pick a size: small (s), medium (m), large (l)\n')
             # image generation
-            if size_input in ['s', 'small']:
-                size = 'small'
-            elif size_input in ['m', 'medium']:
-                size = 'medium'
-            elif size_input in ['l', 'large']:
-                size = 'large'
+            size_map = {'s': 'small', 'm': 'medium', 'l': 'large'}
+            size = size_map.get(size_input, 'default')
+            generate_images_from_prompts(size)
+            continue
+        elif user_input == '-mode':
+            mode_input = input('Choose a mode: [1] default, [2] unhelpful, [3] crazy, [4] hindi, [5] custom\n')
+            if mode_input in ['1', 'default']:
+                preset = 'default'
+            elif mode_input in ['2', 'unhelpful']:
+                preset = 'unhelpful'
+            elif mode_input in ['3', 'crazy']:
+                preset = 'crazy'
+            elif mode_input in ['4', 'hindi']:
+                preset = 'hindi'
+            elif mode_input in ['5', 'custom']:
+                preset = 'custom'
+                custom_preset = input('Please enter a custom preset!\nExample: "You will speak in spanish" \n ')
             else:
-                size = 'default'
-            try_gen(size)
+                print('Invalid mode.')
+            msg = f'Mode set to: {preset}'
+            print(msg)
+            full_log += msg + '\n'
             continue
         elif dev and user_input == 'magic': 
             # Experimenting with a magic string generator for reddit_fetcher.py to use
-            raw_magic_string = input('Throw something at me. Magic string headed back your way:\n')
-            prefix = read_magic_string_training()
-            suffix = '\nOutput:'
-            replace_input = True
-            replace_input_text = raw_magic_string
+            try:
+                raw_magic_string = input('Throw something at me. Magic string headed back your way:\n')
+                prefix = read_magic_string_training()
+                suffix = '\nOutput:'
+                replace_input = True
+                replace_input_text = raw_magic_string
 
-            cached_tokens = max_tokens
-            cached_history = history
-            max_tokens = 15
-            history = ''
+                cached_tokens = max_tokens
+                cached_history = history
+                max_tokens = 15
+                history = ''
 
-            amnesia = True
-            continue
+                amnesia = True
+                continue
+            except:
+                print('Something went wrong.')
+                continue
         
-
         # All valid non-command inputs pass through here.    
         else:
             try:
@@ -847,7 +878,7 @@ def interactive_chat(config_vars):
                     suffix = ''
 
                 # Tokenize the prompt to check length
-                if dev:
+                if dev and (suppress_extra_prints == False):
                     tokenized_text = tokenize(prompt)
                     token_count = len(tokenized_text)
                     # This 4000 is a hard cap for the full completion. I'll work it in better soon. 
@@ -858,7 +889,22 @@ def interactive_chat(config_vars):
 
                 if debug: print('beep, about to try generating response')  
                 if 'turbo' in engine:
-                    conversation_messages = [CHAT_INIT] # initiate conversation
+                    if preset == 'default':
+                        convo_init = CHAT_INIT
+                    elif preset == 'unhelpful':
+                        convo_init = CHAT_INIT_TROLL
+                    elif preset == 'crazy':
+                        convo_init = CHAT_INIT_CRAZY
+                    elif preset == 'hindi':
+                        convo_init = CHAT_INIT_HINDI
+                    elif preset == 'custom':
+                        convo_init = CHAT_INIT_CUSTOM
+                        convo_init['content'] = custom_preset
+                    else:
+                        print(f'preset is {preset}')
+                        convo_init = CHAT_INIT
+                    if debug: print(('Preset:', convo_init['content']))
+                    conversation_messages = [convo_init] # initiate conversation
                     if amnesia == False: # Should this check amnesia instead? 
                                     # I should make assert statements and make SURE that they're consistent
                         for p, r in conversation_in_memory: # add conversation history
@@ -897,7 +943,7 @@ def interactive_chat(config_vars):
         if response != EMPTY_RESPONSE_DELIMITER:
             cached_response = response
          # Dev tokenization check
-        if dev:
+        if dev and (suppress_token_warnings == False):
             tokenized_text = tokenize(history)
             token_count = len(tokenized_text)
             if token_count > WARNING_HISTORY_COUNT:
@@ -918,9 +964,10 @@ def interactive_chat(config_vars):
         print(f'response time: {round(time_taken, 1)} seconds')
         session_total_tokens += total_tokens
         
-        if session_total_tokens > MAX_SESSION_TOTAL_TOKENS:
+        if (session_total_tokens > MAX_SESSION_TOTAL_TOKENS) and (suppress_token_warnings == False):
             print(f'Conversation is very lengthy. Session total tokens: {session_total_tokens}')
-        print(f'This completion was {round(100*total_tokens/4096)}% of the davinci maximum')
+        if suppress_extra_prints == False:
+            print(f'This completion used {round(100*total_tokens/4096)}% of the maximum tokens')
 
             
 def get_config_from_args(args):

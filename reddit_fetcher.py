@@ -184,6 +184,10 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
 def main(user_input, limit_qty, sort_type, time_period, max_count, debug):
     image_only = c.image_only
     filepath = f'{c.filepath}/{c.reddit_folder_name}'
+    try:
+        mkdir(filepath)
+    except FileExistsError:
+        pass
     token_needed = c.token_needed
     getHeaders = c.getHeaders
     DELIMITER = c.DELIMITER
@@ -208,11 +212,6 @@ def main(user_input, limit_qty, sort_type, time_period, max_count, debug):
         print('Faulty output. No links grabbed.')
         return
     # Write it to contents.txt
-    try:
-        mkdir(filepath)
-    except FileExistsError:
-        pass
-        # print(f'The folder {filepath} already exists')
     try:
         with open(f'{filepath}/contents.txt', 'w') as file:
             file.write(output)
@@ -320,7 +319,7 @@ try:
                 arg_count -= 1
                 debug = True
                 print('Debug set to True')
-
+        print('args:', args)
         # If a magic string is used
         if arg_count > 1:
             try:

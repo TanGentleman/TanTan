@@ -1,5 +1,5 @@
 Current issue:
-- Clarify engine types and allow friendly choosing using config strings
+- Make chat.py the configuration file for the chatbot.
 
 In development:
 - A more readable README
