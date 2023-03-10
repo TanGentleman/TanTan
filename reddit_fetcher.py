@@ -2,7 +2,7 @@ import requests
 import config as c
 import os
 class TanSaysNoNo(Exception): pass
-
+if os.system() != 'Windows': import gnureadline
 # Given valid argument strings for sort_type and time_period, returns formatted sort_string
 def get_sort_string(sort_type, time_period):
         type_string = ''
@@ -294,7 +294,6 @@ try:
             allow_input = False
         else:
             allow_input = True
-            import gnureadline
 
         if '-d' in args: # If -d flag is used, set debug to True
             args.remove('-d')

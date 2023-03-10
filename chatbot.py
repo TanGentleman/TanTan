@@ -10,9 +10,7 @@ from platform import system
 class TanSaysNoNo(Exception): pass
 class QuitAndSaveError(Exception): pass
 if system() == 'Windows':
-    pass
     dev = False
-    # import pyreadline
 else:
     import gnureadline
     if c.dev:

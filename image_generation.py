@@ -3,19 +3,15 @@
 import openai
 import requests
 import config as c
-from os import mkdir
+import os 
 from io import BytesIO
-try:
-    from PIL import Image
-except ImportError:
-    Image = None
+from PIL import Image
 import Downloader
-
 MAX_LIMIT = 10
 DEFAULT_SIZE = '256x256'
-filepath = c.filepath + '/DallE'
+filepath = os.path.join(c.filepath, 'DallE')
 try:
-    mkdir(filepath)
+    os.mkdir(filepath)
 except FileExistsError:
     pass
 
@@ -191,7 +187,10 @@ def save_file_from_url(filepath, url):
         print('nay')
 
 if __name__ == '__main__':
-    # This is just testing, make sure to have file existence checks
-    FILENAME = 'an_oil_painting_of_an_indian_grandmother_sitting_with_her_grandson,_a_cavalier_king_charles_spaniel_(blenheim),_and_a_tortoiseshell_cat_colored_black_and_ginger.png'
-    NEW_FILENAME = 'TanAddition.png'
-    generate_variant(f'{filepath}/{FILENAME}', f'{filepath}/{NEW_FILENAME}', 'large', masked = True, var_prompt = 'An oil painting with a grandma, a dog, a cat, and Abraham Lincoln wearing a hot pink hat')
+    main()
+
+    if False:
+        # This is just testing, make sure to have file existence checks
+        FILENAME = 'an_oil_painting_of_an_indian_grandmother_sitting_with_her_grandson,_a_cavalier_king_charles_spaniel_(blenheim),_and_a_tortoiseshell_cat_colored_black_and_ginger.png'
+        NEW_FILENAME = 'TanAddition.png'
+        generate_variant(f'{filepath}/{FILENAME}', f'{filepath}/{NEW_FILENAME}', 'large', masked = True, var_prompt = 'An oil painting with a grandma, a dog, a cat, and Abraham Lincoln wearing a hot pink hat')
