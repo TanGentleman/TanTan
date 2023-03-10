@@ -4,7 +4,7 @@ where you installed this repository. I recommend the Desktop, so ~/Desktop/TanTa
 FILEPATH = 'Desktop/TanTan'
 
 from os import getcwd
-if 'TanTan' in getcwd():
+if 'TanTan'.lower() in getcwd().lower():
     # User is currently in the repository folder
     filepath = ''
 else:

@@ -6,17 +6,23 @@ import os
 import config as c
 import clipboard
 import image_generation as ig
-import gnureadline
-if c.dev:
-    import logging
-    logging.disable(logging.ERROR) # Ignore a warning that doesn't apply to our use of GPT-2
-    # Use a local copy of the pretrained GPT-2 model to reliably tokenize prompt before passing it to OpenAI function
-    from transformers import GPT2TokenizerFast
-    tokenize = GPT2TokenizerFast.from_pretrained("gpt2", local_files_only = True).tokenize
-    os.environ["TOKENIZERS_PARALLELISM"] = "false" # Disable parallelism to avoid a warning
-    dev = True
-else:
+from platform import system
+if system() == 'Windows':
+    pass
     dev = False
+    # import pyreadline
+else:
+    import gnureadline
+    if c.dev:
+        import logging
+        logging.disable(logging.ERROR) # Ignore a warning that doesn't apply to our use of GPT-2
+        # Use a local copy of the pretrained GPT-2 model to reliably tokenize prompt before passing it to OpenAI function
+        from transformers import GPT2TokenizerFast
+        tokenize = GPT2TokenizerFast.from_pretrained("gpt2", local_files_only = True).tokenize
+        os.environ["TOKENIZERS_PARALLELISM"] = "false" # Disable parallelism to avoid a warning
+        dev = True
+    else:
+        dev = False
 
 class TanSaysNoNo(Exception): pass
 class QuitAndSaveError(Exception): pass
@@ -293,20 +299,6 @@ def parse_args(args, engine, max_tokens, debug):
         debug = not(debug) # Toggle debugging state
         args.remove('-d')
         print(f'debug set to {debug}')
-        
-    if '-sp' in args:
-        args.remove('-sp')
-        suppress_extra_prints = True
-        print('Supressing extra prints.')
-    else:
-        suppress_extra_prints = False
-
-    if '-st' in args:
-        args.remove('-st')
-        suppress_token_warnings = True
-        print('Supressing token warnings.')
-    else:
-        suppress_token_warnings = False
 
     arg_count = len(args)
     # This code needs to become friendlier, but it works for now
@@ -343,7 +335,7 @@ def parse_args(args, engine, max_tokens, debug):
                 max_tokens = test_toks # Set the max tokens to the new value
                 ask_token = False # Don't ask for the max tokens again
                 engine, max_tokens = configurate(ask_engine, ask_token, engine, max_tokens) # Configurate the engine and max tokens
-                return engine, max_tokens, debug, suppress_extra_prints, suppress_token_warnings
+                return engine, max_tokens, debug
             else:
                 print(f'Max tokens value must be under {temp_tok_limit}.') # Print an error message
                 ask_token = True # Ask for the max tokens again
@@ -357,7 +349,7 @@ def parse_args(args, engine, max_tokens, debug):
             ask_token = True # Ask for the max tokens again
             engine, max_tokens = configurate(ask_engine, ask_token, engine, max_tokens) # Configurate the engine and max tokens
             break
-    return engine, max_tokens, debug, suppress_extra_prints, suppress_token_warnings
+    return engine, max_tokens, debug
 
 def engine_choice(engine_prompt, slow_status = DISABLE_NERDS):
     if len(engine_prompt) < 2:
@@ -610,23 +602,20 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
                 args = user_input.split(' ')
                 if '-sp' in args:
                     args.remove('-sp')
-                    suppress_extra_prints = True
-                    print('Supressing extra prints.')
-                else:
-                    suppress_extra_prints = False
+                    suppress_extra_prints = not(suppress_extra_prints)
+                    print(f'Print suppression {suppress_extra_prints}.')
 
                 if '-st' in args:
                     args.remove('-st')
-                    suppress_token_warnings = True
-                    print('Supressing token warnings.')
-                else:
-                    suppress_token_warnings = False
+                    suppress_token_warnings = not(suppress_token_warnings)
+                    print(f'Token warning suppression {suppress_token_warnings}.')
+
                 args_count = len(args)
                 if args_count > 4:
                     print('Did you mean to type a config command? Format is: `config <engine> <max_tokens>')
                     continue
                 try:
-                    engine, max_tokens, debug, suppress_extra_prints, suppress_token_warnings = parse_args(args, engine, max_tokens, debug)
+                    engine, max_tokens, debug = parse_args(args, engine, max_tokens, debug)
                 except QuitAndSaveError:
                     print('Quitting...')
                     replace_input, replace_input_text = True, 'quit'
@@ -651,7 +640,7 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
                 else:
                     if user_input[2] == 's':
                         # clipboard summmary (previously -cs)
-                        prefix = '#Provide a brief summary of the following text:\n'
+                        prefix = 'Provide a brief summary of the following text:\n#'
                         suffix = '\n#'
 
                     elif '-r' not in args[1:]: # single -r = suffix mode
@@ -1026,7 +1015,7 @@ def get_config_from_args(args):
     arg_count = len(args)
     if arg_count > 1:
         try:
-            engine, max_tokens, debug, _, _ = parse_args(args, engine, max_tokens, debug)
+            engine, max_tokens, debug = parse_args(args, engine, max_tokens, debug)
         except QuitAndSaveError:
             raise QuitAndSaveError
     config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature, 'debug': debug}
