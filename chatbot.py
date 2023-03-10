@@ -20,13 +20,24 @@ else:
         from transformers import GPT2TokenizerFast
         tokenize = GPT2TokenizerFast.from_pretrained("gpt2", local_files_only = True).tokenize
         os.environ["TOKENIZERS_PARALLELISM"] = "false" # Disable parallelism to avoid a warning
+
+        # URL of the video you want to download
+
+        # Create a YouTube object and get the available streams
+        from pytube import YouTube
+
+        def download_video(url):
+            yt = YouTube(url)
+            stream = yt.streams.get_highest_resolution()
+            stream.download(c.filepath)
         dev = True
     else:
         dev = False
 
+FILEPATH = os.path.join(c.filepath, 'Chatbot')
 
 OPENAI_KEY = c.get_openai_api_key()
-filepath = os.path.join(c.filepath, 'Chatbot')
+filepath = FILEPATH
 
 CONVO_LOGFILE = 'convo_log.txt'
 RESPONSE_TIME_LOGFILE = 'response_time_log.txt'
@@ -880,7 +891,23 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
             print(msg)
             full_log += msg + '\n'
             continue
-        
+        elif user_input == '-yt':
+            input_url = input('Enter a YouTube URL: ')
+            check_quit(input_url)
+            if 'youtu' not in input_url:
+                print('Invalid URL. Try again.')
+                continue
+            else:
+                # If link valid, download the video and save it as a .mp4
+                # If it isn't, print an error message
+                try:
+                    print('Attempting download with given url...')
+                    download_video(input_url.strip())    
+                    print('Downloaded video!')
+                    continue
+                except:
+                    print('Invalid URL. Try again.')
+                    continue
         # All valid non-command inputs pass through here.    
         else:
             try:
