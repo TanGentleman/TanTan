@@ -1,7 +1,16 @@
 '''Hi there! Hopefully these don't look too scary. The filepath is the location 
 where you installed this repository. I recommend the Desktop, so ~/Desktop/TanTan'''
 
-filepath = 'Desktop/TanTan'
+FILEPATH = 'Desktop/TanTan'
+
+from os import getcwd
+if 'TanTan' in getcwd():
+    # User is currently in the repository folder
+    filepath = ''
+else:
+    # User is not currently in the repository folder. Set path to FILEPATH constant above
+    filepath = FILEPATH
+
 reddit_folder_name = 'ScrapeAndSpreddit'
 
 ### REDDIT CONFIG
@@ -33,6 +42,4 @@ except:
 def get_openai_api_key():
     return m.openai_key
 
-getHeaders = m.getHeaders
-getToken = m.getToken
-token_needed = False # Please generate a token using mysecrets.py and leave this as False.
+get_headers = m.get_valid_headers

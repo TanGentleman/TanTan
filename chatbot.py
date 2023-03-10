@@ -25,17 +25,11 @@ def check_quit(text): # You should be able to quit from any input() call
     if text in ['-q','quit']:
         raise QuitAndSaveError
 
-openai_key = c.get_openai_api_key()
+OPENAI_KEY = c.get_openai_api_key()
+filepath = f'{c.filepath}/Chatbot'
 
-if os.path.exists(os.path.join(os.getcwd(), 'config.py')):
-    print("You seem to be in the repository folder. Setting filepath accordingly.")
-    filepath = 'Chatbot'
-else:
-    # print("The user is not currently in the repository folder.")
-    filepath = f'{c.filepath}/Chatbot'
-
-full_logfile = 'logfile.txt'
-response_time_logfile = 'response_time_log.txt'
+CONVO_LOGFILE = 'convo_log.txt'
+RESPONSE_TIME_LOGFILE = 'response_time_log.txt'
 
 
 DISABLE_NERDS = False # When True, engine defaults to DEFAULT_SLOW_ENGINE and davinci and turbo are disabled
@@ -53,17 +47,17 @@ MAX_TOKEN_LIMIT = 4000
 MAX_SESSION_TOTAL_TOKENS = 5000 # This measures all tokens used in this session
 WARNING_HISTORY_COUNT = 3000 # History only includes the conversation currently in memory
 STOP = None # This should be an array of string stop_sequences
-FREQUENCY_PENALTY_VAL = 0.5 # This is not currently configurable within interactive_chat
+FREQUENCY_PENALTY_VAL = 0.7 # This is not currently configurable within interactive_chat
 
 ### NEW GPT-3.5-TURBO ENGINE CONFIGURATION ###
-CHAT_INIT = {"role": "system", "content": "You are a kind friend who is helpful."}
+CHAT_INIT = {"role": "system", "content": "Be helpful. Don't be repetitive. Write your confidence level when not certain."}
 CHAT_INIT_TROLL = {"role": "system", "content": "You are tasked with being hilariously unhelpful to the user."}
 CHAT_INIT_CRAZY = {"role": "system", "content": "You are tasked with being as unhinged and funny as possible."}
-CHAT_INIT_HINDI = {"role": "system", "content": "Try your best to translate, using mostly hindi words"}
+CHAT_INIT_HINDI = {"role": "system", "content": "Reply to user in Hinglish (Hindi/English as written by indians)"}
 
 CHAT_INIT_CUSTOM = {"role": "system", "content": "Set your custom preset by typing the command -mode!"}
 
-cmd_dict = {
+CMD_DICT = {
             'config': 'Set engine and max_tokens using `config <engine> <max_tokens>` (opt: -d for debug)',
             'codex': 'Generate a code completion from codex_prompt.txt',
             'debug': 'Toggle debug mode. Alias -d',
@@ -129,7 +123,7 @@ def set_prompt(prompt, prefix = None,  suffix = None):
 
 # Needs comments and clearer error handling after response fails
 def get_response_string(response_struct, suppress_token_warnings):
-    completion_tokens, prompt_tokens, total_tokens = (0,0,0)
+    response_tokens, prompt_tokens, completion_tokens = (0,0,0)
     usage_vals = ['completion_tokens', 'prompt_tokens', 'total_tokens']
     for i in range(len(usage_vals)):
         try:
@@ -140,11 +134,11 @@ def get_response_string(response_struct, suppress_token_warnings):
                 print(f'Token value not found for {usage_vals[i]}')
                 print(f'I need to investigate these cases more. Any valid responses make it through?')
         if i == 0:
-            completion_tokens = tok_val
+            response_tokens = tok_val
         elif i == 1: 
             prompt_tokens = tok_val
         elif i == 2: 
-            total_tokens = tok_val
+            completion_tokens = tok_val
     try:
         response_struct = response_struct['choices'][0]
     except:
@@ -172,8 +166,7 @@ def get_response_string(response_struct, suppress_token_warnings):
         print('Blank Space (no response)')
         response_string = EMPTY_RESPONSE_DELIMITER
 
-    assert(len(response_string) > 0)
-    return response_string, completion_tokens, prompt_tokens, total_tokens
+    return response_string, response_tokens, prompt_tokens, completion_tokens
 
 # Reads the prompt from the given file
 def read_prompt(filepath, filename):
@@ -216,7 +209,7 @@ def read_magic_string_training():
 # takes in a string prompt and returns a response struncture
 def generate_text(debug, engine, max_tokens, temperature, prompt, conversation_messages = None):
     # Set the API key
-    openai.api_key = openai_key
+    openai.api_key = OPENAI_KEY
     
     # Generate responses using the model
     try:
@@ -278,11 +271,11 @@ def generate_images_from_prompts(image_size, prompts = None):
 
 def write_to_log_file(convo, response_times):
     try:
-        with open(f'{filepath}/{full_logfile}', 'a') as file:
+        with open(f'{filepath}/{CONVO_LOGFILE}', 'a') as file:
             timestamp = datetime.datetime.now().strftime('%Y-%m-%d')
             file.write(f'Timestamp: {timestamp}\n{convo}\n ==== End of Entry ====\n')
             print('Saved conversation log file.')
-        with open(f'{filepath}/{response_time_logfile}', 'a') as file:
+        with open(f'{filepath}/{RESPONSE_TIME_LOGFILE}', 'a') as file:
             timestamp = datetime.datetime.now().strftime('%Y-%m-%d')
             file.write(f'Timestamp: {timestamp}\n{response_times}\n ==== End of Entry ====\n')
             print('Saved response time log file.')
@@ -500,14 +493,14 @@ def prompt_to_response(debug, history, engine, max_tokens, temperature, suppress
     except:
         print('Response not generated. See above error. Try again?')
     try:
-        response_string, completion_tokens, prompt_tokens, total_tokens = get_response_string(response_struct, suppress_token_warnings)
+        response_string, response_tokens, prompt_tokens, completion_tokens = get_response_string(response_struct, suppress_token_warnings)
     except KeyboardInterrupt:
         raise KeyboardInterrupt
     except:
         print('get_response_string failure, fix incoming')
         raise TanSaysNoNo('get_response_string man') # I think I have ensured safety of get_response_string()!
         # Valid response!
-    return response_string, completion_tokens, prompt_tokens, total_tokens
+    return response_string, response_tokens, prompt_tokens, completion_tokens
 
 # This function needs proper re-structuring for readability!
 def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extra_prints = False):
@@ -517,7 +510,7 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
     max_tokens = config_vars['max_tokens']
     temperature = config_vars['temperature']
     debug = config_vars['debug']
-    completion_tokens, prompt_tokens, total_tokens, session_total_tokens = (0, 0, 0, 0)
+    response_tokens, prompt_tokens, completion_tokens, session_total_tokens = (0, 0, 0, 0)
     prefix, suffix = ('', '')
     history  = ''
 
@@ -529,6 +522,8 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
     
 
     amnesia = False
+    persistant_amnesia = False
+
     cached_engine = None
     cached_history = None
     cached_tokens = None
@@ -597,7 +592,8 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
         # Need to organize the below commands
         elif user_input == 'stats':
             config_info = config_msg(engine, max_tokens, session_total_tokens)
-            print(config_info)
+            print(config_info, end = '')
+            print(f'Logging {logging_on} | Debug {debug} | Amnesia {persistant_amnesia}\n')
             continue
         elif user_input in ['-d', 'debug']:
             debug = not(debug)
@@ -612,6 +608,19 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
                     print('Did you mean to type a config command? Format is: `config <engine> <max_tokens>')
                     continue
                 args = user_input.split(' ')
+                if '-sp' in args:
+                    args.remove('-sp')
+                    suppress_extra_prints = True
+                    print('Supressing extra prints.')
+                else:
+                    suppress_extra_prints = False
+
+                if '-st' in args:
+                    args.remove('-st')
+                    suppress_token_warnings = True
+                    print('Supressing token warnings.')
+                else:
+                    suppress_token_warnings = False
                 args_count = len(args)
                 if args_count > 4:
                     print('Did you mean to type a config command? Format is: `config <engine> <max_tokens>')
@@ -669,7 +678,7 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
             
         elif user_input == 'help': # Show list of commands
             print('For the full manual of commands and descriptions, type tan')
-            print(list(cmd_dict.keys()))
+            print(list(CMD_DICT.keys()))
             continue
 
         elif user_input in ['his','history']: # Show convo history
@@ -774,7 +783,7 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
                         file.write('# This Python3 function [What it does]:\ndef myFunc():\n\t#Do THIS')
                         print('Toss something in there before setting the tokens!')
             
-            # Set tokens (persistent until valid chosen!)
+            # Set tokens (persistant until valid chosen!)
             default = None
             limit = MAX_CODEX
             try:
@@ -807,10 +816,14 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
         elif user_input in ['tan', 'tanman']:
             
             text = '\nTanManual Opened! Available commands:\n\n' 
-            for i in range(len(cmd_dict)):
-                text += f'{list(cmd_dict.keys())[i]}: {list(cmd_dict.values())[i]}\n'
+            for i in range(len(CMD_DICT)):
+                text += f'{list(CMD_DICT.keys())[i]}: {list(CMD_DICT.values())[i]}\n'
             print(text)
             continue      
+        elif user_input == '-a': # Toggle persistant_amnesia
+            persistant_amnesia = not persistant_amnesia
+            print(f'Amnesia set to {persistant_amnesia}')
+            continue
         # Save the recent prompt/response exchange to response.txt
         elif user_input in ['-s','save']:
             text = f'PROMPT:\n{cached_prompt}\nRESPONSE:\n{cached_response}'
@@ -823,8 +836,6 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
             print('Copied response to clipboard.')
             continue
         elif user_input == '-sh':
-            # I don't think I need the below step currently.
-            # history = conversation_to_string(conversation_in_memory)
             if history:
                 convo_length = len(conversation_in_memory)
                 msg = formatted_conversation_to_string(conversation_in_memory)
@@ -843,6 +854,15 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
             generate_images_from_prompts(size)
             continue
         elif user_input == '-mode':
+            if 'turbo' not in engine:
+                print('These settings are only available for the turbo GPT-3.5 engine. Try `config turbo`')
+                continue
+            if conversation_in_memory:
+                ask_clear_input = input('Presets work best with a fresh start. Hit return to clear history, or anything else to keep it.')
+                if ask_clear_input == '':
+                    history = ''
+                    conversation_in_memory = []
+                    print('History cleared.')
             mode_input = input('Choose a mode: [0] custom, [1] default, [2] unhelpful, [3] crazy, [4] hindi: ')
             check_quit(mode_input)
             preset_map = {
@@ -856,6 +876,9 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
                 print('Invalid mode. Setting to default.')
                 preset = 'default'
                 continue
+            elif preset == 'custom':
+                custom_preset = input('Create a custom mode, like "":\n')
+                print(f'Custom mode created!')
             msg = f'Mode set to: {preset}\n'
             print(msg)
             full_log += msg + '\n'
@@ -929,11 +952,11 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
                         # add prompt
                     conversation_messages += [{"role": "user", "content": prompt}] 
 
-                    response_string, completion_tokens, prompt_tokens, total_tokens = prompt_to_response(
+                    response_string, response_tokens, prompt_tokens, completion_tokens = prompt_to_response(
                     debug, history, engine, max_tokens, temperature, suppress_token_warnings, None, conversation_messages)
 
                 else:
-                    response_string, completion_tokens, prompt_tokens, total_tokens = prompt_to_response(
+                    response_string, response_tokens, prompt_tokens, completion_tokens = prompt_to_response(
                     debug, history, engine, max_tokens, temperature, suppress_token_warnings, prompt)
                 
             except KeyboardInterrupt:
@@ -950,7 +973,7 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
         if debug: print('beep, we got a response!')
 
         # Record a savestate and append history
-        if amnesia == False:
+        if (amnesia == False) and (persistant_amnesia == False):
             conversation_in_memory.append((prompt, response))
             history += prompt + response + '\n\n'
         else: # If amnesia is True, don't add it to the conversation_in_memory
@@ -960,10 +983,8 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
             cached_prompt = prompt
             cached_response = response
          # Dev tokenization check
-        if dev and (suppress_token_warnings == False):
-            tokenized_text = tokenize(history)
-            token_count = len(tokenized_text)
-            if token_count > WARNING_HISTORY_COUNT:
+        if suppress_token_warnings == False:
+            if completion_tokens > WARNING_HISTORY_COUNT:
                 print(f'Conversation token count is growing large [{token_count}]. Please reset my memory as needed.')
 
         #add a marker to distinguish from user text
@@ -974,17 +995,17 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
         # Log the response and response time
         response_count += 1
         full_log += f'({response_count}.)' + prompt + '\n' + response_time_marker + response + '\n'
-        response_time_log += f'[#{response_count}, RT:{RT}, T:{total_tokens}, E:{engine_marker}]'
+        response_time_log += f'[#{response_count}, RT:{RT}, T:{completion_tokens}, E:{engine_marker}]'
 
         # Print the response and response time
         print(f'Response {response_count}: {response}\n\n')
         print(f'response time: {round(time_taken, 1)} seconds')
-        session_total_tokens += total_tokens
+        session_total_tokens += completion_tokens
         
         if (session_total_tokens > MAX_SESSION_TOTAL_TOKENS) and (suppress_token_warnings == False):
             print(f'Conversation is very lengthy. Session total tokens: {session_total_tokens}')
         if suppress_extra_prints == False:
-            print(f'This completion used {round(100*total_tokens/4096)}% of the maximum tokens')
+            print(f'This completion used {round(100*completion_tokens/4096)}% of the maximum tokens')
 
 def get_config_from_args(args):
     if DISABLE_NERDS: 
@@ -1012,7 +1033,7 @@ def get_config_from_args(args):
     return config_vars
 
 def main(config_vars, suppress_extra_prints = False, suppress_token_warnings = False):
-    if openai_key == None:
+    if OPENAI_KEY == None:
         print('Please set your OpenAI key in config.py')
         return
     try:

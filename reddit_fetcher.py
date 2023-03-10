@@ -96,15 +96,8 @@ def display_hints(counts, posts):
             counts['other'] += 1
     return counts
 
-# Refresh token and return updated headers
-def refresh_token(getHeaders):
-    print('Token expired - gimme a sec')
-    token_needed = True
-    newHeaders = getHeaders(token_needed)
-    return newHeaders
-
 # Returns 
-def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_count, search, sort_string, max_file_size):
+def link_grab(DELIMITER, debug, headers, image_only, limit_qty, max_count, search, sort_string, max_file_size):
         # Define a variable to keep track of the 'after' parameter
         after = None
         # Define a variable to keep track of the number of fetched urls
@@ -168,8 +161,7 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
                     break
             # If reddit token is expired, refresh and try again
             elif res.status_code == 401:
-                newHeaders = refresh_token(getHeaders)
-                return link_grab(DELIMITER, debug, getHeaders, newHeaders, image_only, limit_qty, max_count, search, sort_string, max_file_size)
+                raise ValueError('Reddit token expired')
             else:
                 print(f'Invalid URL request to the Reddit API: ({res.status_code})')
                 print(f'Attempted URL:{url}')
@@ -181,47 +173,7 @@ def link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_
         return output_string
 
 
-def main(user_input, limit_qty, sort_type, time_period, max_count, debug):
-    image_only = c.image_only
-    if os.path.exists(os.path.join(os.getcwd(), 'config.py')):
-        print("You seem to be in the repository folder. Setting filepath accordingly.")
-        filepath = c.reddit_folder_name
-    else:
-        # print("The user is not currently in the repository folder.")
-        filepath = f'{c.filepath}/{c.reddit_folder_name}'
-    try:
-        os.mkdir(filepath)
-    except FileExistsError:
-        pass
-    token_needed = c.token_needed
-    getHeaders = c.getHeaders
-    DELIMITER = c.DELIMITER
-    max_file_size = c.max_file_size
 
-    try:
-        search = user_input_to_search(user_input)
-    except:
-        print('Syntax error! Format better!')
-        return
-    try:
-        headers = getHeaders(token_needed)
-    except:
-        print('Issue with authorization. Please read above and troubleshoot.')
-        return
-
-    sort_string = get_sort_string(sort_type, time_period)
-    
-    # Collect output (debugging statements not included)
-    output = link_grab(DELIMITER, debug, getHeaders, headers, image_only, limit_qty, max_count, search, sort_string, max_file_size)
-    if output == None:
-        print('Faulty output. No links grabbed.')
-        return
-    # Write it to contents.txt
-    try:
-        with open(f'{filepath}/contents.txt', 'w') as file:
-            file.write(output)
-    except:
-        print('Error. Could not write to contents.txt')
 
 def valid_arg(arg, index, max_count):
     # user_input
@@ -300,30 +252,59 @@ def set_vars_from_args(max_count, args, arg_count, allow_input):
             # Set time_period string to third argument in args (default is None)
             time_period = args[i]
     return user_input, limit_qty, sort_type, time_period
+
+def main(user_input, limit_qty, sort_type, time_period, max_count, debug):
+    image_only = c.image_only
+    filepath = f'{c.filepath}/{c.reddit_folder_name}'
+    try:
+        os.mkdir(filepath)
+    except FileExistsError:
+        pass
+    headers = c.get_headers()
+    DELIMITER = c.DELIMITER
+    max_file_size = c.max_file_size
+
+    try:
+        search = user_input_to_search(user_input)
+    except:
+        print('Syntax error! Format better!')
+        return
+    sort_string = get_sort_string(sort_type, time_period)
+    
+    # Collect output (debugging statements not included)
+    output = link_grab(DELIMITER, debug, headers, image_only, limit_qty, max_count, search, sort_string, max_file_size)
+    if output == None:
+        print('Faulty output. No links grabbed.')
+        return
+    # Write it to contents.txt
+    try:
+        with open(f'{filepath}/contents.txt', 'w') as file:
+            file.write(output)
+    except:
+        print('Error. Could not write to contents.txt')
+
 try:
     if __name__ == '__main__':
         import sys
         args = sys.argv
-        arg_count = len(args)
         max_count = c.max_count
         debug = c.debug
-        
-        # If arguments are found
-        if arg_count > 1:
-            # Check for flags
-            # If -s flag is used, disallow input retrying (since that's terminal-only)
-            if '-s' == args[1]:
-                args.remove('-s')
-                arg_count -= 1
-                allow_input = False
-            else:
-                allow_input = True
-            # If -d flag is used, set debug to True
-            if '-d' in args:
-                args.remove('-d')
-                arg_count -= 1
-                debug = True
-                print('Debug set to True')
+        if '-s' in args[1]: # If -s flag is used, disallow input retrying (since that's terminal-only)
+            args.remove('-s')
+            allow_input = False
+        else:
+            allow_input = True
+            import gnureadline
+
+        if '-d' in args: # If -d flag is used, set debug to True
+            args.remove('-d')
+            debug = True
+            print('Debug set to True')
+        else:
+            debug = False
+
+        arg_count = len(args)
+
         if debug: print('args:', args)
         # If a magic string is used
         if arg_count > 1:
@@ -338,5 +319,6 @@ try:
             time_period = c.time_period
 
         main(user_input, limit_qty, sort_type, time_period, max_count, debug)
-except:
+except Exception as e:
+    print(e)
     print('*shortcut_failure*')

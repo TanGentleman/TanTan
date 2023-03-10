@@ -53,15 +53,14 @@ pip3 install pillow
 ```
 To troubleshoot, make sure packages are updated, specifically trying `pip3 --upgrade openai`
 # Using the TanTan chatbot:
-1. Paste your secret openai key to mysecrets.py
-2. To test, run `python3 chatbot.py` from the TanTan repository in terminal
-2*. You can also run `python3 Desktop/TanTan/chatbot.py` from the home directory
+1. Paste your secret openai key to mysecrets.py, and double check the filepath in config.py
+2. Run `python3 chatbot.py` in terminal from the TanTan repository 
+    - Alternatively: Run `python3 Desktop/TanTan/chatbot.py` from the home directory
 
 After completing the prerequisites above, and moving chat.py to your home directory:
-You can now additionally: 
-2. Run `python3 chat.py` from your home directory in terminal
+    - You can run `python3 chat.py` from your home directory in terminal
 
-3. You're in! Have fun feeling like a computer whiz with the world of knowledge at your fintertips. 
+3. You're in! Have fun feeling like a computer whiz with the world of knowledge at your fingertips. 
 To see the manual of commands and descriptions:
     - `tan` or `tanman`
 - FYI: You can follow `python3 chat.py` with `config <engine> <max_tokens> <debug>`
