@@ -636,7 +636,7 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
             full_log += msg + '\n'
             continue
         # Embedded clipboard reading. Example command:-r Define this word: # -r #
-        elif user_input.startswith('-r'): # Amnesic
+        elif (user_input != '-read') and user_input.startswith('-r'): # Amnesic
             args = user_input.split(' ')
             args_count = len(args)
             
