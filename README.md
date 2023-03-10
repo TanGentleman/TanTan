@@ -50,6 +50,7 @@ pip3 install clipboard
 pip3 install gnureadline
 pip3 install requests
 pip3 install pillow
+pip3 install pytube
 ```
 To troubleshoot, make sure packages are updated, specifically trying `pip3 --upgrade openai`
 # Using the TanTan chatbot:

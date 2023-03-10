@@ -20,20 +20,17 @@ else:
         from transformers import GPT2TokenizerFast
         tokenize = GPT2TokenizerFast.from_pretrained("gpt2", local_files_only = True).tokenize
         os.environ["TOKENIZERS_PARALLELISM"] = "false" # Disable parallelism to avoid a warning
-
-        # URL of the video you want to download
-
-        # Create a YouTube object and get the available streams
-        from pytube import YouTube
-
-        def download_video(url):
-            yt = YouTube(url)
-            stream = yt.streams.get_highest_resolution()
-            stream.download(c.filepath)
         dev = True
     else:
         dev = False
-
+try:
+    from pytube import YouTube
+    def download_video(url):
+        yt = YouTube(url)
+        stream = yt.streams.get_highest_resolution()
+        stream.download(c.filepath)
+except:
+    pass
 FILEPATH = os.path.join(c.filepath, 'Chatbot')
 
 OPENAI_KEY = c.get_openai_api_key()
@@ -1077,8 +1074,8 @@ def main(config_vars, suppress_extra_prints = False, suppress_token_warnings = F
 
 def check_directories():
     chatbot_filepath = filepath
-    training_data_filepath = os.path.join(filepath + 'TrainingData')
-    dalle_downloads_filepath = os.path.join(filepath + 'DallE')
+    training_data_filepath = os.path.join(filepath, 'TrainingData')
+    dalle_downloads_filepath = os.path.join(filepath, 'DallE')
     if not os.path.exists(chatbot_filepath):
         os.mkdir(chatbot_filepath)
     if not os.path.exists(training_data_filepath):
