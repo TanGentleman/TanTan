@@ -1,7 +1,7 @@
 '''Hi there! Hopefully these don't look too scary. The filepath is the location 
 where you installed this repository. I recommend the Desktop, so ~/Desktop/TanTan'''
 
-FILEPATH = 'Desktop/TanTan'
+FILEPATH = 'Desktop/TanTan' # Relative to your home directory. Do not include a trailing slash.
 
 from os import getcwd
 if 'TanTan'.lower() in getcwd().lower():

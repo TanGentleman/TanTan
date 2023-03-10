@@ -7,6 +7,8 @@ import config as c
 import clipboard
 import image_generation as ig
 from platform import system
+class TanSaysNoNo(Exception): pass
+class QuitAndSaveError(Exception): pass
 if system() == 'Windows':
     pass
     dev = False
@@ -24,15 +26,9 @@ else:
     else:
         dev = False
 
-class TanSaysNoNo(Exception): pass
-class QuitAndSaveError(Exception): pass
-
-def check_quit(text): # You should be able to quit from any input() call
-    if text in ['-q','quit']:
-        raise QuitAndSaveError
 
 OPENAI_KEY = c.get_openai_api_key()
-filepath = f'{c.filepath}/Chatbot'
+filepath = os.path.join(c.filepath, 'Chatbot')
 
 CONVO_LOGFILE = 'convo_log.txt'
 RESPONSE_TIME_LOGFILE = 'response_time_log.txt'
@@ -92,7 +88,9 @@ CMD_DICT = {
                     'Example: `Define: -p` followed by `mellifluous`, or `-c` for clipboard substitute that maintains the conversation.\n',
             }
 
-
+def check_quit(text): # You should be able to quit from any input() call
+    if text in ['-q','quit']:
+        raise QuitAndSaveError
 
 def format_engine_string(engine):
     engine_id = engine.split('-')
@@ -269,7 +267,7 @@ def generate_images_from_prompts(image_size, prompts = None):
     valid = False
     while valid == False:
         try:
-            ig.generate_images_from_prompts(f'{filepath}/DallE', image_size, prompts)
+            ig.generate_images_from_prompts(os.path.join(c.filepath, 'DallE'), image_size, prompts)
             valid = True
         except:
             print('Image generation failed.')

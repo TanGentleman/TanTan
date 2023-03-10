@@ -255,7 +255,7 @@ def set_vars_from_args(max_count, args, arg_count, allow_input):
 
 def main(user_input, limit_qty, sort_type, time_period, max_count, debug):
     image_only = c.image_only
-    filepath = f'{c.filepath}/{c.reddit_folder_name}'
+    filepath = os.path.join(c.filepath, c.reddit_folder_name)
     try:
         os.mkdir(filepath)
     except FileExistsError:

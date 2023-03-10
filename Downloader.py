@@ -9,25 +9,25 @@ class TanSaysNoNo(Exception): pass
 
 # Given a filepath:s to a contents.txt file, returns the internal text as a string.
 def read_content(contents_path):
-        try:
-            with open(f'{contents_path}/contents.txt', 'r') as file:
-                file_contents = file.read()
-                return file_contents
-        except FileNotFoundError:
-            print('No contents.txt in this directory found')
-            raise TanSaysNoNo
+    try:
+        with open(f'{contents_path}/contents.txt', 'r') as file:
+            file_contents = file.read()
+            return file_contents
+    except FileNotFoundError:
+        print('No contents.txt in this directory found')
+        raise TanSaysNoNo
 
 # Takes a filename, returns a safely-formatted filename
 def sanitize_filename(filename):
-        # Remove invalid characters
-        filename = sub(r"[\/:*?'<>|]", '', filename)
-        # Replace whitespace characters with an underscore
-        filename = filename.replace(' ', '_')
-        # Truncate the filename if it is too long
-        max_length = 247
-        if len(filename) > max_length:
-            filename = filename[:max_length]
-        return filename
+    # Remove invalid characters
+    filename = sub(r"[\/:*?'\"<>|]", '', filename)
+    # Replace whitespace characters with an underscore
+    filename = filename.replace(' ', '_')
+    # Truncate the filename if it is too long
+    max_length = 247
+    if len(filename) > max_length:
+        filename = filename[:max_length]
+    return filename
 
 # Given content as a string, plus the delimiter to parse it, return arrays of titles and links
 # Content must be formatted TITLE + DELIMITER + URL where empty string values are not permitted
@@ -103,6 +103,7 @@ def save_images(titles, links, folder_path):
         seen.add(filename)
 
         # Save the image
+        print(f'{folder_path}/{filename}{file_extension}<----')
         try:
             with open(f'{folder_path}/{filename}{file_extension}', 'wb') as f:
                 f.write(res.content)
@@ -178,7 +179,7 @@ def run_downloader(DELIMITER, filepath, download_folder_path):
 
 def main(folder_name):
     DELIMITER = c.DELIMITER
-    filepath = f'{c.filepath}/{c.reddit_folder_name}'
+    filepath = os.path.join(c.filepath, c.reddit_folder_name)
 
     folder_name = sanitize_filename(folder_name)
     download_folder_path = f'{filepath}/{folder_name}'
