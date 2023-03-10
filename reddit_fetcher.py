@@ -1,8 +1,9 @@
 import requests
 import config as c
 import os
+import platform
 class TanSaysNoNo(Exception): pass
-if os.system() != 'Windows': import gnureadline
+if platform.system() != 'Windows': import gnureadline
 # Given valid argument strings for sort_type and time_period, returns formatted sort_string
 def get_sort_string(sort_type, time_period):
         type_string = ''

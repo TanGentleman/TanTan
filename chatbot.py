@@ -57,6 +57,17 @@ CHAT_INIT_HINDI = {"role": "system", "content": "Reply to user in Hinglish (Hind
 
 CHAT_INIT_CUSTOM = {"role": "system", "content": "Set your custom preset by typing the command -mode!"}
 
+
+CHAT_INIT_MAGIC = [{"role": "system", "content": """A magic string is text formatted as <u/user or r/subreddit> <opt:qty> <opt:new or
+top> <opt: all/year/month/week/day/hour> You can ONLY ever respond with a magic string or NOT SURE."""},
+                    {"role": "user", "content": "How about u/username pics 5 or top from all"}, 
+                    {"role": "assistant", "content": "u/username 5 top all"},
+                    {"role": "user", "content": "I want to download a hundred photos from you/user"}, 
+                    {"role": "assistant", "content": "r/user 100"},
+                    {"role": "user", "content": "Let's do r/houseplants, but I want fifty of the top photos from the year"}, 
+                    {"role": "assistant", "content": "r/houseplants 50 top year"},
+                    {"role": "user", "content": "Let's say I wanted to download 300 of the top pictures from our/smashbros"}, 
+                    {"role": "assistant", "content": "r/smashbros 300"}]
 CMD_DICT = {
             'config': 'Set engine and max_tokens using `config <engine> <max_tokens>` (opt: -d for debug)',
             'codex': 'Generate a code completion from codex_prompt.txt',
@@ -97,7 +108,7 @@ def format_engine_string(engine):
 
 def config_msg(engine, max_tokens, session_total_tokens):
     engine_marker = format_engine_string(engine)
-    return f'Engine: {engine_marker} | Max Tokens: {max_tokens} | Tokens Used: {session_total_tokens}\n'
+    return f'Engine: {engine_marker} | Max Response Tokens: {max_tokens} | Tokens Used: {session_total_tokens}\n'
 
 def conversation_to_string(conversation_in_memory):
     if conversation_in_memory == []:
@@ -399,7 +410,7 @@ def set_max_tokens(default, limit):
         check_quit(user_input)
         if user_input in ['', ' ']:
             if default:
-                print(f'Max tokens [default]: {default}')
+                print(f'Max response tokens [default]: {default}')
                 return default
             else:
                 'You really like Blank Space, huh?'
@@ -848,14 +859,15 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
                     history = ''
                     conversation_in_memory = []
                     print('History cleared.')
-            mode_input = input('Choose a mode: [0] custom, [1] default, [2] unhelpful, [3] crazy, [4] hindi: ')
+            mode_input = input('Choose a mode: [0] custom, [1] default, [2] unhelpful, [3] crazy, [4] hindi, [5] reddit magic string: ')
             check_quit(mode_input)
             preset_map = {
                         '0': 'custom', 'custom': 'custom',
                         '1': 'default', 'default': 'default', 
                         '2': 'unhelpful', 'unhelpful': 'unhelpful',
                         '3': 'crazy', 'crazy': 'crazy', 
-                        '4': 'hindi', 'hindi': 'hindi'}
+                        '4': 'hindi', 'hindi': 'hindi',
+                        '5': 'magic', 'magic': 'magic'}
             preset = preset_map.get(mode_input, 'invalid mode')
             if preset == 'invalid mode':
                 print('Invalid mode. Setting to default.')
@@ -868,26 +880,6 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
             print(msg)
             full_log += msg + '\n'
             continue
-        elif dev and user_input == 'magic': 
-            # Experimenting with a magic string generator for reddit_fetcher.py to use
-            try:
-                raw_magic_string = input('Throw something at me. Magic string headed back your way:\n')
-                check_quit(raw_magic_string)
-                prefix = read_magic_string_training()
-                suffix = '\nOutput:'
-                replace_input = True
-                replace_input_text = raw_magic_string
-
-                cached_tokens = max_tokens
-                cached_history = history
-                max_tokens = 15
-                history = ''
-
-                amnesia = True
-                continue
-            except:
-                print('Something went wrong.')
-                continue
         
         # All valid non-command inputs pass through here.    
         else:
@@ -928,7 +920,12 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
                         print(f'preset is {preset}')
                         convo_init = CHAT_INIT
                     if debug: print(('Preset:', convo_init['content']))
-                    conversation_messages = [convo_init] # initiate conversation
+                    if preset == 'magic':
+                        temperature = 0
+                        print('Magic mode activated. Temperature set to 0.')
+                        conversation_messages = CHAT_INIT_MAGIC
+                    else:
+                        conversation_messages = [convo_init] # initiate conversation
                     if amnesia == False: # Could this check history var instead? 
                                     # I can make assert statements and make SURE that they're consistent
                         for p, r in conversation_in_memory: # add conversation history
@@ -1053,8 +1050,8 @@ def main(config_vars, suppress_extra_prints = False, suppress_token_warnings = F
 
 def check_directories():
     chatbot_filepath = filepath
-    training_data_filepath = filepath + '/TrainingData'
-    dalle_downloads_filepath = filepath + '/DallE'
+    training_data_filepath = os.path.join(filepath + 'TrainingData')
+    dalle_downloads_filepath = os.path.join(filepath + 'DallE')
     if not os.path.exists(chatbot_filepath):
         os.mkdir(chatbot_filepath)
     if not os.path.exists(training_data_filepath):
