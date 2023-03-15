@@ -269,8 +269,17 @@ def read_magic_string_training():
         print(f'Could not read {filename}')
 
 
-# takes in a string prompt and returns a response struncture
+# takes in a string prompt and returns a response structure
 def generate_text(debug, engine, max_tokens, temperature, prompt, conversation_messages = None):
+    '''
+    Takes in arguments, returns a response structure
+    `debug`: a boolean representing whether or not to print debug statements
+    `engine`: a string representing the engine to use
+    `max_tokens`: an integer representing the maximum number of tokens to generate
+    `temperature`: a float representing the temperature of the response
+    `prompt`: a string representing the prompt to send to the API
+    `conversation_messages`: a list of dicionaries representing the conversation history to send to the ChatCompletions API endpoint
+    '''
     # Set the API key
     openai.api_key = OPENAI_KEY
     
@@ -642,16 +651,15 @@ def interactive_chat(config_vars: dict, debug: bool, suppress_extra_prints = Fal
             print(f'Debug mode: {debug}')
             continue
         elif user_input == 'config':
-            if user_input == 'config':
-                args = ['config']
+            args = ['config']
             try:
                 engine, max_tokens = parse_args(args, engine, max_tokens)
+                continue
             except QuitAndSaveError:
                 print('Quitting...')
                 replace_input, replace_input_text = True, 'quit'
                 continue
         elif user_input.startswith('config '):
-                    # print('Did you mean to type a config command? Format is: `config <engine> <max_tokens>')
             args = user_input.split(' ')
             if len(args) > 7:
                 print('Did you mean to type a config command? Format is: `config <engine> <max_tokens>')
@@ -690,7 +698,7 @@ def interactive_chat(config_vars: dict, debug: bool, suppress_extra_prints = Fal
                 msg = f'Engine set to: {engine}, {max_tokens} Max Tokens'
                 print(msg + '\n')
                 full_log += msg + '\n'
-                continue
+            continue
         # Embedded clipboard reading. Example command:-r Define this word: # -r #
         elif (user_input != '-read') and user_input.startswith('-r'): # Amnesic
             args = user_input.split(' ')
