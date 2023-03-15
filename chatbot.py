@@ -14,6 +14,8 @@ if system() == 'Windows':
 else:
     import gnureadline
     if c.dev:
+        # This allows for you to check the tokens in your prompt without having to make a call to the OpenAI API
+        # It uses a fully offline and local pretrained model to tokenize the prompt
         import logging
         logging.disable(logging.ERROR) # Ignore a warning that doesn't apply to our use of GPT-2
         # Use a local copy of the pretrained GPT-2 model to reliably tokenize prompt before passing it to OpenAI function
@@ -24,6 +26,7 @@ else:
     else:
         dev = False
 try:
+    # Function for the -yt command to download a youtube video
     from pytube import YouTube
     def download_video(url):
         yt = YouTube(url)
@@ -31,6 +34,7 @@ try:
         stream.download(c.filepath)
 except:
     pass
+# Gets filepath from config.filepath, make sure you are either in the repository or filepath is set correctly
 FILEPATH = os.path.join(c.filepath, 'Chatbot')
 
 OPENAI_KEY = c.get_openai_api_key()
@@ -39,26 +43,25 @@ filepath = FILEPATH
 CONVO_LOGFILE = 'convo_log.txt'
 RESPONSE_TIME_LOGFILE = 'response_time_log.txt'
 
-
 DISABLE_NERDS = False # When True, engine defaults to DEFAULT_SLOW_ENGINE and davinci and turbo are disabled
 
 DEFAULT_ENGINE = 'gpt-3.5-turbo'
 DEFAULT_FAST_ENGINE = 'text-curie-001'
 
-DEFAULT_MAX_TOKENS = 200
-DEFAULT_TEMPERATURE = 0.5
+DEFAULT_MAX_TOKENS = 200 # This is how long the response is. You can change it within the chat session by typing the `tok` command
+DEFAULT_TEMPERATURE = 0.5 # Set close to 0 when you want the response to be more predictable.
 
 EMPTY_RESPONSE_DELIMITER = '.' # Replaces the response when blocked or empty
 
-MAX_CODEX = 4000
-MAX_TOKEN_LIMIT = 4000
-MAX_SESSION_TOTAL_TOKENS = 5000 # This measures all tokens used in this session
+MAX_CODEX = 4000 # max token limit for codex when using the -codex command
+MAX_TOKEN_LIMIT = 4000 # max allowable token limit (for safety, but maybe adjust?)
+MAX_SESSION_TOTAL_TOKENS = 5000 # This measures all tokens used in this session, used for a warning
 WARNING_HISTORY_COUNT = 3000 # History only includes the conversation currently in memory
 STOP = None # This should be an array of string stop_sequences
 FREQUENCY_PENALTY_VAL = 0.7 # This is not currently configurable within interactive_chat
 
 ### NEW GPT-3.5-TURBO ENGINE CONFIGURATION ###
-CHAT_INIT = {"role": "system", "content": "Be helpful. Don't be repetitive. Write your confidence level when not certain."}
+CHAT_INIT_DEFAULT = {"role": "system", "content": "You are a helpful AI specialized for a university student."}
 CHAT_INIT_TROLL = {"role": "system", "content": "You are tasked with being hilariously unhelpful to the user."}
 CHAT_INIT_CRAZY = {"role": "system", "content": "You are tasked with being as unhinged and funny as possible."}
 CHAT_INIT_HINDI = {"role": "system", "content": "Reply to user in Hinglish (Hindi/English as written by indians)"}
@@ -66,16 +69,20 @@ CHAT_INIT_HINDI = {"role": "system", "content": "Reply to user in Hinglish (Hind
 CHAT_INIT_CUSTOM = {"role": "system", "content": "Set your custom preset by typing the command -mode!"}
 
 
-CHAT_INIT_MAGIC = [{"role": "system", "content": """A magic string is text formatted as <u/user or r/subreddit> <opt:qty> <opt:new or
-top> <opt: all/year/month/week/day/hour> You can ONLY ever respond with a magic string or NOT SURE."""},
-                    {"role": "user", "content": "How about u/username pics 5 or top from all"}, 
+CHAT_INIT_MAGIC = [{"role": "system", "content": """A magic string is text formatted as [<u/user or r/subreddit> <opt:qty> <opt:new or
+                        top> <opt: all/year/month/week/day/hour>] You may ONLY respond with a magic string or X. Do not parse the meaning of the selected subreddit or any keywords"""},
+                    {"role": "user", "content": "How about u/username pics 5 or top from all"},
                     {"role": "assistant", "content": "u/username 5 top all"},
                     {"role": "user", "content": "I want to download a hundred photos from you/user"}, 
-                    {"role": "assistant", "content": "r/user 100"},
+                    {"role": "assistant", "content": "u/user 100"},
                     {"role": "user", "content": "Let's do r/houseplants, but I want fifty of the top photos from the year"}, 
                     {"role": "assistant", "content": "r/houseplants 50 top year"},
                     {"role": "user", "content": "Let's say I wanted to download 300 of the top pictures from our/smashbros"}, 
                     {"role": "assistant", "content": "r/smashbros 300"}]
+
+CHAT_INIT_CODE = [{"role": "system", "content": "Welcome to the chatbot! How can I assist you today?"},
+{"role": "user", "content": "Hi there, I'm looking for help with coding in Python 3.11."},
+{"role": "system", "content": "Sure thing! What specifically do you need help with?"}]
 CMD_DICT = {
             'config': 'Set engine and max_tokens using `config <engine> <max_tokens>` (opt: -d for debug)',
             'codex': 'Generate a code completion from codex_prompt.txt',
@@ -304,17 +311,11 @@ def write_to_log_file(convo, response_times):
         print('error. Unable to find path to logfile.')
 
 
-def parse_args(args, engine, max_tokens, debug):
+def parse_args(args, engine, max_tokens):
    # This function parses config string arguments and returns the desired engine, max_tokens, and debug values.
 
     if args == []: # No arguments provided, return default values
-        return engine, max_tokens, debug
-    # '-d' argument given to toggle debug mode on/off
-    if '-d' in args: 
-        debug = not(debug) # Toggle debugging state
-        args.remove('-d')
-        print(f'debug set to {debug}')
-
+        return engine, max_tokens
     arg_count = len(args)
     # This code needs to become friendlier, but it works for now
     for i in range(arg_count):
@@ -350,7 +351,7 @@ def parse_args(args, engine, max_tokens, debug):
                 max_tokens = test_toks # Set the max tokens to the new value
                 ask_token = False # Don't ask for the max tokens again
                 engine, max_tokens = configurate(ask_engine, ask_token, engine, max_tokens) # Configurate the engine and max tokens
-                return engine, max_tokens, debug
+                return engine, max_tokens
             else:
                 print(f'Max tokens value must be under {temp_tok_limit}.') # Print an error message
                 ask_token = True # Ask for the max tokens again
@@ -359,12 +360,12 @@ def parse_args(args, engine, max_tokens, debug):
         else:
             if i == 0:
                 continue
-            print(f'Invalid argument on {args[i]}. Syntax is config (engine) (max_tokens) (optional -d)')
+            print(f'Invalid argument on {args[i]}. Syntax is config (engine) (max_tokens)')
             ask_engine = True # Ask for the engine again
             ask_token = True # Ask for the max tokens again
             engine, max_tokens = configurate(ask_engine, ask_token, engine, max_tokens) # Configurate the engine and max tokens
             break
-    return engine, max_tokens, debug
+    return engine, max_tokens
 
 def engine_choice(engine_prompt, slow_status = DISABLE_NERDS):
     if len(engine_prompt) < 2:
@@ -862,11 +863,14 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
                 print('These settings are only available for the turbo GPT-3.5 engine. Try `config turbo`')
                 continue
             if conversation_in_memory:
-                ask_clear_input = input('Presets work best with a fresh start. Hit return to clear history, or anything else to keep it.')
+                ask_clear_input = input('Presets work best with a fresh start. Hit return to clear history, or anything else to cancel.')
                 if ask_clear_input == '':
                     history = ''
                     conversation_in_memory = []
                     print('History cleared.')
+                else:
+                    print('History retained. Cancelling preset.')
+                    continue
             mode_input = input('Choose a mode: [0] custom, [1] default, [2] unhelpful, [3] crazy, [4] hindi, [5] reddit magic string: ')
             check_quit(mode_input)
             preset_map = {
@@ -930,7 +934,7 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
                 if debug: print('beep, about to try generating response')  
                 if 'turbo' in engine:
                     if preset == 'default':
-                        convo_init = CHAT_INIT
+                        convo_init = CHAT_INIT_DEFAULT
                     elif preset == 'unhelpful':
                         convo_init = CHAT_INIT_TROLL
                     elif preset == 'crazy':
@@ -941,11 +945,13 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
                         convo_init = CHAT_INIT_CUSTOM
                         convo_init['content'] = custom_preset
                     else:
-                        print(f'preset is {preset}')
-                        convo_init = CHAT_INIT
+                        preset == 'default'
+                        print(f'preset is now {preset}')
+                        conversation_messages = [CHAT_INIT_DEFAULT]
                     if debug: print(('Preset:', convo_init['content']))
                     if preset == 'magic':
                         temperature = 0
+                        max_tokens = 20
                         print('Magic mode activated. Temperature set to 0.')
                         conversation_messages = CHAT_INIT_MAGIC
                     else:
@@ -1032,7 +1038,7 @@ def get_config_from_args(args):
     arg_count = len(args)
     if arg_count > 1:
         try:
-            engine, max_tokens, debug = parse_args(args, engine, max_tokens, debug)
+            engine, max_tokens = parse_args(args, engine, max_tokens)
         except QuitAndSaveError:
             raise QuitAndSaveError
     config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature, 'debug': debug}

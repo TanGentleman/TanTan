@@ -15,9 +15,9 @@ reddit_folder_name = 'ScrapeAndSpreddit'
 
 ### REDDIT CONFIG
 image_only = True # Set to False to allow mp4 filetypes. This will not scrape videos hosted by third parties (i.e youtube, tiktok)
-max_count = 500 # Please keep this to a reasonable value (I recommend < 1000 unless experienced or small files)
-max_file_size = 10000 # This is in KB, only filters valid .gif and .mp4 filetypes.
-
+max_count = 1500 # Please keep this to a reasonable value (I recommend < 1000 unless experienced or small files)
+max_file_size = 10000 # This is in KB: filters out .png, .gif, and .mp4 filetypes above this size when check_size == True.
+check_size = False # Set to True to enforce a maximize filesize (performs an additional check, but avoids expensive downloads you may not want).
 
 # The following variables can also optionally be set when running reddit_fetcher.py via the command line
 # [MAGIC STRING] = {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}
@@ -42,4 +42,5 @@ except:
 def get_openai_api_key():
     return m.openai_key
 
-get_headers = m.get_valid_headers
+def get_headers():
+    return m.getHeaders(m.REDDIT_TOKEN, m.reddit_config)

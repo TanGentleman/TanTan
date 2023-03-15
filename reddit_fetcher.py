@@ -4,6 +4,7 @@ import os
 import platform
 class TanSaysNoNo(Exception): pass
 if platform.system() != 'Windows': import gnureadline
+check_size = c.check_size
 # Given valid argument strings for sort_type and time_period, returns formatted sort_string
 def get_sort_string(sort_type, time_period):
         type_string = ''
@@ -61,7 +62,7 @@ def get_urls_and_titles(count, posts, image_only, image_urls, image_titles, limi
             if not image_url.endswith(valid_extensions):
                 continue
             # Filter out large gif/mp4 files
-            if image_url.endswith(('.gif', 'mp4')):
+            if (check_size == True) and image_url.endswith(('.png', '.gif', 'mp4')):
                 res = requests.head(image_url)  # Make a HEAD request to get response headers
                 if 'content-length' in res.headers:  # Check if content-length is present in headers
                     file_size = int(res.headers['content-length']) / 1024  # Convert bytes to KB and store as an integer
@@ -107,7 +108,7 @@ def link_grab(DELIMITER, debug, headers, image_only, limit_qty, max_count, searc
         image_urls = []
         image_titles = []
         output_string = ''
-        if count > 10:
+        if limit_qty > 10:
             json_limit = 100
         else:
             json_limit = 25
