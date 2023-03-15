@@ -12,7 +12,7 @@ class QuitAndSaveError(Exception): pass
 if system() == 'Windows':
     dev = False
 else:
-    import gnureadline
+    import gnureadline # Not supported on windows
     if c.dev:
         # This allows for you to check the tokens in your prompt without having to make a call to the OpenAI API
         # It uses a fully offline and local pretrained model to tokenize the prompt
@@ -28,7 +28,7 @@ else:
 try:
     # Function for the -yt command to download a youtube video
     from pytube import YouTube
-    def download_video(url):
+    def download_video(url: str):
         yt = YouTube(url)
         stream = yt.streams.get_highest_resolution()
         stream.download(c.filepath)
@@ -112,20 +112,33 @@ CMD_DICT = {
                     'Example: `Define: -p` followed by `mellifluous`, or `-c` for clipboard substitute that maintains the conversation.\n',
             }
 
-def check_quit(text): # You should be able to quit from any input() call
+def check_quit(text: str):
+    '''
+    Raises a QuitAndSaveError if the user types -q or quit
+    '''
     if text in ['-q','quit']:
         raise QuitAndSaveError
 
-def format_engine_string(engine):
+def format_engine_string(engine: str):
+    '''
+    Takes in an engine string like 'text-davinci-003' and returns a string like 'TD3'
+    '''
     engine_id = engine.split('-')
     engine_marker = engine_id[0][0].upper() + engine_id[1][0].upper() + engine_id[2][-1]
     return engine_marker
 
-def config_msg(engine, max_tokens, session_total_tokens):
+def config_msg(engine: str, max_tokens: int, session_total_tokens: int):
+    '''
+    Input and Output will soon be adjusted - returns a string of current configuration
+    '''
     engine_marker = format_engine_string(engine)
     return f'Engine: {engine_marker} | Max Response Tokens: {max_tokens} | Tokens Used: {session_total_tokens}\n'
 
-def conversation_to_string(conversation_in_memory):
+def conversation_to_string(conversation_in_memory: list):
+    '''
+    Takes in a conversation in memory (list of tuples) and returns a string of the conversation
+    Should be equivalent to history variable in interactive_chat()
+    '''
     if conversation_in_memory == []:
         return '' # Should I only get non-empty arrays to come to this function?
     conversation_string = ''
@@ -139,9 +152,18 @@ def conversation_to_string(conversation_in_memory):
     return conversation_string
 
 def formatted_conversation_to_string(conversation):
+    '''
+    Takes in a conversation in memory and returns a formatted string of the conversation (text to be printed out to user (used by -sh and history))
+    '''
     return '\n'.join([f'{p}\n{r}' for (p, r) in conversation])
 
-def set_prompt(prompt, prefix = None,  suffix = None):
+def set_prompt(prompt: str, prefix: str = None,  suffix: str = None):
+    '''
+    Takes in arguments, returns a ready-to-send prompt
+    `prompt`: a string representing the main text of the prompt
+    `prefix` (optional): a string that will be added before `prompt`
+    `suffix` (optional): a string that will be added after `prompt`
+    '''
     if prefix is None:
         prefix = ''
     if suffix is None:
@@ -150,43 +172,48 @@ def set_prompt(prompt, prefix = None,  suffix = None):
     return prompt
 
 # Needs comments and clearer error handling after response fails
-def get_response_string(response_struct, suppress_token_warnings):
-    response_tokens, prompt_tokens, completion_tokens = (0,0,0)
+def get_response_string(response_struct: dict, suppress_token_warnings: bool):
+    '''
+    Takes in a response_struct and returns a string of the response, along with token usage integers
+    '''
     usage_vals = ['completion_tokens', 'prompt_tokens', 'total_tokens']
-    for i in range(len(usage_vals)):
+    for val in usage_vals:
         try:
-            tok_val = response_struct['usage'][usage_vals[i]]
+            # Try to get the token value from the response structure
+            tok_val = response_struct['usage'][val]
         except:
+            # If not found, set to 0 (Though perhaps I should be raising errors in more edge cases?)
             tok_val = 0
-            if i in [1, 2]:
-                print(f'Token value not found for {usage_vals[i]}')
+            if suppress_token_warnings == False:
+                print(f'Token value not found for {val}')
                 print(f'I need to investigate these cases more. Any valid responses make it through?')
-        if i == 0:
+        if val == 'completion_tokens':
             response_tokens = tok_val
-        elif i == 1: 
+        elif val == 'prompt_tokens':
             prompt_tokens = tok_val
-        elif i == 2: 
+        elif val == 'total_tokens':
             completion_tokens = tok_val
-    try:
+    # I have hardcoded number of choices to 1, contact me if you have an exceptional use case for multiple responses
+    try: # Traverse the response structure to get the first response
         response_struct = response_struct['choices'][0]
     except:
         print("Could not access response['choices']")
         raise TanSaysNoNo
-
     finish_reason = response_struct['finish_reason']
     if finish_reason is None:
         pass
-    elif finish_reason == 'stop':
+    elif finish_reason == 'stop': # Healthiest finish reason
         pass
     elif finish_reason == 'length':
         if suppress_token_warnings == False:
             print('*Truncation warning: Adjust max tokens as needed.')
         else:
+            # I got tired of the above, so token suppression abbreviates it
             print('*TW*')
     else:
         print(f'Warning -- Finish reason: {response_struct["finish_reason"]}<--')
 
-    try:
+    try: # Continue traversing response structure to get the text of the response
         response_string = response_struct['text']
     except:
         response_string = response_struct['message']['content']
@@ -196,8 +223,10 @@ def get_response_string(response_struct, suppress_token_warnings):
 
     return response_string, response_tokens, prompt_tokens, completion_tokens
 
-# Reads the prompt from the given file
 def read_prompt(filepath, filename):
+    '''
+    Returns contents of a prompt in a .txt file given filepath and name
+    '''
     try:
         contents_path = f'{filepath}/{filename}'
         with open(contents_path, 'r') as file:
@@ -206,8 +235,10 @@ def read_prompt(filepath, filename):
     except FileNotFoundError:
         print(f'No {filename} in this directory found')
 
-# Returns text from codex_prompt.txt
 def read_codex_prompt():
+    '''
+    Returns contents of codex_prompt.txt
+    '''
     filename = 'codex_prompt.txt'
     text = read_prompt(filepath, filename)
     if text:
@@ -215,8 +246,10 @@ def read_codex_prompt():
     else:
         print('Could not read codex_prompt.txt')
 
-# Returns text from text_prompt.txt
 def read_text_prompt():
+    '''
+    Returns contents of text_prompt.txt
+    '''
     filename = 'text_prompt.txt'
     text = read_prompt(filepath, filename)
     if text:
@@ -224,8 +257,10 @@ def read_text_prompt():
     else:
         print(f'Could not read {filename}')
 
-# Returns text from magic_string_training.txt
 def read_magic_string_training():
+    '''
+    Returns contents of magic_string_training.txt
+    '''
     filename = 'TrainingData/magic_string_training.txt'
     text = read_prompt(filepath, filename)
     if text:
@@ -249,7 +284,7 @@ def generate_text(debug, engine, max_tokens, temperature, prompt, conversation_m
             max_tokens = max_tokens if ('davinci' in engine or 'turbo' in engine) else min(2000, max_tokens),
             temperature = 0 if 'code' in engine else temperature,
             frequency_penalty = FREQUENCY_PENALTY_VAL,
-            stop = STOP # I use ['\n'] for one line responses, you can use a custom symbol like ['###'] or ['$$']
+            stop = STOP # Using this in conjunction with the custom preset seems smart. I'll add STOP into config_vars later on
         )
         else:
             response_struct = openai.ChatCompletion.create(
@@ -511,13 +546,12 @@ def prompt_to_response(debug, history, engine, max_tokens, temperature, suppress
     return response_string, response_tokens, prompt_tokens, completion_tokens
 
 # This function needs proper re-structuring for readability!
-def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extra_prints = False):
+def interactive_chat(config_vars: dict, debug: bool, suppress_extra_prints = False, suppress_token_warnings = False):
     # Unpack config_vars
-    # config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature, 'debug': debug}
+    # config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature}
     engine = config_vars['engine']
     max_tokens = config_vars['max_tokens']
     temperature = config_vars['temperature']
-    debug = config_vars['debug']
     response_tokens, prompt_tokens, completion_tokens, session_total_tokens = (0, 0, 0, 0)
     prefix, suffix = ('', '')
     history  = ''
@@ -607,39 +641,56 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
             debug = not(debug)
             print(f'Debug mode: {debug}')
             continue
-        elif user_input.startswith('config'):
-            # Fix this to make it a bit more like -r
+        elif user_input == 'config':
             if user_input == 'config':
                 args = ['config']
-            else:
-                if user_input.startswith('config ') == False:
-                    print('Did you mean to type a config command? Format is: `config <engine> <max_tokens>')
-                    continue
-                args = user_input.split(' ')
-                if '-sp' in args:
-                    args.remove('-sp')
-                    suppress_extra_prints = not(suppress_extra_prints)
-                    print(f'Print suppression {suppress_extra_prints}.')
+            try:
+                engine, max_tokens = parse_args(args, engine, max_tokens)
+            except QuitAndSaveError:
+                print('Quitting...')
+                replace_input, replace_input_text = True, 'quit'
+                continue
+        elif user_input.startswith('config '):
+                    # print('Did you mean to type a config command? Format is: `config <engine> <max_tokens>')
+            args = user_input.split(' ')
+            if len(args) > 7:
+                print('Did you mean to type a config command? Format is: `config <engine> <max_tokens>')
+                continue
+            
+            if '-a' in args: # Toggle persistant_amnesia
+                persistant_amnesia = not persistant_amnesia
+                print(f'Amnesia set to {persistant_amnesia}')
+            if '-d' in args: # Toggle debug
+                debug = not debug
+                print(f'Debug set to {debug}')
+            if '-l' in args: # Toggle logging
+                logging_on = not logging_on
+                args.remove('-l')
+                print(f'Logging set to {logging_on}')
+            if '-sp' in args:
+                args.remove('-sp')
+                suppress_extra_prints = not(suppress_extra_prints)
+                print(f'Print suppression {suppress_extra_prints}.')
+            if '-st' in args:
+                args.remove('-st')
+                suppress_token_warnings = not(suppress_token_warnings)
+                print(f'Token warning suppression {suppress_token_warnings}.')
 
-                if '-st' in args:
-                    args.remove('-st')
-                    suppress_token_warnings = not(suppress_token_warnings)
-                    print(f'Token warning suppression {suppress_token_warnings}.')
+            if args == ['config']:
+                continue
 
-                args_count = len(args)
-                if args_count > 4:
-                    print('Did you mean to type a config command? Format is: `config <engine> <max_tokens>')
-                    continue
+            args_count = len(args)
+            if args_count > 0:
                 try:
-                    engine, max_tokens, debug = parse_args(args, engine, max_tokens, debug)
+                    engine, max_tokens = parse_args(args, engine, max_tokens)
                 except QuitAndSaveError:
                     print('Quitting...')
                     replace_input, replace_input_text = True, 'quit'
                     continue
-            msg = f'Engine set to: {engine}, {max_tokens} Max Tokens'
-            print(msg + '\n')
-            full_log += msg + '\n'
-            continue
+                msg = f'Engine set to: {engine}, {max_tokens} Max Tokens'
+                print(msg + '\n')
+                full_log += msg + '\n'
+                continue
         # Embedded clipboard reading. Example command:-r Define this word: # -r #
         elif (user_input != '-read') and user_input.startswith('-r'): # Amnesic
             args = user_input.split(' ')
@@ -825,10 +876,6 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
                 text += f'{list(CMD_DICT.keys())[i]}: {list(CMD_DICT.values())[i]}\n'
             print(text)
             continue      
-        elif user_input == '-a': # Toggle persistant_amnesia
-            persistant_amnesia = not persistant_amnesia
-            print(f'Amnesia set to {persistant_amnesia}')
-            continue
         # Save the recent prompt/response exchange to response.txt
         elif user_input in ['-s','save']:
             text = f'PROMPT:\n{cached_prompt}\nRESPONSE:\n{cached_response}'
@@ -1019,7 +1066,7 @@ def interactive_chat(config_vars, suppress_token_warnings = False, suppress_extr
         if suppress_extra_prints == False:
             print(f'This completion used {round(100*completion_tokens/4096)}% of the maximum tokens')
 
-def get_config_from_args(args):
+def get_config_from_CLI_args(args):
     if DISABLE_NERDS: 
         engine = DEFAULT_FAST_ENGINE
     else:
@@ -1027,13 +1074,6 @@ def get_config_from_args(args):
 
     max_tokens = DEFAULT_MAX_TOKENS
     temperature = DEFAULT_TEMPERATURE
-   
-    if '-d' in args:
-        args.remove('-d')
-        debug = True
-        print('Debug set to True')
-    else:
-        debug = False
 
     arg_count = len(args)
     if arg_count > 1:
@@ -1041,10 +1081,10 @@ def get_config_from_args(args):
             engine, max_tokens = parse_args(args, engine, max_tokens)
         except QuitAndSaveError:
             raise QuitAndSaveError
-    config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature, 'debug': debug}
+    config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature}
     return config_vars
 
-def main(config_vars, suppress_extra_prints = False, suppress_token_warnings = False):
+def run_chatbot(config_vars, debug, suppress_extra_prints = False, suppress_token_warnings = False):
     if OPENAI_KEY == None:
         print('Please set your OpenAI key in config.py')
         return
@@ -1054,7 +1094,7 @@ def main(config_vars, suppress_extra_prints = False, suppress_token_warnings = F
         print('Error. Cannot create directories. Check that filepath in config.py and chat.py matches the repo location.')
         return
     try:
-        logs = interactive_chat(config_vars, suppress_extra_prints, suppress_token_warnings)
+        logs = interactive_chat(config_vars, debug, suppress_extra_prints, suppress_token_warnings)
     except KeyboardInterrupt:
         print('You have interrupted your session. It has been terminated, with no logfiles saved.')
         return
@@ -1091,22 +1131,28 @@ def check_directories():
 
 # Allows execution from python environment with `import chatbot` to run like default script execution from CLI
 def main_from_args(args):
+    if '-d' in args:
+        args.remove('-d')
+        debug = True
+        print('Debug set to True')
+    else:
+        debug = False
     if '-sp' in args:
         args.remove('-sp')
         suppress_extra_prints = True
-        print('Supressing extra prints.')
+        print('Suppressing extra prints.')
     else:
         suppress_extra_prints = False
 
     if '-st' in args:
         args.remove('-st')
         suppress_token_warnings = True
-        print('Supressing token warnings.')
+        print('Suppressing token warnings.')
     else:
         suppress_token_warnings = False
     try:
-        config_vars = get_config_from_args(args)
-        main(config_vars, suppress_extra_prints, suppress_token_warnings)
+        config_vars = get_config_from_CLI_args(args)
+        run_chatbot(config_vars, debug, suppress_extra_prints, suppress_token_warnings)
     except QuitAndSaveError:
         print('Pre-emptive quit. No logfiles saved.')
         
