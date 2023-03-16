@@ -340,7 +340,7 @@ def generate_images_from_prompts(image_size: str, prompts: list[str] = None) -> 
     valid = False
     while valid == False:
         try:
-            ig.generate_images_from_prompts(os.path.join(c.filepath, 'DallE'), image_size, prompts)
+            ig.generate_images_from_prompts(os.path.join(filepath, 'DallE'), image_size, prompts)
             valid = True
         except:
             print('Image generation failed.')
@@ -626,9 +626,8 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
     preset = 'default'
     custom_preset = None
     while chat_ongoing:
-        # Amnesia uses a sandboxed environment, saving the current configuration and history for next prompt
+        # Amnesia does not use conversation_in_memory, saving the current configuration / history for next prompt
         if amnesia == False:
-            # The following 3 assume correctness of cached vars
             if cached_engine:
                 engine = cached_engine # Restore the engine
                 cached_engine = None
@@ -650,7 +649,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             user_input = input('You: ')
             # I want to avoid spam user inputs. 
             # I can lstrip/rstrip, but I want to allow for niche use cases in weird workflows.
-            # Planning to implement a cooldown of sorts, but I want to allow a use allow for individually processed list items.
+            # Planning to implement a cooldown of sorts, but I want to allow a line of multiple inputs (can be commands too).
         
         # Start the timer
         start_time = time.time()
@@ -663,7 +662,6 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
         elif user_input in ['-q', 'quit']:
             if session_total_tokens == 0:
                 logging_on = False
-                print('This was not logged.')
             else:
                 full_log += f'Tokens used: {session_total_tokens}'
                 #print(prompts_and_responses)            
@@ -991,8 +989,13 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 print('Invalid URL. Please copy a valid youtube link to your clipboard and try again.')
                 continue
             else:
-                # If link valid, download the video and save it as a .mp4
-                # If it isn't, print an error message
+                yt_confirmation = input(f'{clipboard_contents} is the link in your clipboard.\nHit return to download, or anything else to cancel. ')
+                check_quit(yt_confirmation)
+                if yt_confirmation != '':
+                    print('Cancelled.')
+                    continue
+                # If link valid, download the video as a .mp4
+                # Otherwise, print an error message
                 try:
                     print('Attempting download with given url...')
                     download_video(clipboard_contents.strip())    
@@ -1047,9 +1050,8 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                         messages = CHAT_INIT_MAGIC
                     else:
                         messages = [convo_init] # initiate conversation
-                    if amnesia == False: # Could this check history var instead? 
-                                    # I can make assert statements and make SURE that they're consistent
-                        for p, r in conversation_in_memory: # add conversation history
+                    if (amnesia == False) and (persistant_amnesia == False): 
+                        for p, r in conversation_in_memory: # add conversation context
                             messages += [{"role": "user", "content": p},
                                                       {"role": "assistant", "content": r}]
                         # add prompt
