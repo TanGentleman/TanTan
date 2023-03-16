@@ -28,7 +28,7 @@ else:
 try:
     # Function for the -yt command to download a youtube video
     from pytube import YouTube
-    def download_video(url: str):
+    def download_video(url: str) -> None:
         yt = YouTube(url)
         stream = yt.streams.get_highest_resolution()
         stream.download(c.filepath)
@@ -97,7 +97,7 @@ CMD_DICT = {
             '-read': 'Respond to text_prompt.txt', 
             'save': 'Save the recent prompt/response exchange to response.txt. Alias -s',
             'stats': 'Prints the current configuration and session total tokens.',
-            'tanman': 'Bring up the TanManual (commands with their descriptions). Alias tan',
+            'tan': 'Bring up the TanManual (commands with their descriptions). Alias tanman',
             'temp': 'Configure temperature (0.0-1.0)',
             'tok': 'Configure max tokens for the response',
             '-sr': 'Save Response: Copies response to clipboard',
@@ -109,17 +109,18 @@ CMD_DICT = {
                     'Case 2: `-r is an example using a suffix!` => Replaces -r with contents of clipboard\n' +
                     'Case 3: `-r Analyze this url: -r Analysis:` => Replaces -r with #clipboard_contents#\n',
             '-p': 'This is a special string that goes at the END of your input to make it a prefix.\n' +
-                    'Example: `Define: -p` followed by `mellifluous`, or `-c` for clipboard substitute that maintains the conversation.\n',
+                    'Example: `Define:-p` followed by `mellifluous`, or `-c` for clipboard substitute that maintains the conversation.\n',
+            '-yt': 'Download the youtube video from the url in your clipboard.'
             }
 
-def check_quit(text: str):
+def check_quit(text: str) -> None:
     '''
     Raises a QuitAndSaveError if the user types -q or quit
     '''
     if text in ['-q','quit']:
         raise QuitAndSaveError
 
-def format_engine_string(engine: str):
+def format_engine_string(engine: str) -> str:
     '''
     Takes in an engine string like 'text-davinci-003' and returns a string like 'TD3'
     '''
@@ -127,14 +128,14 @@ def format_engine_string(engine: str):
     engine_marker = engine_id[0][0].upper() + engine_id[1][0].upper() + engine_id[2][-1]
     return engine_marker
 
-def config_msg(engine: str, max_tokens: int, session_total_tokens: int):
+def config_msg(engine: str, max_tokens: int, session_total_tokens: int) -> str:
     '''
     Input and Output will soon be adjusted - returns a string of current configuration
     '''
     engine_marker = format_engine_string(engine)
     return f'Engine: {engine_marker} | Max Response Tokens: {max_tokens} | Tokens Used: {session_total_tokens}\n'
 
-def conversation_to_string(conversation_in_memory: list):
+def conversation_to_string(conversation_in_memory: list[tuple[str, str]]) -> str:
     '''
     Takes in a conversation in memory (list of tuples) and returns a string of the conversation
     Should be equivalent to history variable in interactive_chat()
@@ -151,13 +152,13 @@ def conversation_to_string(conversation_in_memory: list):
     assert(response_count == convo_length)
     return conversation_string
 
-def formatted_conversation_to_string(conversation):
+def formatted_conversation_to_string(conversation_in_memory: list[tuple[str, str]]) -> str:
     '''
     Takes in a conversation in memory and returns a formatted string of the conversation (text to be printed out to user (used by -sh and history))
     '''
-    return '\n'.join([f'{p}\n{r}' for (p, r) in conversation])
+    return '\n'.join([f'{p}\n{r}' for (p, r) in conversation_in_memory])
 
-def set_prompt(prompt: str, prefix: str = None,  suffix: str = None):
+def set_prompt(prompt: str, prefix: str = None,  suffix: str = None) -> str:
     '''
     Takes in arguments, returns a ready-to-send prompt
     `prompt`: a string representing the main text of the prompt
@@ -172,7 +173,7 @@ def set_prompt(prompt: str, prefix: str = None,  suffix: str = None):
     return prompt
 
 # Needs comments and clearer error handling after response fails
-def get_response_string(response_struct: dict, suppress_token_warnings: bool):
+def get_response_string(response_struct: dict, suppress_token_warnings: bool) -> tuple[str, int, int, int]:
     '''
     Takes in a response_struct and returns a string of the response, along with token usage integers
     '''
@@ -221,9 +222,9 @@ def get_response_string(response_struct: dict, suppress_token_warnings: bool):
         print('Blank Space (no response)')
         response_string = EMPTY_RESPONSE_DELIMITER
 
-    return response_string, response_tokens, prompt_tokens, completion_tokens
+    return (response_string, response_tokens, prompt_tokens, completion_tokens)
 
-def read_prompt(filepath, filename):
+def read_prompt(filepath: str, filename: str) -> str:
     '''
     Returns contents of a prompt in a .txt file given filepath and name
     '''
@@ -235,7 +236,7 @@ def read_prompt(filepath, filename):
     except FileNotFoundError:
         print(f'No {filename} in this directory found')
 
-def read_codex_prompt():
+def read_codex_prompt() -> str:
     '''
     Returns contents of codex_prompt.txt
     '''
@@ -246,7 +247,7 @@ def read_codex_prompt():
     else:
         print('Could not read codex_prompt.txt')
 
-def read_text_prompt():
+def read_text_prompt() -> str:
     '''
     Returns contents of text_prompt.txt
     '''
@@ -257,7 +258,7 @@ def read_text_prompt():
     else:
         print(f'Could not read {filename}')
 
-def read_magic_string_training():
+def read_magic_string_training() -> str:
     '''
     Returns contents of magic_string_training.txt
     '''
@@ -270,36 +271,35 @@ def read_magic_string_training():
 
 
 # takes in a string prompt and returns a response structure
-def generate_text(debug, engine, max_tokens, temperature, prompt, conversation_messages = None):
+def generate_text(debug: bool, engine: str, max_tokens: int, temperature: float, prompt: str, messages: list[dict[str, str]] = None) -> dict:
     '''
     Takes in arguments, returns a response structure
     `debug`: a boolean representing whether or not to print debug statements
     `engine`: a string representing the engine to use
     `max_tokens`: an integer representing the maximum number of tokens to generate
     `temperature`: a float representing the temperature of the response
-    `prompt`: a string representing the prompt to send to the API
-    `conversation_messages`: a list of dicionaries representing the conversation history to send to the ChatCompletions API endpoint
+    `prompt`: a string representing the prompt (None if engine is turbo) - Completion.create
+    `messages`: (None UNLESS engine is turbo): list of dicionaries representing the conversation history - ChatCompletion.create
     '''
     # Set the API key
     openai.api_key = OPENAI_KEY
-    
-    # Generate responses using the model
+    # Below assertion should always hold true. Use prompt for completions, messages for gpt-3.5 onwards chat
+    assert( (prompt is None) or (messages is None) )
     try:
         if prompt:
             response_struct = openai.Completion.create(
             engine=engine,
             prompt=prompt,
             # testing this 2000 thing for a sec
-            max_tokens = max_tokens if ('davinci' in engine or 'turbo' in engine) else min(2000, max_tokens),
+            max_tokens = max_tokens if 'davinci' in engine else min(2000, max_tokens),
             temperature = 0 if 'code' in engine else temperature,
             frequency_penalty = FREQUENCY_PENALTY_VAL,
-            stop = STOP # Using this in conjunction with the custom preset seems smart. I'll add STOP into config_vars later on
+            stop = STOP # Using this in conjunction with the custom preset seems smart. I'll add STOP into config_vars or smth later on
         )
         else:
             response_struct = openai.ChatCompletion.create(
             model=engine,
-            messages=conversation_messages,
-            # testing this 2000 thing for a sec
+            messages=messages,
             max_tokens = max_tokens,
             temperature = temperature,
             frequency_penalty = FREQUENCY_PENALTY_VAL,
@@ -329,8 +329,13 @@ def generate_text(debug, engine, max_tokens, temperature, prompt, conversation_m
     if debug: print(response_struct)
     return response_struct
 
-# In development
-def generate_images_from_prompts(image_size, prompts = None):
+
+def generate_images_from_prompts(image_size: str, prompts: list[str] = None) -> None:
+    '''
+    Generates images from prompts 
+    Check out generate_images_from_prompts() in image_generation.py
+    `image_size`: a string representing the size of the image to generate ('small', 'medium', 'large', 'default')
+    '''
     print('Starting image generation!')
     valid = False
     while valid == False:
@@ -341,7 +346,10 @@ def generate_images_from_prompts(image_size, prompts = None):
             print('Image generation failed.')
             return
 
-def write_to_log_file(convo, response_times):
+def write_to_log_file(convo: str, response_times:str) -> None:
+    '''
+    Writes conversation and response times to log files
+    '''
     try:
         with open(f'{filepath}/{CONVO_LOGFILE}', 'a') as file:
             timestamp = datetime.datetime.now().strftime('%Y-%m-%d')
@@ -355,13 +363,16 @@ def write_to_log_file(convo, response_times):
         print('error. Unable to find path to logfile.')
 
 
-def parse_args(args, engine, max_tokens):
-   # This function parses config string arguments and returns the desired engine, max_tokens, and debug values.
+def parse_args(args: list[str], engine: str, max_tokens: int) -> tuple[str, int]:
+    '''
+    Takes config string arguments and updates the engine and max_tokens value.
+    '''
 
     if args == []: # No arguments provided, return default values
         return engine, max_tokens
     arg_count = len(args)
     # This code needs to become friendlier, but it works for now
+    # It's pure logic, took several iterations, but I will eventually change the format
     for i in range(arg_count):
         if args[i] == 'config': # If the config argument is given
             try:
@@ -411,7 +422,10 @@ def parse_args(args, engine, max_tokens):
             break
     return engine, max_tokens
 
-def engine_choice(engine_prompt, slow_status = DISABLE_NERDS):
+def engine_choice(engine_prompt: str, slow_status: bool = DISABLE_NERDS) -> str:
+    '''
+    Takes in a string and slow_status, returns selected engine.
+    '''
     if len(engine_prompt) < 2:
         print('Please enter at least two characters for the engine selection.')
         raise(ValueError)
@@ -454,15 +468,17 @@ def engine_choice(engine_prompt, slow_status = DISABLE_NERDS):
         print('invalid engine choice')
         raise(ValueError)
 
-# This function assumes both the default tokens and token limit are SAFE and correct values
-def set_max_tokens(default, limit):
+def set_max_tokens(default: int, limit: int) -> int:
+    '''
+    Sets max tokens, with a default value and a limit value as arguments.
+    '''
     # Keep trying until a valid max_tokens value is set
     legal_answer = False
     while legal_answer == False:
         user_input = input('Max Token count: ')
         check_quit(user_input)
         if user_input in ['', ' ']:
-            if default:
+            if default is not None:
                 print(f'Max response tokens [default]: {default}')
                 return default
             else:
@@ -483,7 +499,10 @@ def set_max_tokens(default, limit):
     return max_tokens
 
 # This function assumes both the default tokens and token limit are SAFE and correct values
-def set_temperature(default):
+def set_temperature(default: float) -> float:
+    '''
+    Sets temperature, with a default value as an argument.
+    '''
     legal_answer = False
     while legal_answer == False:
         user_input = input('Temperature: ')
@@ -504,7 +523,10 @@ def set_temperature(default):
             print('Try a value between 0.0 and 1.0')
     return round(temperature,2)
 
-def configurate(ask_engine, ask_token, engine, max_tokens):
+def configurate(ask_engine: bool, ask_token: bool, engine: str, max_tokens: int) -> tuple[str, int]:
+    '''
+    Configurate the engine and max tokens.
+    '''
     if ask_engine:
         legal_answer = False
         while legal_answer == False:
@@ -532,11 +554,23 @@ def configurate(ask_engine, ask_token, engine, max_tokens):
             raise QuitAndSaveError
     return engine, max_tokens
 
-def prompt_to_response(debug, history, engine, max_tokens, temperature, suppress_token_warnings, prompt, conversation_messages = None):
-    try: # continues the conversation by default
-        if conversation_messages:
-            # Conversation_messages should ALWAYS be passed to this function when 'turbo' in engine
-            response_struct = generate_text(debug, engine, max_tokens, temperature, None, conversation_messages)
+def prompt_to_response(debug: bool, history: str, engine: str, max_tokens: int, temperature: float, 
+                        suppress_token_warnings: bool, prompt: str, messages: list[dict[str, str]] = None) -> tuple[str, int, int, int]:
+    '''
+    Takes a prompt and returns a response.
+    `debug` is a bool that determines whether to print debug info.
+    `history` is a string that is the conversation context for the Completions endpoint.
+    `engine` is the model used for the api call.
+    `max_tokens` is the max number of tokens in the response.
+    `temperature` is the temperature of the response.
+    `suppress_token_warnings` is a bool that determines whether to suppress token warnings.
+    `prompt` is a string, suffixed to the history or messages, sent to be completed.
+    `messages` is a list of dictionaries that is the conversation context for the ChatCompletions endpoint.
+    '''
+    try:
+        if messages:
+            # messages should ALWAYS be passed to this function when 'turbo' in engine
+            response_struct = generate_text(debug, engine, max_tokens, temperature, None, messages)
         else:
             response_struct = generate_text(debug, engine, max_tokens, temperature, history + prompt)
     except KeyboardInterrupt:
@@ -555,7 +589,7 @@ def prompt_to_response(debug, history, engine, max_tokens, temperature, suppress
     return response_string, response_tokens, prompt_tokens, completion_tokens
 
 # This function needs proper re-structuring for readability!
-def interactive_chat(config_vars: dict, debug: bool, suppress_extra_prints = False, suppress_token_warnings = False):
+def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints = False, suppress_token_warnings = False) -> tuple[str, str, bool]:
     # Unpack config_vars
     # config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature}
     engine = config_vars['engine']
@@ -906,12 +940,13 @@ def interactive_chat(config_vars: dict, debug: bool, suppress_extra_prints = Fal
                 print(msg)
             continue
         elif user_input == '-images':
-            size_input = input('Pick a size: small (s), medium (m), large (l)\n')
+            size_input = input('Sizes: s | SMALL, m | MED, l | LARGE, invalid | DEFAULT\nEnter your choice (s/m/l): ')
             check_quit(size_input)
             # image generation
             size_map = {'s': 'small', 'm': 'medium', 'l': 'large'}
-            size = size_map.get(size_input, 'default')
-            generate_images_from_prompts(size)
+            image_size = size_map.get(size_input, 'default')
+            print(f'Generating images of {image_size} size!')
+            generate_images_from_prompts(image_size)
             continue
         elif user_input == '-mode':
             if 'turbo' not in engine:
@@ -919,6 +954,7 @@ def interactive_chat(config_vars: dict, debug: bool, suppress_extra_prints = Fal
                 continue
             if conversation_in_memory:
                 ask_clear_input = input('Presets work best with a fresh start. Hit return to clear history, or anything else to cancel.')
+                check_quit(ask_clear_input)
                 if ask_clear_input == '':
                     history = ''
                     conversation_in_memory = []
@@ -926,7 +962,7 @@ def interactive_chat(config_vars: dict, debug: bool, suppress_extra_prints = Fal
                 else:
                     print('History retained. Cancelling preset.')
                     continue
-            mode_input = input('Choose a mode: [0] custom, [1] default, [2] unhelpful, [3] crazy, [4] hindi, [5] reddit magic string: ')
+            mode_input = input('Choose a preset: [0] custom, [1] default, [2] unhelpful, [3] crazy, [4] hindi, [5] reddit magic string: ')
             check_quit(mode_input)
             preset_map = {
                         '0': 'custom', 'custom': 'custom',
@@ -948,22 +984,20 @@ def interactive_chat(config_vars: dict, debug: bool, suppress_extra_prints = Fal
             full_log += msg + '\n'
             continue
         elif user_input == '-yt':
-            input_url = input('Enter a YouTube URL: ')
-            check_quit(input_url)
-            if 'youtu' not in input_url:
-                print('Invalid URL. Try again.')
+            clipboard_contents = clipboard.paste()
+            if 'youtu' not in clipboard_contents:
+                print('Invalid URL. Please copy a valid youtube link to your clipboard and try again.')
                 continue
             else:
                 # If link valid, download the video and save it as a .mp4
                 # If it isn't, print an error message
                 try:
                     print('Attempting download with given url...')
-                    download_video(input_url.strip())    
+                    download_video(clipboard_contents.strip())    
                     print('Downloaded video!')
-                    continue
                 except:
                     print('Invalid URL. Try again.')
-                    continue
+                continue
         # All valid non-command inputs pass through here.    
         else:
             try:
@@ -1002,25 +1036,27 @@ def interactive_chat(config_vars: dict, debug: bool, suppress_extra_prints = Fal
                     else:
                         preset == 'default'
                         print(f'preset is now {preset}')
-                        conversation_messages = [CHAT_INIT_DEFAULT]
-                    if debug: print(('Preset:', convo_init['content']))
+                        messages = [CHAT_INIT_DEFAULT]
+                    
                     if preset == 'magic':
                         temperature = 0
                         max_tokens = 20
                         print('Magic mode activated. Temperature set to 0.')
-                        conversation_messages = CHAT_INIT_MAGIC
+                        messages = CHAT_INIT_MAGIC
                     else:
-                        conversation_messages = [convo_init] # initiate conversation
+                        messages = [convo_init] # initiate conversation
                     if amnesia == False: # Could this check history var instead? 
                                     # I can make assert statements and make SURE that they're consistent
                         for p, r in conversation_in_memory: # add conversation history
-                            conversation_messages += [{"role": "user", "content": p},
+                            messages += [{"role": "user", "content": p},
                                                       {"role": "assistant", "content": r}]
                         # add prompt
-                    conversation_messages += [{"role": "user", "content": prompt}] 
+                    if ( len(messages) == 1 ) and ( suppress_extra_prints == False ):
+                        print(f"Using preset:{messages[0]['content']}")
+                    messages += [{"role": "user", "content": prompt}] 
 
                     response_string, response_tokens, prompt_tokens, completion_tokens = prompt_to_response(
-                    debug, history, engine, max_tokens, temperature, suppress_token_warnings, None, conversation_messages)
+                    debug, history, engine, max_tokens, temperature, suppress_token_warnings, None, messages)
 
                 else:
                     response_string, response_tokens, prompt_tokens, completion_tokens = prompt_to_response(
@@ -1074,7 +1110,10 @@ def interactive_chat(config_vars: dict, debug: bool, suppress_extra_prints = Fal
         if suppress_extra_prints == False:
             print(f'This completion used {round(100*completion_tokens/4096)}% of the maximum tokens')
 
-def get_config_from_CLI_args(args):
+def get_config_from_CLI_args(args: list[str]) -> dict[str]:
+    '''
+    Returns a dictionary of config variables from the CLI arguments.
+    '''
     if DISABLE_NERDS: 
         engine = DEFAULT_FAST_ENGINE
     else:
@@ -1092,7 +1131,11 @@ def get_config_from_CLI_args(args):
     config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature}
     return config_vars
 
-def run_chatbot(config_vars, debug, suppress_extra_prints = False, suppress_token_warnings = False):
+def run_chatbot(config_vars: dict[str], debug: bool, suppress_extra_prints = False, suppress_token_warnings = False) -> None:
+    '''
+    Runs the chatbot with the given config variables.
+    Formerly main() function
+    '''
     if OPENAI_KEY == None:
         print('Please set your OpenAI key in config.py')
         return
@@ -1124,9 +1167,12 @@ def run_chatbot(config_vars, debug, suppress_extra_prints = False, suppress_toke
             print('This conversation was not logged. Have a nice day.')
     else:
         print('Error. Cannot set conversation and response time logfiles.')
-        return
+    return
 
-def check_directories():
+def check_directories() -> None:
+    '''
+    Checks if required folders exist. If not, creates them.
+    '''
     chatbot_filepath = filepath
     training_data_filepath = os.path.join(filepath, 'TrainingData')
     dalle_downloads_filepath = os.path.join(filepath, 'DallE')
@@ -1137,8 +1183,12 @@ def check_directories():
     if not os.path.exists(dalle_downloads_filepath):
         os.mkdir(dalle_downloads_filepath)
 
-# Allows execution from python environment with `import chatbot` to run like default script execution from CLI
-def main_from_args(args):
+# Allows execution from within python environment as well as CLI
+def main_from_args(args: list[str]) -> None:
+    '''
+    Runs the chatbot with args formatted like sys.argv (arguments following chatbot.py when typing in Terminal).
+    Allowed flags: [-d] [-sp] [-st]
+    '''
     if '-d' in args:
         args.remove('-d')
         debug = True

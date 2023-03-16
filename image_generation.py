@@ -10,10 +10,8 @@ import Downloader
 MAX_LIMIT = 10
 DEFAULT_SIZE = '256x256'
 filepath = os.path.join(c.filepath, 'DallE')
-try:
+if not os.path.exists(filepath):
     os.mkdir(filepath)
-except FileExistsError:
-    pass
 
 size_dict = {'small': '256x256', 'medium': '512x512', 'large': '1024x1024', 'default': DEFAULT_SIZE}
 
@@ -101,7 +99,7 @@ def prompts_from_input():
     limit_qty = -1
     count = 0
     while limit_qty < 0:
-        user_input = input('How many images would you like?: ')
+        user_input = input('How many images would you like? (Type 0 to exit): ')
         try:
             limit_qty = int(user_input)
         except:
