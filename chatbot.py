@@ -84,7 +84,7 @@ CHAT_INIT_CODE = [{"role": "system", "content": "Welcome to the chatbot! How can
 {"role": "user", "content": "Hi there, I'm looking for help with coding in Python 3.11."},
 {"role": "system", "content": "Sure thing! What specifically do you need help with?"}]
 CMD_DICT = {
-            'config': 'Set engine and max_tokens using `config <engine> <max_tokens>` (opt: -d for debug)',
+            'config': 'Set engine and max_tokens using `config <engine> <max_tokens>`',
             'codex': 'Generate a code completion from codex_prompt.txt',
             'debug': 'Toggle debug mode. Alias -d',
             'del': 'Delete the last exchange from memory',
@@ -102,7 +102,7 @@ CMD_DICT = {
             'tok': 'Configure max tokens for the response',
             '-sr': 'Save Response: Copies response to clipboard',
             '-sh': 'Save History: Copies history to clipboard',
-            '-c': 'Respond to clipboard text (Maintains conversation history)',
+            '-c': 'Use clipboard text as input',
             '-rs': 'Amnesic clipboard summarizer',
             '-r': 'Versatile Amnesic Formatter, here is example usage:\n' +
                     'Case 1: `-r` => Uses clipboard as prompt, like -c\n' +
@@ -701,9 +701,11 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             
             if '-a' in args: # Toggle persistant_amnesia
                 persistant_amnesia = not persistant_amnesia
+                args.remove('-a')
                 print(f'Amnesia set to {persistant_amnesia}')
             if '-d' in args: # Toggle debug
                 debug = not debug
+                args.remove('-d')
                 print(f'Debug set to {debug}')
             if '-l' in args: # Toggle logging
                 logging_on = not logging_on
