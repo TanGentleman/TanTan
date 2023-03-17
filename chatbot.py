@@ -38,11 +38,12 @@ try:
             print('Error downloading video. Please check that url is correct and try again.')
 except:
     pass
+
+
 # Gets filepath from config.filepath, make sure you are either in the repository or filepath is set correctly
-FILEPATH = os.path.join(c.filepath, 'Chatbot')
+filepath = os.path.join(c.filepath, 'Chatbot')
 
 OPENAI_KEY = c.get_openai_api_key()
-filepath = FILEPATH
 
 CONVO_LOGFILE = 'convo_log.txt'
 RESPONSE_TIME_LOGFILE = 'response_time_log.txt'
@@ -88,6 +89,7 @@ CHAT_INIT_CODE = [{"role": "system", "content": "Welcome to the chatbot! How can
 {"role": "user", "content": "Hi there, I'm looking for help with coding in Python 3.11."},
 {"role": "system", "content": "Sure thing! What specifically do you need help with?"}]
 CMD_DICT = {
+            'quit': 'Exit the chatbot. Alias -q',
             'config': 'Set engine and max_tokens using `config <engine> <max_tokens>`',
             'codex': 'Generate a code completion from codex_prompt.txt',
             'debug': 'Toggle debug mode. Alias -d',
@@ -96,13 +98,13 @@ CMD_DICT = {
             'help': 'Display the list of commands',
             'history': 'The current conversation in memory. Alias his', 
             '-images': 'Generate images! Fully built in Dall-E with size customization',
-            '-len': 'next non-command input will now be scanned for length instead of generating a response',
+            '-len (DEV)': 'next non-command input will now be scanned for length instead of generating a response',
             'log': 'Toggle to enable or disable logging of conversation + response times', 
             '-mode': 'Choose a preset, like unhelpful or crazy',
             '-read': 'Respond to text_prompt.txt', 
             'save': 'Save the recent prompt/response exchange to response.txt. Alias -s',
             'stats': 'Prints the current configuration and session total tokens.',
-            'tan': 'Bring up the TanManual (commands with their descriptions). Alias tanman',
+            'tan': 'Bring up the TanManual (commands with their descriptions).',
             'temp': 'Configure temperature (0.0-1.0)',
             'tok': 'Configure max tokens for the response',
             '-sr': 'Save Response: Copies response to clipboard',
@@ -114,7 +116,8 @@ CMD_DICT = {
                     'Case 2: `-r is an example using a suffix!` => Replaces -r with contents of clipboard\n' +
                     'Case 3: `-r Analyze this url: -r Analysis:` => Replaces -r with #clipboard_contents#\n',
             '-p': 'This is a special string that goes at the END of your input to make it a prefix.\n' +
-                    'Example: `Define:-p` followed by `mellifluous`, or `-c` for clipboard substitute that maintains the conversation.\n',
+                    'It works great to save your prompt and tinker using a different command\n' +
+                    'Example: Type `Define the word:-p`, `tok 30`, then `-c`, maintaining the convo but keeping the response to clipboard short.',
             '-yt': 'Download the youtube video from the url in your clipboard.'
             }
 
@@ -921,7 +924,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             else:
                 print('No readable text in codex_prompt.txt')
                 continue
-        elif user_input in ['tan', 'tanman']:
+        elif user_input in ['tan']:
             
             text = '\nTanManual Opened! Available commands:\n\n' 
             for i in range(len(CMD_DICT)):
@@ -956,7 +959,13 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             size_map = {'s': 'small', 'm': 'medium', 'l': 'large'}
             image_size = size_map.get(size_input, 'default')
             print(f'Generating images of {image_size} size!')
-            generate_images_from_prompts(image_size)
+            try:
+                generate_images_from_prompts(image_size)
+            except QuitAndSaveError:
+                if suppress_extra_prints == False:
+                    print('Exiting image generation.')
+            except Exception as e:
+                print(f'Help me debug this! Error message: {e}')
             continue
         elif user_input == '-mode':
             if 'turbo' not in engine:
@@ -1015,7 +1024,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 continue
         elif dev and user_input == '-len':
             check_length = True
-            print('Your next non-command input will now be scanned for length instead of calling the api!')
+            print('Your next non-command input will now be scanned for length. It will not generate a response.')
             continue
         # All valid non-command inputs pass through here.    
         else:

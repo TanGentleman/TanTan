@@ -8,11 +8,24 @@ What it is and what it does:
 
 This work in progress is just for friends, but as it progresses, it's intended to be a versatile tool to harness the power of AI and design neat browserless strategies to complete all sorts of tasks! Whether you use it to engage in rich conversations shaping your life perspective, to goof off with fun presets, or even to task it with niche developer work that's historically human-only, the bounds truly are limited only by your imagination.
 
+# Privacy (I take this seriously):
+- My code is written with the end goal of being 100% friendly to investigate, tinker with, and even improve!
+- Using this program in your CLI alongside a reliable VPN is leaps ahead of what most software could offer in terms of privacy.
+- Browsers leak a lot of information that can be used to identify you.
+    - All tools in TanTan are pure Python, and run only where and when you call them.
+    - No third-parties (including me) are EVER contacted by your computer - Your device communicates with explicit calls:
+        - When sending a prompt in chatbot.py, generating a response makes an API call to an OpenAI endpoint.
+        - The command `-images` in chatbot.py and use of the image generator from image_generation.py makes an API call to an endpoint for Dall-E.
+        - The command `-yt` in chatbot.py uses pytube to download a video from youtube.
+        - reddit_fetcher.py uses the reddit API to fetch content from reddit (But does not make you subject to much of the tracking on a browser).
+        - The dev command -len (as well as prompt tokenizing more generally) is 100% offline and processed locally on your device
+    - All logfiles are stored in text files locally, only for you to reference.
 # Getting this onto your computer (MacOS only):
 1. Go the the main github page @ github.com/TanGentleman/TanTan > Code > Download Zip
 2. Download TanTan-Main (Should be in ~/Downloads)
 3. Rename to TanTan and move the folder to the Desktop on your computer.
 4. This location is the filepath variable in config.py
+- I'm working on instructions for Windows, but I need more time to test. I'll update this when I do.
 
 OFFICIALLY OPTIONAL:
 - Move chat.py to your home directory instead, and ensure the filepath matches in chat.py and config.py
@@ -33,7 +46,7 @@ To install pip:
     - For that, copy what was written in '<>', adding a /pip3 to it 
     - This will look something like 'Users/.../Library/Python/3.9/bin/pip3'
     - Paste that instead of MUFFIN below
-- `sudo set PATH=%PATH%'MUFFIN'`
+    - `sudo set PATH=%PATH%'MUFFIN'`
 
 # Step 1 Alternate: Install python via homebrew:
 1. install homebrew `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
@@ -41,22 +54,26 @@ To install pip:
 3. You may need to follow the error message(s) and run the prompted commands (like chmod for file permissions)
 
 If anything goes wrong before this point, and you are using the latest version of python/brew, please let me know. Should be smooth sailing after step 1.
-# Step 2: Install dependencies 
-
-Paste the following commands into terminal:
+# Step 2: Install dependencies (Adjust python/python3 pip/pip3 depending on the flexibility of your setup)
+1. If on MacOS, try:
+    - `pip3 install gnureadline`
+1. I don't officially support Windows, but I'll occasionally test the scripts on Windows 11 for core functionality 
+    - Apply `python` and `pip` accordingly with the below instructions.
+2. Paste the following commands into terminal:
 ```
 pip3 install openai
 pip3 install clipboard
-pip3 install gnureadline
 pip3 install requests
 pip3 install pillow
 pip3 install pytube
 ```
 To troubleshoot, make sure packages are updated, specifically trying `pip3 --upgrade openai`
 # Using the TanTan chatbot:
-1. Paste your secret openai key to mysecrets.py, and double check the filepath in config.py
+1. Paste your secret openai key to mysecrets.py, and double 
 2. Run `python3 chatbot.py` in terminal from the TanTan repository 
-    - Alternatively: Run `python3 Desktop/TanTan/chatbot.py` from the home directory
+    - Alternatively: 
+        - check the filepath in config.py
+        - Run `python3 Desktop/TanTan/chatbot.py` from the home directory
 
 After completing the prerequisites above, and moving chat.py to your home directory:
     - You can run `python3 chat.py` from your home directory in terminal
@@ -64,7 +81,7 @@ After completing the prerequisites above, and moving chat.py to your home direct
 3. You're in! Have fun feeling like a computer whiz with the world of knowledge at your fingertips. 
 To see the manual of commands and descriptions:
     - `tan` or `tanman`
-- FYI: You can follow `python3 chat.py` with `config <engine> <max_tokens> <debug>`
+- FYI: You can follow `python3 chat.py` with `config <engine> <max_tokens>` with optional `-d`, `-sp`, `-st`, `-a (soon)` flags
 - For instance `python3 chat.py config curie 30` for short, fast, simple responses with low latency.
 - Or even ...`config codex` for a simple, default-token value codex response generator (great for basic function-making, needs basic prompt engineering)
 
@@ -111,7 +128,7 @@ Follow these steps to set up the Reddit Image Fetcher:
     - The other variables in config.py can be used in lieu of additional arguments in the command line
     - For now, please stick to subs/users with posts of standard image formats, not videos hosted elsewhere.
 2. Set the 5 query variables in config.py, or add the Magic String in the command line for step 3.
-- [MAGIC STRING] = {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour} {-d for debug}
+- [MAGIC STRING] = {u/user or r/subreddit} {qty} {new/top} {all/year/month/week/day/hour}
 3. Run either command in terminal from your home directory.
     - `python3 Desktop/TanTan/reddit_fetcher.py`
     - `python3 Desktop/TanTan/reddit_fetcher.py r/houseplants 50 top year -d`
