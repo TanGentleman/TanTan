@@ -32,15 +32,21 @@ debug = False
 
 # Do not touch. 
 DELIMITER = '_||_' # Change only if you're certain it won't be affected by text in title/url pairs.
-
 try: # This is to allow for a dev features. Please only modify if you know what you're doing.
     # For example, you can do pip install transformers in terminal, then set dev = True to get some neat prompt tokenizing features.
-    import tansecrets as m
+    from tansecrets import NULL
     dev = True
 except:
-    import mysecrets as m
     dev = False
 def get_openai_api_key():
-    return m.openai_key
+    try:
+        from tansecrets import openai_key as key
+    except:
+        from mysecrets import openai_key as key
+    return key
 def get_headers():
-    return m.getHeaders(m.REDDIT_TOKEN, m.reddit_config)
+    try:
+        from tansecrets import getHeaders
+    except:
+        from mysecrets import getHeaders
+    return getHeaders()

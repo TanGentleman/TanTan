@@ -27,37 +27,41 @@ except:
 
 
 # Do not touch. This is the code for authorizing your reddit credentials and generating a token.
-reddit_config = (USER_AGENT, CLIENT_ID, CLIENT_SECRET, USERNAME, PASSWORD)
+REDDIT_CONFIG = (USER_AGENT, CLIENT_ID, CLIENT_SECRET, USERNAME, PASSWORD)
+
 def write_token_to_file(token):
     with open(f'{filepath}/REDDIT_TOKEN.txt', 'w') as f:
         f.write(token)
     print('Saved your reddit token to to REDDIT_TOKEN.txt! If you prefer, set the variable above and delete the file.')
 
 
-def getHeaders(token, reddit_config):
-    assert(all(reddit_config))
-    (user_agent, client_id, client_secret, username, password) = reddit_config
+def getHeaders(token):
     if token is None:
+        if not all(REDDIT_CONFIG):
+            raise ValueError('missing values in REDDIT_CONFIG.')
         print('You need a token. Saving one to REDDIT_TOKEN.txt')
-        token = get_reddit_token(user_agent, client_id, client_secret, username, password)
+        token = get_reddit_token(REDDIT_CONFIG)
     else:
         try:
             headers = {
                     'Authorization': 'bearer ' + token,
-                    'User-Agent': user_agent}
+                    'User-Agent': USER_AGENT}
             response = requests.get('https://oauth.reddit.com/api/v1/me', headers=headers)
             if response.status_code == 200:
                 print('Token is valid')
-        except:
+            else:
+                raise ValueError
+        except ValueError:
             print('Token is invalid. Fetching new token...')
-            token = get_reddit_token(user_agent, client_id, client_secret, username, password)
-
+            token = get_reddit_token(REDDIT_CONFIG)
+        except Exception as e:
+            print('Exception:', e)
+            raise ValueError('Reddit token validation failed. Exception is above.')
     headers = {'Authorization': 'bearer ' + token,
-                'User-Agent': user_agent}
+                'User-Agent': USER_AGENT}
     return headers
 
 ### SAVES TOKEN TO REDDIT_TOKEN.TXT
-
 def get_reddit_token(user_agent, client_id, client_secret, username, password):
     auth = requests.auth.HTTPBasicAuth(client_id, client_secret)
     data = {'grant_type': 'password',

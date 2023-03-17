@@ -1,10 +1,10 @@
+from config import dev, filepath, get_openai_api_key # These are from config.py
 import openai
-import sys
-import datetime
-import time
+from datetime import datetime
+from time import time
 import os
-import config as c
-import clipboard
+
+from clipboard import copy as clipboard_copy, paste as clipboard_paste
 import image_generation as ig
 from platform import system
 class TanSaysNoNo(Exception): pass
@@ -13,7 +13,7 @@ if system() == 'Windows':
     dev = False
 else:
     import gnureadline # Not supported on windows
-    if c.dev: # Not officially released. Needs transformers library.
+    if dev: # Not officially released. Needs transformers library.
         # Allows you to check the tokens in your prompt without having to make a call to the OpenAI API (Using -len)
         # It uses a fully offline and local pretrained GPT-2 model to tokenize the prompt
         import logging
@@ -21,14 +21,12 @@ else:
         from transformers import GPT2TokenizerFast
         tokenize = GPT2TokenizerFast.from_pretrained("gpt2", local_files_only = True).tokenize
         os.environ["TOKENIZERS_PARALLELISM"] = "false" # Disable parallelism to avoid a warning
-        dev = True
-    else:
-        dev = False
+
 # Wrap the text to fit within the terminal window
-import textwrap
+from textwrap import fill
 terminal_width = os.get_terminal_size().columns
-# Define a function for printing text with adjusted line wrapping
-def print_adjusted(text):
+
+def print_adjusted(text) -> None:
     '''
     Prints text with adjusted line wrapping
     '''
@@ -38,7 +36,7 @@ def print_adjusted(text):
     for line in lines:
         # If the line is longer than the terminal width, wrap it to fit within the width
         if len(line) > terminal_width:
-            wrapped_line = textwrap.fill(line, width=terminal_width)
+            wrapped_line = fill(line, width=terminal_width)
             print(wrapped_line)
         else:
             print(line)
@@ -52,16 +50,16 @@ try:
         try:
             yt = YouTube(url)
             stream = yt.streams.get_highest_resolution()
-            stream.download(c.filepath)
+            stream.download(filepath)
         except:
             print_adjusted('Error downloading video. Please check that url is correct and try again.')
 except:
     pass
 
 # Gets filepath from config.filepath, make sure you are either in the repository or filepath is set correctly
-filepath = os.path.join(c.filepath, 'Chatbot')
+filepath = os.path.join(filepath, 'Chatbot')
 
-OPENAI_KEY = c.get_openai_api_key()
+OPENAI_KEY = get_openai_api_key()
 
 CONVO_LOGFILE = 'convo_log.txt'
 RESPONSE_TIME_LOGFILE = 'response_time_log.txt'
@@ -166,16 +164,11 @@ def conversation_to_string(conversation_in_memory: list[tuple[str, str]]) -> str
     Takes in a conversation in memory (list of tuples) and returns a string of the conversation
     Should be equivalent to history variable in interactive_chat()
     '''
-    if conversation_in_memory == []:
-        return '' # Should I only get non-empty arrays to come to this function?
+    if not conversation_in_memory:
+        return ''
     conversation_string = ''
-    response_count = 0
-    convo_length = len(conversation_in_memory)
-    for exchange in conversation_in_memory:
-        prompt, response = exchange
-        response_count += 1
-        conversation_string += prompt + response + '\n\n'
-    assert(response_count == convo_length)
+    for prompt, response in conversation_in_memory:
+        conversation_string += f'{prompt}{response}\n\n'
     return conversation_string
 
 def formatted_conversation_to_string(conversation_in_memory: list[tuple[str, str]]) -> str:
@@ -220,6 +213,8 @@ def get_response_string(response_struct: dict, suppress_token_warnings: bool) ->
             prompt_tokens = tok_val
         elif val == 'total_tokens':
             completion_tokens = tok_val
+
+    print('b')
     # I have hardcoded number of choices to 1, contact me if you have an exceptional use case for multiple responses
     try: # Traverse the response structure to get the first response
         response_struct = response_struct['choices'][0]
@@ -335,10 +330,8 @@ def generate_text(debug: bool, engine: str, max_tokens: int, temperature: float,
             
     except openai.error.OpenAIError as e:
         status = e.http_status
+        print_adjusted(f'error: {e.http_status}')
         error_dict = e.error
-        
-        print_adjusted('error:',status)
-        
         if status == 400:
             if error_dict['type'] == 'invalid_request_error':
                 message = error_dict['message']
@@ -354,7 +347,6 @@ def generate_text(debug: bool, engine: str, max_tokens: int, temperature: float,
         raise KeyboardInterrupt
     except Exception as e:
         print_adjusted(e)
-    if debug: print_adjusted(response_struct)
     return response_struct
 
 
@@ -380,11 +372,11 @@ def write_to_log_file(convo: str, response_times:str) -> None:
     '''
     try:
         with open(f'{filepath}/{CONVO_LOGFILE}', 'a') as file:
-            timestamp = datetime.datetime.now().strftime('%Y-%m-%d')
+            timestamp = datetime.now().strftime('%Y-%m-%d')
             file.write(f'Timestamp: {timestamp}\n{convo}\n ==== End of Entry ====\n')
             print_adjusted('Saved conversation log file.')
         with open(f'{filepath}/{RESPONSE_TIME_LOGFILE}', 'a') as file:
-            timestamp = datetime.datetime.now().strftime('%Y-%m-%d')
+            timestamp = datetime.now().strftime('%Y-%m-%d')
             file.write(f'Timestamp: {timestamp}\n{response_times}\n ==== End of Entry ====\n')
             print_adjusted('Saved response time log file.')
     except:
@@ -604,7 +596,8 @@ def prompt_to_response(debug: bool, history: str, engine: str, max_tokens: int, 
     except KeyboardInterrupt:
         print_adjusted('Read the above error. Attempting to interrupt.')
         raise KeyboardInterrupt
-    except:
+    except Exception as e:
+        print_adjusted(e)
         print_adjusted('Response not generated. See above error. Try again?')
     try:
         response_string, response_tokens, prompt_tokens, completion_tokens = get_response_string(response_struct, suppress_token_warnings)
@@ -615,6 +608,7 @@ def prompt_to_response(debug: bool, history: str, engine: str, max_tokens: int, 
         raise TanSaysNoNo('get_response_string man') # I think I have ensured safety of get_response_string()!
         # Valid response!
     return response_string, response_tokens, prompt_tokens, completion_tokens
+    # return h.prompt_to_response(debug, history, engine, max_tokens, temperature, suppress_token_warnings, prompt, messages)
 
 # This function needs proper re-structuring for readability!
 def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints = False, suppress_token_warnings = False) -> tuple[str, str, bool]:
@@ -683,7 +677,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             # Planning to implement a cooldown of sorts, but I want to allow a line of multiple inputs (can be commands too).
         
         # Start the timer
-        start_time = time.time()
+        start_time = time()
         # If Blank Space
         if len(user_input) < 1 and (suppress_extra_prints == False):
             print_adjusted('Taylor Swift, I like it!')
@@ -797,7 +791,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
 
             print_adjusted('Reading clipboard. Working on response...\n')
             replace_input = True
-            replace_input_text = (clipboard.paste()).strip()
+            replace_input_text = (clipboard_paste()).strip()
             # Cache history here
             cached_history = history
             history = ''
@@ -895,7 +889,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
         elif user_input == '-c': 
             # -c is a NON-amnesic clipboard reader
             replace_input = True
-            replace_input_text = (clipboard.paste()).strip()
+            replace_input_text = (clipboard_paste()).strip()
             print_adjusted('Responding to clipboard text...')
             continue # No amnesia, so it will use the current history.
             
@@ -957,7 +951,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             print_adjusted('Saved most recent exchange to response.txt!')
             continue
         elif user_input == '-sr':
-            clipboard.copy(cached_response.strip())
+            clipboard_copy(cached_response.strip())
             print_adjusted('Copied response to clipboard.')
             continue
         elif user_input == '-sh':
@@ -965,7 +959,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 convo_length = len(conversation_in_memory)
                 msg = formatted_conversation_to_string(conversation_in_memory)
                 print_adjusted(f'{convo_length} exchanges from memory copied to clipboard')
-                clipboard.copy(msg.strip())
+                clipboard_copy(msg.strip())
             else:
                 msg = 'No history to copy.'
                 print_adjusted(msg)
@@ -1023,7 +1017,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             full_log += msg + '\n'
             continue
         elif user_input == '-yt':
-            clipboard_contents = clipboard.paste()
+            clipboard_contents = clipboard_paste()
             if clipboard_contents.count('youtu') != 1:
                 print_adjusted('Invalid URL. Please copy a valid youtube link to your clipboard and try again.')
                 continue
@@ -1133,7 +1127,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
         assert(len(response_string) > 0)
         response = response_string
         # Only if non-command, it has successfully passed through else clause.
-        time_taken = time.time()-start_time
+        time_taken = time()-start_time
         if debug: print_adjusted('beep, we got a response!')
 
         # Record a savestate and append history
@@ -1275,7 +1269,8 @@ def main_from_args(args: list[str]) -> None:
     except QuitAndSaveError:
         print_adjusted('Pre-emptive quit. No logfiles saved.')
         
-# Default script execution from running chatbot.py in CLI, uses sys.argv arguments
+# Default script execution from running chatbot.py in CLI, uses sys.argv
 if __name__ == '__main__':
-    args = sys.argv
-    main_from_args(args)
+    from sys import argv
+    cli_arguments = argv
+    main_from_args(cli_arguments)
