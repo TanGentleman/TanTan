@@ -4,13 +4,20 @@ from config import filepath
 
 # SECRET KEY
 openai_key = None # Your OpenAI Api Key
-
-
 # The below is only to utilize functions from reddit_fetcher.py, you should be able to safely ignore it if you're not using that file.
 
-### Your reddit secret token is stored in TanTan/REDDIT_TOKEN.txt
+USER_AGENT = 'reddit_fetcher' # Recommended to change to the 'name' you chose in the reddit api prefs.
 
-# This is your reddit token, should look like: '1488117263818-EcDrolQTJqYrOOvmVcKbuN-b61wBB'
+CLIENT_ID = None
+CLIENT_SECRET = None 
+
+# Your reddit username and password. This is needed ONLY to authorize getToken() if you don't yet have one.
+USERNAME = None
+PASSWORD = None
+
+### Your reddit secret token is stored in TanTan/REDDIT_TOKEN.txt
+# It should look like: '1488117263818-EcDrolQTJqYrOOvmVcKbuN-b61wBB'
+
 try: # see if REDDIT_TOKEN.txt exists
     with open(f'{filepath}/REDDIT_TOKEN.txt', 'r') as f:
         REDDIT_TOKEN = f.read()
@@ -18,18 +25,9 @@ except:
     # No REDDIT_TOKEN.txt exists. It was worth a try.
     REDDIT_TOKEN = None
 
-USER_AGENT = 'reddit_fetcher' # Recommended to change to the 'name' you chose in the reddit api prefs.
 
-CLIENT_ID = None
-CLIENT_SECRET = None
-
-# Your reddit username and password. This is needed ONLY to authorize getToken() if you don't yet have one.
-USERNAME = None
-PASSWORD = None
-
-reddit_config = (USER_AGENT, CLIENT_ID, CLIENT_SECRET, USERNAME, PASSWORD)
 # Do not touch. This is the code for authorizing your reddit credentials and generating a token.
-
+reddit_config = (USER_AGENT, CLIENT_ID, CLIENT_SECRET, USERNAME, PASSWORD)
 def write_token_to_file(token):
     with open(f'{filepath}/REDDIT_TOKEN.txt', 'w') as f:
         f.write(token)

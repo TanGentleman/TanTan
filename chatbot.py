@@ -13,7 +13,7 @@ if system() == 'Windows':
     dev = False
 else:
     import gnureadline # Not supported on windows
-    if c.dev:
+    if c.dev: # Still torn on whether I want to officially release this or make it an optional add on, maybe a separate bunch of them, like -yt too.
         # This allows for you to check the tokens in your prompt without having to make a call to the OpenAI API
         # It uses a fully offline and local pretrained model to tokenize the prompt
         import logging
@@ -29,9 +29,13 @@ try:
     # Function for the -yt command to download a youtube video
     from pytube import YouTube
     def download_video(url: str) -> None:
-        yt = YouTube(url)
-        stream = yt.streams.get_highest_resolution()
-        stream.download(c.filepath)
+        # maybe add some code to fix certain url parsing errors
+        try:
+            yt = YouTube(url)
+            stream = yt.streams.get_highest_resolution()
+            stream.download(c.filepath)
+        except:
+            print('Error downloading video. Please check that url is correct and try again.')
 except:
     pass
 # Gets filepath from config.filepath, make sure you are either in the repository or filepath is set correctly
@@ -92,6 +96,7 @@ CMD_DICT = {
             'help': 'Display the list of commands',
             'history': 'The current conversation in memory. Alias his', 
             '-images': 'Generate images! Fully built in Dall-E with size customization',
+            '-len': 'next non-command input will now be scanned for length instead of generating a response',
             'log': 'Toggle to enable or disable logging of conversation + response times', 
             '-mode': 'Choose a preset, like unhelpful or crazy',
             '-read': 'Respond to text_prompt.txt', 
@@ -296,15 +301,17 @@ def generate_text(debug: bool, engine: str, max_tokens: int, temperature: float,
             frequency_penalty = FREQUENCY_PENALTY_VAL,
             stop = STOP # Using this in conjunction with the custom preset seems smart. I'll add STOP into config_vars or smth later on
         )
-        else:
+        else: # This uses messages instead
             response_struct = openai.ChatCompletion.create(
             model=engine,
             messages=messages,
             max_tokens = max_tokens,
-            temperature = temperature,
             frequency_penalty = FREQUENCY_PENALTY_VAL,
-            stop = STOP # You can use a custom symbol like ['###'] or ['$$'], and it works esp well with custom preset.
+            stop = STOP, 
+            temperature = temperature
             )
+            # You can use a custom symbol like ['###'] or ['$$'], for STOP and it should work in tandem with custom preset.
+            
     except openai.error.OpenAIError as e:
         status = e.http_status
         error_dict = e.error
@@ -625,6 +632,9 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
     conversation_in_memory = []
     preset = 'default'
     custom_preset = None
+    check_length = False
+
+
     while chat_ongoing:
         # Amnesia does not use conversation_in_memory, saving the current configuration / history for next prompt
         if amnesia == False:
@@ -985,7 +995,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             continue
         elif user_input == '-yt':
             clipboard_contents = clipboard.paste()
-            if 'youtu' not in clipboard_contents:
+            if clipboard_contents.count('youtu') != 1:
                 print('Invalid URL. Please copy a valid youtube link to your clipboard and try again.')
                 continue
             else:
@@ -1003,6 +1013,10 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 except:
                     print('Invalid URL. Try again.')
                 continue
+        elif dev and user_input == '-len':
+            check_length = True
+            print('Your next non-command input will now be scanned for length instead of calling the api!')
+            continue
         # All valid non-command inputs pass through here.    
         else:
             try:
@@ -1014,9 +1028,9 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 if suffix:
                     prompt += suffix
                     suffix = ''
-
+                    
                 # Tokenize the prompt to check length
-                if dev and (suppress_extra_prints == False):
+                if dev and (check_length or (suppress_extra_prints == False)):
                     tokenized_text = tokenize(prompt)
                     token_count = len(tokenized_text)
                     # This 4000 is a hard cap for the full completion. I'll work it in better soon. 
@@ -1024,6 +1038,10 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                         print('WARNING: prompt is too long. I will try to generate a response, but it may be truncated.')
                         print(f'max_tokens would need to be set to roughly {4000-token_count}')
                     print(f'prompt is {token_count} tokens')
+                    if check_length:
+                        check_length = False
+                        print('check_length is now False')
+                        continue
 
                 if debug: print('beep, about to try generating response')  
                 if 'turbo' in engine:
@@ -1191,7 +1209,7 @@ def check_directories() -> None:
 def main_from_args(args: list[str]) -> None:
     '''
     Runs the chatbot with args formatted like sys.argv (arguments following chatbot.py when typing in Terminal).
-    Allowed flags: [-d] [-sp] [-st]
+    Allowed flags: -d | -sp | -st
     '''
     if '-d' in args:
         args.remove('-d')

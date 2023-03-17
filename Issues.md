@@ -1,20 +1,21 @@
-Current issue:
-- Make chat.py the configuration file for the chatbot.
+# Active Issues (Priority L/M/!):
+- [ ! ] Unsafe array accesses and possible errors need to be handled appropriately
+- [ ! ] Add command to enable reddit downloading within chatbot session
+- [ ! ] Explicit typing and function descriptions for all functions (chatbot.py should be good)
+- [ L ] Debug print statements that don't clutter, and have purpose.
+- [ L ] Documentation for the reddit scraper
+- [ M ] Documentation for the chatbot
+- [ M ] Presets for chatbot. (i.e. debugging code, essay organization, fact checking, general advice, summarization, link analysis)
+- [ L ] Implement completion_tokens, prompt_tokens in their appropriate use cases
 
-In development:
-- A more readable README
+ 
+- Tokenizer using an offline, local, pretrained GPT2 Model (Still a dev command)
+    - Also want to run some tests to see if computation is expensive enough to warrant this disabled by default.
 
-- Tokenizer using an offline, local, pretrained GPT2 Model (Need to handle log-warning better)
-    - Also want to run some tests to see of computation ends up being a limiting factor, I should be able run it in parallel with response generation in the existing code if needbe.
-- Documentation for the chatbot
-- Documentation for the reddit scraper
-- Presets for chatbot. (i.e. debugging code, essay organization, fact checking, general advice, summarization, link analysis)
-- Image generation integration
 - Add command to enable reddit downloading within chatbot session [ In development ]
-- Add command to enable image generation using DALL-E API
 
 [ x ] : fix being tested
-# Active Issues:
+
 [ x ] Checks to see if directories valid first.
 ! Functions to make all needed folders
 ! Do reddit API key check before any workflow progress
@@ -22,7 +23,7 @@ In development:
 
 Chatbot.py
 - [ ! ] Debug statements/variables that don't clutter, and have purpose.
-- [ ! ] Unsafe array accesses and variable assignments need to be handled appropriately
+
 - [ ] Checks to ensure loop correctness
 - [ x ] Create better "help" functionality and prompt guidance
 - [ ] Implement completion_tokens, prompt_tokens in their appropriate use cases
@@ -31,7 +32,6 @@ Chatbot.py
 
 reddit_fetcher.py
 - [ x ] Enable video configuration with proper safeguards for large mp4 files and total download size.
-- [ ] Enable third-party (YouTube) downloads
 - [ ] Fetch more meaningful data alongside the generated list
 
 # Inactive Issues:
@@ -49,6 +49,9 @@ Features Added:
 - Be able to save current convo to conversation.txt at any time.
 - Escape string 'quit' can be used in any input() call, and it saves whenever possible
 - Tidy up clipboard manipulation, allowing for powerful use in copying and pasting, without spaces or newlines being annoying
+- Image generation fully live using -images
+- YouTube download from url in clipboard fully live using -yt
+- 
 
 
 Bugs Squashed:
@@ -67,17 +70,17 @@ To-Do List:
     - Allow calling reddit_fetcher functions
     - Use prompt engineering on an OpenAI engine to generate magic strings from natural language and keywords
         - Create a dataset of natural language queries and corresponding magic strings [ In testing ]
-- Work on image generation [ In development ]
 - Play around with offline pretrained models like gpt2 but specialized [ In testing ]
 
-My current workflow for Chatbot:
-- `python -i -m chat`
-- `config curie 20` Example config command, useful when testing
 
 If message truncated:
 - increase tokens as needed:
     - `tok`
     - input `500` (or whatever is adequate for your needs)
+
+
+
+# Legacy (no longer applicable):
 
 To complete a truncated response:
 - Use a single space as the next input, should work fine with appropriate max token values.

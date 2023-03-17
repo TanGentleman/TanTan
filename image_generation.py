@@ -7,19 +7,27 @@ import os
 from io import BytesIO
 from PIL import Image
 import Downloader
-MAX_LIMIT = 10
-DEFAULT_SIZE = '256x256'
+
 filepath = os.path.join(c.filepath, 'DallE')
 if not os.path.exists(filepath):
     os.mkdir(filepath)
 
-size_dict = {'small': '256x256', 'medium': '512x512', 'large': '1024x1024', 'default': DEFAULT_SIZE}
-
+size_dict = {'small': '256x256', 'medium': '512x512', 'large': '1024x1024', 'default': '256x256'}
 
 openai_key = c.get_openai_api_key()
-
 # Takes a filename, returns a safely-formatted filename
 sanitize_filename = Downloader.sanitize_filename
+
+MAX_LIMIT = 10
+DEFAULT_SIZE = size_dict['small']
+
+class QuitAndSaveError(Exception): pass
+def check_quit(text: str) -> None:
+    '''
+    Raises a QuitAndSaveError if the user types -q or quit
+    '''
+    if text in ['-q','quit']:
+        raise QuitAndSaveError
 
 def image_data_from_url(image_url):
     res = requests.get(image_url)
@@ -100,6 +108,7 @@ def prompts_from_input():
     count = 0
     while limit_qty < 0:
         user_input = input('How many images would you like? (Type 0 to exit): ')
+        check_quit(user_input)
         try:
             limit_qty = int(user_input)
         except:
@@ -113,6 +122,7 @@ def prompts_from_input():
     while len(prompts) < limit_qty:
         #Ask for input   
         prompt = input('Enter a prompt: ')
+        check_quit(prompt)
         if prompt == 'quit':
             print(f'Prompts: {prompts}')
             return
@@ -137,7 +147,10 @@ def generate_images_from_prompts(filepath, image_size, prompts = None):
     urls = []
     titles = []
     if prompts == None:
-        prompts = prompts_from_input()
+        try:
+            prompts = prompts_from_input()
+        except:
+            raise QuitAndSaveError
     if prompts:
         for prompt in prompts:
             try:

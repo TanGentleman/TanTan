@@ -33,7 +33,8 @@ debug = False
 # Do not touch. 
 DELIMITER = '_||_' # Change only if you're certain it won't be affected by text in title/url pairs.
 
-try: # This is a hacky way to allow for a dev environment. Please do not touch.
+try: # This is to allow for a dev features. Please only modify if you know what you're doing.
+    # For example, you can do pip install transformers in terminal, then set dev = True to get some neat prompt tokenizing features.
     import tansecrets as m
     dev = True
 except:
@@ -41,6 +42,5 @@ except:
     dev = False
 def get_openai_api_key():
     return m.openai_key
-
 def get_headers():
     return m.getHeaders(m.REDDIT_TOKEN, m.reddit_config)
