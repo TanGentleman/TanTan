@@ -13,19 +13,17 @@ if system() == 'Windows':
     dev = False
 else:
     import gnureadline # Not supported on windows
-    if c.dev: # Still torn on whether I want to officially release this or make it an optional add on, maybe a separate bunch of them, like -yt too.
-        # This allows for you to check the tokens in your prompt without having to make a call to the OpenAI API
-        # It uses a fully offline and local pretrained model to tokenize the prompt
+    if c.dev: # Not officially released. Needs transformers library.
+        # Allows you to check the tokens in your prompt without having to make a call to the OpenAI API (Using -len)
+        # It uses a fully offline and local pretrained GPT-2 model to tokenize the prompt
         import logging
         logging.disable(logging.ERROR) # Ignore a warning that doesn't apply to our use of GPT-2
-        # Use a local copy of the pretrained GPT-2 model to reliably tokenize prompt before passing it to OpenAI function
         from transformers import GPT2TokenizerFast
         tokenize = GPT2TokenizerFast.from_pretrained("gpt2", local_files_only = True).tokenize
         os.environ["TOKENIZERS_PARALLELISM"] = "false" # Disable parallelism to avoid a warning
         dev = True
     else:
         dev = False
-
 # Wrap the text to fit within the terminal window
 import textwrap
 terminal_width = os.get_terminal_size().columns
@@ -34,6 +32,8 @@ def print_adjusted(text):
     '''
     Prints text with adjusted line wrapping
     '''
+    if type(text) != str:
+        text = str(text)
     lines = text.splitlines()
     for line in lines:
         # If the line is longer than the terminal width, wrap it to fit within the width
@@ -84,12 +84,12 @@ STOP = None # This should be an array of string stop_sequences
 FREQUENCY_PENALTY_VAL = 0.7 # This is not currently configurable within interactive_chat
 
 ### NEW GPT-3.5-TURBO ENGINE CONFIGURATION ###
-CHAT_INIT_DEFAULT = {"role": "system", "content": "You are a helpful AI specialized for a university student."}
-CHAT_INIT_TROLL = {"role": "system", "content": "You are tasked with being hilariously unhelpful to the user."}
-CHAT_INIT_CRAZY = {"role": "system", "content": "You are tasked with being helpful, but as unhinged and witty as possible."}
-CHAT_INIT_HINDI = {"role": "system", "content": "Reply to user in Hinglish (Hindi/English as written by indians)"}
+CHAT_INIT_DEFAULT = [{"role": "system", "content": "You are a helpful AI specialized for a university student."}]
+CHAT_INIT_TROLL = [{"role": "system", "content": "You are tasked with being hilariously unhelpful to the user."}]
+CHAT_INIT_CRAZY = [{"role": "system", "content": "You are tasked with being helpful, but as unhinged and witty as possible."}]
+CHAT_INIT_HINDI = [{"role": "system", "content": "Reply to user in Hinglish (Hindi/English as written by indians)"}]
 
-CHAT_INIT_CUSTOM = {"role": "system", "content": "Set your custom preset by typing the command -mode!"}
+CHAT_INIT_CUSTOM = [{"role": "system", "content": "Set your custom preset by typing the command -mode!"}]
 
 
 CHAT_INIT_MAGIC = [{"role": "system", "content": """A magic string is text formatted as [<u/user or r/subreddit> <opt:qty> <opt:new or
@@ -103,9 +103,9 @@ CHAT_INIT_MAGIC = [{"role": "system", "content": """A magic string is text forma
                     {"role": "user", "content": "Let's say I wanted to download 300 of the top pictures from our/smashbros"}, 
                     {"role": "assistant", "content": "r/smashbros 300"}]
 
-CHAT_INIT_CODE = [{"role": "system", "content": "Welcome to the chatbot! How can I assist you today?"},
-{"role": "user", "content": "Hi there, I'm looking for help with coding in Python 3.11."},
-{"role": "system", "content": "Sure thing! What specifically do you need help with?"}]
+CHAT_INIT_JOKES = [{"role": "system", "content": "Tell the most clever joke you can given the user's prompt"}]
+
+
 CMD_DICT = {
             'quit': 'Exit the chatbot. Alias -q',
             'config': 'Set engine and max_tokens using `config <engine> <max_tokens>`',
@@ -159,7 +159,7 @@ def config_msg(engine: str, max_tokens: int, session_total_tokens: int) -> str:
     Input and Output will soon be adjusted - returns a string of current configuration
     '''
     engine_marker = format_engine_string(engine)
-    return f'Engine: {engine_marker} | Max Response Tokens: {max_tokens} | Tokens Used: {session_total_tokens}\n'
+    return f'Engine: {engine_marker} | Max Response Tokens: {max_tokens} | Tokens Used: {session_total_tokens}'
 
 def conversation_to_string(conversation_in_memory: list[tuple[str, str]]) -> str:
     '''
@@ -646,7 +646,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
     response_count = 0
     chat_ongoing = True
 
-    config_info = config_msg(engine, max_tokens, session_total_tokens)
+    config_info = config_msg(engine, max_tokens, session_total_tokens) + '\n'
     full_log += config_info
     print_adjusted(config_info)
     prompts_and_responses = []
@@ -706,7 +706,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
         # Need to organize the below commands
         elif user_input == 'stats':
             config_info = config_msg(engine, max_tokens, session_total_tokens)
-            print_adjusted(config_info, end = '')
+            print_adjusted(config_info)
             print_adjusted(f'Logging {logging_on} | Debug {debug} | Amnesia {persistant_amnesia}\n')
             continue
         elif user_input in ['-d', 'debug']:
@@ -999,7 +999,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 else:
                     print_adjusted('History retained. Cancelling preset.')
                     continue
-            mode_input = input('Choose a preset: [0] custom, [1] default, [2] unhelpful, [3] crazy, [4] hindi, [5] reddit magic string: ')
+            mode_input = input('Choose a preset: [0] | custom | [1] default | [2] unhelpful | [3] crazy | [4] hindi | [5] reddit magic string | [6] jokes: ')
             check_quit(mode_input)
             preset_map = {
                         '0': 'custom', 'custom': 'custom',
@@ -1007,14 +1007,16 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                         '2': 'unhelpful', 'unhelpful': 'unhelpful',
                         '3': 'crazy', 'crazy': 'crazy', 
                         '4': 'hindi', 'hindi': 'hindi',
-                        '5': 'magic', 'magic': 'magic'}
+                        '5': 'magic', 'magic': 'magic',
+                        '6': 'jokes', 'jokes': 'jokes'}
             preset = preset_map.get(mode_input, 'invalid mode')
             if preset == 'invalid mode':
                 print_adjusted('Invalid mode. Setting to default.')
                 preset = 'default'
                 continue
             elif preset == 'custom':
-                custom_preset = input('Create a custom mode, like "":\n')
+                custom_preset = input('Create a custom mode, like `You are a helpful AI with a stutter.`:\n')
+                check_quit(custom_preset)
                 print_adjusted(f'Custom mode created!')
             msg = f'Mode set to: {preset}\n'
             print_adjusted(msg)
@@ -1072,40 +1074,51 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
 
                 if debug: print_adjusted('beep, about to try generating response')  
                 if 'turbo' in engine:
-                    if preset == 'default':
-                        convo_init = CHAT_INIT_DEFAULT
-                    elif preset == 'unhelpful':
-                        convo_init = CHAT_INIT_TROLL
-                    elif preset == 'crazy':
-                        convo_init = CHAT_INIT_CRAZY
-                    elif preset == 'hindi':
-                        convo_init = CHAT_INIT_HINDI
-                    elif preset == 'custom':
+                    if preset == 'custom':
                         convo_init = CHAT_INIT_CUSTOM
-                        convo_init['content'] = custom_preset
-                    else:
-                        preset == 'default'
-                        print_adjusted(f'preset is now {preset}')
-                        messages = [CHAT_INIT_DEFAULT]
-                    
-                    if preset == 'magic':
+                        convo_init[0]['content'] = custom_preset
+                        messages = convo_init
+                    elif preset == 'default':
+                        messages = CHAT_INIT_DEFAULT
+                        engine = 'gpt-3.5-turbo'
+                        max_tokens = DEFAULT_MAX_TOKENS
+                        temperature = DEFAULT_TEMPERATURE
+                    elif preset == 'unhelpful':
+                        messages = CHAT_INIT_TROLL
+                    elif preset == 'crazy':
+                        messages = CHAT_INIT_CRAZY
+                    elif preset == 'hindi':
+                        messages = CHAT_INIT_HINDI
+                    elif preset == 'magic':
                         temperature = 0
                         max_tokens = 20
                         print_adjusted('Magic mode activated. Temperature set to 0.')
                         messages = CHAT_INIT_MAGIC
+                    elif preset == 'jokes':
+                        max_tokens = 50
+                        temperature = 0.8
+                        amnesia = True
+                        if suppress_extra_prints == False:
+                            print_adjusted(f'Jokes! Max tokens: {max_tokens} | Temperature: {temperature} | Amnesia: {amnesia}.')
+                        messages = CHAT_INIT_JOKES
                     else:
-                        messages = [convo_init] # initiate conversation
-                    if (amnesia == False) and (persistant_amnesia == False): 
+                        print_adjusted('Can I even get here?')
+                        messages = CHAT_INIT_DEFAULT # initiate conversation
+
+                    context = []    
+                    if (amnesia == False) and (persistant_amnesia == False) and (conversation_in_memory): 
                         for p, r in conversation_in_memory: # add conversation context
-                            messages += [{"role": "user", "content": p},
-                                                      {"role": "assistant", "content": r}]
-                        # add prompt
+                            context += [{"role": "user", "content": p},
+                                        {"role": "assistant", "content": r}]
+
+                    context += [{"role": "user", "content": prompt}]
                     if ( len(messages) == 1 ) and ( suppress_extra_prints == False ):
                         print_adjusted(f"Using preset:{messages[0]['content']}")
-                    messages += [{"role": "user", "content": prompt}] 
 
+                    if debug: print_adjusted(messages + context)
+                    
                     response_string, response_tokens, prompt_tokens, completion_tokens = prompt_to_response(
-                    debug, history, engine, max_tokens, temperature, suppress_token_warnings, None, messages)
+                    debug, history, engine, max_tokens, temperature, suppress_token_warnings, None, messages + context )
 
                 else:
                     response_string, response_tokens, prompt_tokens, completion_tokens = prompt_to_response(
@@ -1114,7 +1127,6 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             except KeyboardInterrupt:
                 print_adjusted('KeyboardInterrupt. Interrupting this prompt. Try again :D')
                 continue
-                # I can format the two above lines better byr
             # End of else clause
 
         # Successfully passed through else clause and response string obtained
@@ -1128,7 +1140,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
         if (amnesia == False) and (persistant_amnesia == False):
             conversation_in_memory.append((prompt, response))
             history += prompt + response + '\n\n'
-        else: # If amnesia is True, don't add it to the conversation_in_memory
+        elif amnesia == True: # If amnesia is True, don't add it to the conversation_in_memory
             amnesia = False
         prompts_and_responses.append((prompt, response))
         if response != EMPTY_RESPONSE_DELIMITER:
