@@ -43,7 +43,8 @@ def print_adjusted(text) -> None:
 try:
     # Function for the -yt command to download a youtube video
     from pytube import YouTube
-    # CURRENTLY HAVING ISSUES
+    # CURRENTLY HAVING ISSUES -> My solution requires editing one line of the source code in the pytube library
+    # Replace Line 411 in /site-packages/pytube/cipher.py to transform_plan_raw = js
     def download_video(url: str, filepath: str) -> None:
         '''
         Downloads a youtube video from the given url
@@ -627,20 +628,14 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
     replace_input = False
     replace_input_text = ''
     
-    
-
     temp_amnesia = False
-    persistant_amnesia = False
+    persistent_amnesia = False
 
     cached_engine = None
     cached_history = None
     cached_tokens = None
     cached_prompt, cached_response = ('', '')
     
-
-    response_count = 0
-    chat_ongoing = True
-
     config_info = config_msg(engine, max_tokens, session_total_tokens) + '\n'
     full_log += config_info
     print_adjusted(config_info)
@@ -650,10 +645,11 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
     custom_preset = None
     check_length = False
 
-
+    response_count = 0
+    chat_ongoing = True
     while chat_ongoing:
         # temp_amnesia does not use conversation_in_memory, saving the current configuration / history for next prompt
-        if temp_amnesia == False and persistant_amnesia == False:
+        if temp_amnesia == False and persistent_amnesia == False:
             if cached_engine:
                 engine = cached_engine # Restore the engine
                 cached_engine = None
@@ -702,7 +698,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
         elif user_input == 'stats':
             config_info = config_msg(engine, max_tokens, session_total_tokens)
             print_adjusted(config_info)
-            print_adjusted(f'Logging {logging_on} | Debug {debug} | Amnesia {persistant_amnesia}\n')
+            print_adjusted(f'Logging {logging_on} | Debug {debug} | Amnesia {persistent_amnesia}\n')
             continue
         elif user_input in ['-d', 'debug']:
             debug = not(debug)
@@ -723,10 +719,10 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 print_adjusted('Did you mean to type a config command? Format is: `config <engine> <max_tokens>')
                 continue
             
-            if '-a' in args: # Toggle persistant_amnesia
-                persistant_amnesia = not persistant_amnesia
+            if '-a' in args: # Toggle persistent_amnesia
+                persistent_amnesia = not persistent_amnesia
                 args.remove('-a')
-                print_adjusted(f'Amnesia set to {persistant_amnesia}')
+                print_adjusted(f'Amnesia set to {persistent_amnesia}')
             if '-d' in args: # Toggle debug
                 debug = not debug
                 args.remove('-d')
@@ -907,7 +903,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                         file.write('# This Python3 function [What it does]:\ndef myFunc():\n\t#Do THIS')
                         print_adjusted('Toss something in there before setting the tokens!')
             
-            # Set tokens (persistant until valid chosen!)
+            # Set tokens (persistent until valid chosen!)
             default = None
             limit = MAX_CODEX
             try:
@@ -1107,7 +1103,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                         messages = CHAT_INIT_DEFAULT # initiate conversation
 
                     context = []    
-                    if (temp_amnesia == False) and (persistant_amnesia == False) and (conversation_in_memory): 
+                    if (temp_amnesia == False) and (persistent_amnesia == False) and (conversation_in_memory): 
                         for p, r in conversation_in_memory: # add conversation context
                             context += [{"role": "user", "content": p},
                                         {"role": "assistant", "content": r}]
@@ -1140,7 +1136,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
         if temp_amnesia == True: # If temp_amnesia (temporary) is True, don't add it to the conversation_in_memory
             temp_amnesia == False
         else:
-            if persistant_amnesia == False:
+            if persistent_amnesia == False:
                 conversation_in_memory.append((prompt, response))
                 history += prompt + response + '\n\n'
         prompts_and_responses.append((prompt, response))
@@ -1159,7 +1155,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
         
         # Log the response and response time
         response_count += 1
-        full_log += f'({response_count}.)' + prompt + '\n' + response_time_marker + response + '\n'
+        full_log += f'({response_count}{"*" if temp_amnesia or persistent_amnesia else ""}.)' + prompt + '\n' + response_time_marker + response + '\n'
         response_time_log += f'[#{response_count}, RT:{RT}, T:{completion_tokens}, E:{engine_marker}]'
 
         # Print the response and response time
