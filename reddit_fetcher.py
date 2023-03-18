@@ -280,7 +280,7 @@ def main(user_input, limit_qty, sort_type, time_period, max_count, debug):
         return
     # Write it to contents.txt
     try:
-        with open(f'{filepath}/contents.txt', 'w') as file:
+        with open(os.path.join(filepath, 'contents.txt'), 'w') as file:
             file.write(output)
     except:
         print('Error. Could not write to contents.txt')

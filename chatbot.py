@@ -11,18 +11,15 @@ from clipboard import copy as clipboard_copy, paste as clipboard_paste
 from platform import system
 class TanSaysNoNo(Exception): pass
 class QuitAndSaveError(Exception): pass
-if system() == 'Windows':
-    dev = False
-else:
-    import gnureadline # Not supported on windows
-    if dev: # Not officially released. Needs transformers library.
-        # Allows you to check the tokens in your prompt without having to make a call to the OpenAI API (Using -len)
-        # It uses a fully offline and local pretrained GPT-2 model to tokenize the prompt
-        import logging
-        logging.disable(logging.ERROR) # Ignore a warning that doesn't apply to our use of GPT-2
-        from transformers import GPT2TokenizerFast
-        tokenize = GPT2TokenizerFast.from_pretrained("gpt2", local_files_only = True).tokenize
-        os.environ["TOKENIZERS_PARALLELISM"] = "false" # Disable parallelism to avoid a warning
+if system() != 'Windows': import gnureadline # Not supported on windows
+if dev: # Not officially released. Needs transformers library.
+    # Allows you to check the tokens in your prompt without having to make a call to the OpenAI API (Using -len)
+    # It uses a fully offline and local pretrained GPT-2 model to tokenize the prompt
+    import logging
+    logging.disable(logging.ERROR) # Ignore a warning that doesn't apply to our use of GPT-2
+    from transformers import GPT2TokenizerFast
+    tokenize = GPT2TokenizerFast.from_pretrained('gpt2', local_files_only = True).tokenize
+    os.environ['TOKENIZERS_PARALLELISM'] = 'false' # Disable parallelism to avoid a warning
 
 # Wrap the text to fit within the terminal window
 from textwrap import fill
@@ -87,26 +84,26 @@ STOP = None # This should be an array of string stop_sequences
 FREQUENCY_PENALTY_VAL = 0.7 # This is not currently configurable within interactive_chat
 
 ### NEW GPT-3.5-TURBO ENGINE CONFIGURATION ###
-CHAT_INIT_DEFAULT = [{"role": "system", "content": "You are a helpful AI specialized for a university student."}]
-CHAT_INIT_TROLL = [{"role": "system", "content": "You are tasked with being hilariously unhelpful to the user."}]
-CHAT_INIT_CRAZY = [{"role": "system", "content": "You are tasked with being helpful, but as unhinged and witty as possible."}]
-CHAT_INIT_HINDI = [{"role": "system", "content": "Reply to user in Hinglish (Hindi/English as written by indians)"}]
+CHAT_INIT_DEFAULT = [{'role': 'system', 'content': 'You are a helpful AI specialized for a university student.'}]
+CHAT_INIT_TROLL = [{'role': 'system', 'content': 'You are tasked with being hilariously unhelpful to the user.'}]
+CHAT_INIT_CRAZY = [{'role': 'system', 'content': 'You are tasked with being helpful, but as unhinged and witty as possible.'}]
+CHAT_INIT_HINDI = [{'role': 'system', 'content': 'Reply to user in Hinglish (Hindi/English as written by indians)'}]
 
-CHAT_INIT_CUSTOM = [{"role": "system", "content": "Set your custom preset by typing the command -mode!"}]
+CHAT_INIT_CUSTOM = [{'role': 'system', 'content': 'Set your custom preset by typing the command -mode!'}]
 
 
-CHAT_INIT_MAGIC = [{"role": "system", "content": """A magic string is text formatted as [<u/user or r/subreddit> <opt:qty> <opt:new or
-                        top> <opt: all/year/month/week/day/hour>] You may ONLY respond with a magic string or X. Do not parse the meaning of the selected subreddit or any keywords"""},
-                    {"role": "user", "content": "How about u/username pics 5 or top from all"},
-                    {"role": "assistant", "content": "u/username 5 top all"},
-                    {"role": "user", "content": "I want to download a hundred photos from you/user"}, 
-                    {"role": "assistant", "content": "u/user 100"},
-                    {"role": "user", "content": "Let's do r/houseplants, but I want fifty of the top photos from the year"}, 
-                    {"role": "assistant", "content": "r/houseplants 50 top year"},
-                    {"role": "user", "content": "Let's say I wanted to download 300 of the top pictures from our/smashbros"}, 
-                    {"role": "assistant", "content": "r/smashbros 300"}]
+CHAT_INIT_MAGIC = [{'role': 'system', 'content': '''A magic string is text formatted as [<u/user or r/subreddit> <opt:qty> <opt:new or
+                        top> <opt: all/year/month/week/day/hour>] You may ONLY respond with a magic string or X. Do not parse the meaning of the selected subreddit or any keywords'''},
+                    {'role': 'user', 'content': 'How about u/username pics 5 or top from all'},
+                    {'role': 'assistant', 'content': 'u/username 5 top all'},
+                    {'role': 'user', 'content': 'I want to download a hundred photos from you/user'}, 
+                    {'role': 'assistant', 'content': 'u/user 100'},
+                    {'role': 'user', 'content': 'Lets do r/houseplants, but I want fifty of the top photos from the year'}, 
+                    {'role': 'assistant', 'content': 'r/houseplants 50 top year'},
+                    {'role': 'user', 'content': 'Lets say I wanted to download 300 of the top pictures from our/smashbros'}, 
+                    {'role': 'assistant', 'content': 'r/smashbros 300'}]
 
-CHAT_INIT_JOKES = [{"role": "system", "content": "Tell a clever joke about the given theme"}]
+CHAT_INIT_JOKES = [{'role': 'system', 'content': 'Tell a clever joke about the given theme'}]
 
 
 CMD_DICT = {
@@ -223,7 +220,7 @@ def get_response_string(response_struct: dict, suppress_token_warnings: bool) ->
     try: # Traverse the response structure to get the first response
         response_struct = response_struct['choices'][0]
     except:
-        print_adjusted("Could not access response['choices']")
+        print_adjusted('Could not access response["choices"]')
         raise TanSaysNoNo
     finish_reason = response_struct['finish_reason']
     if finish_reason is None:
@@ -1107,12 +1104,12 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                     context = []    
                     if (temp_amnesia == False) and (persistent_amnesia == False) and (conversation_in_memory): 
                         for p, r in conversation_in_memory: # add conversation context
-                            context += [{"role": "user", "content": p},
-                                        {"role": "assistant", "content": r}]
+                            context += [{'role': 'user', 'content': p},
+                                        {'role': 'assistant', 'content': r}]
 
-                    context += [{"role": "user", "content": prompt}]
+                    context += [{'role': 'user', 'content': prompt}]
                     if ( len(messages) == 1 ) and ( suppress_extra_prints == False ):
-                        print_adjusted(f"Using preset:{messages[0]['content']}")
+                        print_adjusted(f'Using preset:{messages[0]["content"]}')
 
                     if debug: print_adjusted(messages + context)
                     response_string, response_tokens, prompt_tokens, completion_tokens = prompt_to_response(
