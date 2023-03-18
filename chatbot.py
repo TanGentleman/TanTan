@@ -1,11 +1,13 @@
 from config import dev, filepath, get_openai_api_key # These are from config.py
+import image_generation as ig
 import openai
+import os
 from datetime import datetime
 from time import time
-import os
+
 
 from clipboard import copy as clipboard_copy, paste as clipboard_paste
-import image_generation as ig
+
 from platform import system
 class TanSaysNoNo(Exception): pass
 class QuitAndSaveError(Exception): pass
@@ -43,7 +45,7 @@ def print_adjusted(text) -> None:
 try:
     # Function for the -yt command to download a youtube video
     from pytube import YouTube
-    # CURRENTLY HAVING ISSUES -> My solution requires editing one line of the source code in the pytube library
+    # CURRENTLY HAVING ISSUES -> Workaround requires editing one line of the source code in the pytube library
     # Replace Line 411 in /site-packages/pytube/cipher.py to transform_plan_raw = js
     def download_video(url: str, filepath: str) -> None:
         '''
@@ -104,7 +106,7 @@ CHAT_INIT_MAGIC = [{"role": "system", "content": """A magic string is text forma
                     {"role": "user", "content": "Let's say I wanted to download 300 of the top pictures from our/smashbros"}, 
                     {"role": "assistant", "content": "r/smashbros 300"}]
 
-CHAT_INIT_JOKES = [{"role": "system", "content": "Tell the most clever joke you can given the user's prompt"}]
+CHAT_INIT_JOKES = [{"role": "system", "content": "Tell a clever joke about the given theme"}]
 
 
 CMD_DICT = {
@@ -252,7 +254,7 @@ def read_prompt(filepath: str, filename: str) -> str:
     Returns contents of a prompt in a .txt file given filepath and name
     '''
     try:
-        contents_path = f'{filepath}/{filename}'
+        contents_path = os.path.join(filepath, filename)
         with open(contents_path, 'r') as file:
             file_contents = file.read()
             return file_contents
@@ -285,7 +287,7 @@ def read_magic_string_training() -> str:
     '''
     Returns contents of magic_string_training.txt
     '''
-    filename = 'TrainingData/magic_string_training.txt'
+    filename = os.path.join('TrainingData', 'magic_string_training.txt')
     text = read_prompt(filepath, filename)
     if text:
         return text
@@ -373,11 +375,11 @@ def write_to_log_file(convo: str, response_times:str) -> None:
     Writes conversation and response times to log files
     '''
     try:
-        with open(f'{filepath}/{CONVO_LOGFILE}', 'a') as file:
+        with open(os.path.join(filepath, CONVO_LOGFILE), 'a') as file:
             timestamp = datetime.now().strftime('%Y-%m-%d')
             file.write(f'Timestamp: {timestamp}\n{convo}\n ==== End of Entry ====\n')
             print_adjusted('Saved conversation log file.')
-        with open(f'{filepath}/{RESPONSE_TIME_LOGFILE}', 'a') as file:
+        with open(os.path.join(filepath, RESPONSE_TIME_LOGFILE), 'a') as file:
             timestamp = datetime.now().strftime('%Y-%m-%d')
             file.write(f'Timestamp: {timestamp}\n{response_times}\n ==== End of Entry ====\n')
             print_adjusted('Saved response time log file.')
@@ -847,7 +849,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             continue
         elif user_input == '-read': # Responds to text_prompt.txt
             # Amnesic reading
-            if os.path.isfile(f'{filepath}/text_prompt.txt'):
+            if os.path.isfile(os.path.join(filepath, 'text_prompt.txt')):
                 text_prompt = read_text_prompt()
                 if text_prompt:
                     print_adjusted('Reading text_prompt.txt')
@@ -863,7 +865,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                     continue
             else:
                 print_adjusted('You have not written a text_prompt.txt file for me to read. I gotchu.')
-                with open(f'{filepath}/text_prompt.txt', 'w') as file:
+                with open(os.path.join(filepath, 'text_prompt.txt'), 'w') as file:
                     file.write('Insert text prompt here')
                 print_adjusted('Try adding something!')
             continue
@@ -895,13 +897,13 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             # Responds to codex_prompt.txt using codex engine
             
             # If file exists, read it. Else, write a template.
-            if os.path.isfile(f'{filepath}/codex_prompt.txt'):
+            if os.path.isfile(os.path.join(filepath, 'codex_prompt.txt')):
                 print_adjusted(f'Reading codex!')
             else:
                 print_adjusted('You have not written a codex_prompt.txt file for me to read. I gotchu.')
-                with open(f'{filepath}/codex_prompt.txt', 'w') as file:
-                        file.write('# This Python3 function [What it does]:\ndef myFunc():\n\t#Do THIS')
-                        print_adjusted('Toss something in there before setting the tokens!')
+                with open(os.path.join(filepath, 'codex_prompt.txt'), 'w') as file:
+                    file.write('# This Python3 function [What it does]:\ndef myFunc():\n\t#Do THIS')
+                    print_adjusted('Toss something in there before setting the tokens!')
             
             # Set tokens (persistent until valid chosen!)
             default = None
@@ -943,7 +945,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
         # Save the recent prompt/response exchange to response.txt
         elif user_input in ['-s','save']:
             text = f'PROMPT:\n{cached_prompt}\nRESPONSE:\n{cached_response}'
-            with open(f'{filepath}/response.txt', 'w') as file:
+            with open(os.path.join(filepath, 'response.txt'), 'w') as file:
                 file.write(text)
             print_adjusted('Saved most recent exchange to response.txt!')
             continue
@@ -1017,7 +1019,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             full_log += msg + '\n'
             continue
         elif user_input == '-yt':
-            clipboard_contents = clipboard_paste()
+            clipboard_contents = clipboard_paste().strip()
             if clipboard_contents.count('youtu') != 1:
                 print_adjusted('Invalid URL. Please copy a valid youtube link to your clipboard and try again.')
                 continue
@@ -1032,7 +1034,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 try:
                     print_adjusted('Attempting download with given url...')
                     try:
-                        print_adjusted(clipboard_contents.strip())
+                        print_adjusted(clipboard_contents)
                         download_video(clipboard_contents, filepath)
                     except Exception as e:
                         print_adjusted(e)
@@ -1093,7 +1095,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                         messages = CHAT_INIT_MAGIC
                     elif preset == 'jokes':
                         max_tokens = 50
-                        temperature = 0.8
+                        temperature = 0.7
                         temp_amnesia = True
                         if suppress_extra_prints == False:
                             print_adjusted(f'Jokes! Max tokens: {max_tokens} | Temperature: {temperature} | Amnesia: {temp_amnesia}')
