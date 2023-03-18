@@ -43,7 +43,8 @@ def print_adjusted(text) -> None:
 try:
     # Function for the -yt command to download a youtube video
     from pytube import YouTube
-    def download_video(url: str) -> None:
+    # CURRENTLY HAVING ISSUES
+    def download_video(url: str, filepath: str) -> None:
         '''
         Downloads a youtube video from the given url
         '''
@@ -51,11 +52,12 @@ try:
             yt = YouTube(url)
             stream = yt.streams.get_highest_resolution()
             stream.download(filepath)
-        except:
+        except Exception as e:
+            print_adjusted(e)
             print_adjusted('Error downloading video. Please check that url is correct and try again.')
+            raise TanSaysNoNo
 except:
     pass
-
 # Gets filepath from config.filepath, make sure you are either in the repository or filepath is set correctly
 filepath = os.path.join(filepath, 'Chatbot')
 
@@ -1004,8 +1006,11 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                         '6': 'jokes', 'jokes': 'jokes'}
             preset = preset_map.get(mode_input, 'invalid mode')
             if preset == 'invalid mode':
-                print_adjusted('Invalid mode. Setting to default.')
+                print_adjusted('Invalid mode. Setting config to default.')
                 preset = 'default'
+                engine = 'gpt-3.5-turbo'
+                max_tokens = DEFAULT_MAX_TOKENS
+                temperature = DEFAULT_TEMPERATURE
                 continue
             elif preset == 'custom':
                 custom_preset = input('Create a custom mode, like `You are a helpful AI with a stutter.`:\n')
@@ -1030,7 +1035,13 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 # Otherwise, print an error message
                 try:
                     print_adjusted('Attempting download with given url...')
-                    download_video(clipboard_contents.strip())    
+                    try:
+                        print_adjusted(clipboard_contents.strip())
+                        download_video(clipboard_contents, filepath)
+                    except Exception as e:
+                        print_adjusted(e)
+                        print_adjusted('Invalid URL. Try again.')
+                        continue
                     print_adjusted('Downloaded video!')
                 except:
                     print_adjusted('Invalid URL. Try again.')
@@ -1073,9 +1084,6 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                         messages = convo_init
                     elif preset == 'default':
                         messages = CHAT_INIT_DEFAULT
-                        engine = 'gpt-3.5-turbo'
-                        max_tokens = DEFAULT_MAX_TOKENS
-                        temperature = DEFAULT_TEMPERATURE
                     elif preset == 'unhelpful':
                         messages = CHAT_INIT_TROLL
                     elif preset == 'crazy':
@@ -1109,7 +1117,6 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                         print_adjusted(f"Using preset:{messages[0]['content']}")
 
                     if debug: print_adjusted(messages + context)
-                    
                     response_string, response_tokens, prompt_tokens, completion_tokens = prompt_to_response(
                     debug, history, engine, max_tokens, temperature, suppress_token_warnings, None, messages + context )
 
