@@ -103,7 +103,7 @@ def save_images(titles, links, folder_path):
         seen.add(filename)
 
         # Save the image
-        print(f'{folder_path}/{filename}{file_extension}<----')
+        # print(f'{folder_path}/{filename}{file_extension}<----')
         try:
             with open(f'{folder_path}/{filename}{file_extension}', 'wb') as f:
                 f.write(res.content)

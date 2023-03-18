@@ -1,4 +1,4 @@
-# New way to run the chatbot from within a python environment:
+# Alternate way to run the chatbot:
 1. Move chat.py to your home directory and configure FILENAME.
 2. Run terminal command:
 - `python3 chat.py`

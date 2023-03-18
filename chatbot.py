@@ -214,7 +214,6 @@ def get_response_string(response_struct: dict, suppress_token_warnings: bool) ->
         elif val == 'total_tokens':
             completion_tokens = tok_val
 
-    print('b')
     # I have hardcoded number of choices to 1, contact me if you have an exceptional use case for multiple responses
     try: # Traverse the response structure to get the first response
         response_struct = response_struct['choices'][0]
@@ -628,7 +627,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
     
     
 
-    amnesia = False
+    temp_amnesia = False
     persistant_amnesia = False
 
     cached_engine = None
@@ -651,8 +650,8 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
 
 
     while chat_ongoing:
-        # Amnesia does not use conversation_in_memory, saving the current configuration / history for next prompt
-        if amnesia == False:
+        # temp_amnesia does not use conversation_in_memory, saving the current configuration / history for next prompt
+        if temp_amnesia == False and persistant_amnesia == False:
             if cached_engine:
                 engine = cached_engine # Restore the engine
                 cached_engine = None
@@ -664,7 +663,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 cached_tokens = None
         
         # When non-amnesic, history should always be consistent with the conversation in memory
-        assert(amnesia or (history == conversation_to_string(conversation_in_memory)))
+        assert(temp_amnesia or (history == conversation_to_string(conversation_in_memory)))
 
         # Get prompt
         if replace_input:
@@ -672,9 +671,9 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             replace_input = False
         else:
             user_input = input('You: ')
-            # I want to avoid spam user inputs. 
-            # I can lstrip/rstrip, but I want to allow for niche use cases in weird workflows.
-            # Planning to implement a cooldown of sorts, but I want to allow a line of multiple inputs (can be commands too).
+            # I want to avoid obvious/accidental spam user inputs. 
+            # lstrip/rstrip is an option, but I want to allow for niche use cases in weird workflows.
+            # Am working on implementing workflows in the form of a string, one command per line that can be pasted in lieu of complex configuration.
         
         # Start the timer
         start_time = time()
@@ -796,7 +795,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             cached_history = history
             history = ''
 
-            amnesia = True
+            temp_amnesia = True
             continue
             
         elif user_input == 'help': # Show list of commands
@@ -859,7 +858,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                     cached_history = history
                     history = ''
 
-                    amnesia = True
+                    temp_amnesia = True
                     continue
                 else:
                     print_adjusted('text_prompt.txt is empty. Try adding something!')
@@ -891,7 +890,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             replace_input = True
             replace_input_text = (clipboard_paste()).strip()
             print_adjusted('Responding to clipboard text...')
-            continue # No amnesia, so it will use the current history.
+            continue # No temp_amnesia, so it will use the current history.
             
         elif user_input == 'codex':
             # Amnesic command, will not affect current configuration or history
@@ -931,7 +930,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 engine = 'code-davinci-002' # Latest codex model
                 max_tokens = codex_tokens
                 
-                amnesia = True
+                temp_amnesia = True
                 continue
             else:
                 print_adjusted('No readable text in codex_prompt.txt')
@@ -1091,16 +1090,16 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                     elif preset == 'jokes':
                         max_tokens = 50
                         temperature = 0.8
-                        amnesia = True
+                        temp_amnesia = True
                         if suppress_extra_prints == False:
-                            print_adjusted(f'Jokes! Max tokens: {max_tokens} | Temperature: {temperature} | Amnesia: {amnesia}.')
+                            print_adjusted(f'Jokes! Max tokens: {max_tokens} | Temperature: {temperature} | Amnesia: {temp_amnesia}')
                         messages = CHAT_INIT_JOKES
                     else:
                         print_adjusted('Can I even get here?')
                         messages = CHAT_INIT_DEFAULT # initiate conversation
 
                     context = []    
-                    if (amnesia == False) and (persistant_amnesia == False) and (conversation_in_memory): 
+                    if (temp_amnesia == False) and (persistant_amnesia == False) and (conversation_in_memory): 
                         for p, r in conversation_in_memory: # add conversation context
                             context += [{"role": "user", "content": p},
                                         {"role": "assistant", "content": r}]
@@ -1131,11 +1130,12 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
         if debug: print_adjusted('beep, we got a response!')
 
         # Record a savestate and append history
-        if (amnesia == False) and (persistant_amnesia == False):
-            conversation_in_memory.append((prompt, response))
-            history += prompt + response + '\n\n'
-        elif amnesia == True: # If amnesia is True, don't add it to the conversation_in_memory
-            amnesia = False
+        if temp_amnesia == True: # If temp_amnesia (temporary) is True, don't add it to the conversation_in_memory
+            temp_amnesia == False
+        else:
+            if persistant_amnesia == False:
+                conversation_in_memory.append((prompt, response))
+                history += prompt + response + '\n\n'
         prompts_and_responses.append((prompt, response))
         if response != EMPTY_RESPONSE_DELIMITER:
             cached_prompt = prompt
