@@ -17,7 +17,7 @@
 - Logic for adding smart config strings like `config curie 20>`or `config turbo` to the function interactive_chat()
 - Utilize cache variables to store current engine/token/history
 - Expanded 'tanman' command documentation
-- Be able to save current convo to conversation.txt at any time.
+- Be able to save current prompt/response pair to response.txt at any time by typing `save`.
 - Escape string 'quit' can be used in any input() call, and it saves whenever possible
 - Commands now integrate copy and paste functionality, allowing for efficient workflows (deals with potentially annoying spaces or newlines)
 - Image generation fully live using -images

@@ -4,13 +4,9 @@ import openai
 import os
 from datetime import datetime
 from time import time
-
-
 from clipboard import copy as clipboard_copy, paste as clipboard_paste
-
 from platform import system
-class TanSaysNoNo(Exception): pass
-class QuitAndSaveError(Exception): pass
+
 if system() != 'Windows': import gnureadline # Not supported on windows
 if dev: # Not officially released. Needs transformers library.
     # Allows you to check the tokens in your prompt without having to make a call to the OpenAI API (Using -len)
@@ -23,8 +19,10 @@ if dev: # Not officially released. Needs transformers library.
 
 # Wrap the text to fit within the terminal window
 from textwrap import fill
-terminal_width = os.get_terminal_size().columns
+TERMINAL_WIDTH = os.get_terminal_size().columns
 
+class TanSaysNoNo(Exception): pass
+class QuitAndSaveError(Exception): pass
 def print_adjusted(text) -> None:
     '''
     Prints text with adjusted line wrapping
@@ -34,8 +32,8 @@ def print_adjusted(text) -> None:
     lines = text.splitlines()
     for line in lines:
         # If the line is longer than the terminal width, wrap it to fit within the width
-        if len(line) > terminal_width:
-            wrapped_line = fill(line, width=terminal_width)
+        if len(line) > TERMINAL_WIDTH:
+            wrapped_line = fill(line, width=TERMINAL_WIDTH)
             print(wrapped_line)
         else:
             print(line)
@@ -698,6 +696,10 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             config_info = config_msg(engine, max_tokens, session_total_tokens)
             print_adjusted(config_info)
             print_adjusted(f'Logging {logging_on} | Debug {debug} | Amnesia {persistent_amnesia}\n')
+            try:
+                print_adjusted(f'Last system message used: {messages[0]["content"]}')
+            except:
+                pass
             continue
         elif user_input in ['-d', 'debug']:
             debug = not(debug)
@@ -1006,6 +1008,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 engine = 'gpt-3.5-turbo'
                 max_tokens = DEFAULT_MAX_TOKENS
                 temperature = DEFAULT_TEMPERATURE
+                print_adjusted(f'Amnesia: {persistent_amnesia}')
                 continue
             elif preset == 'custom':
                 custom_preset = input('Create a custom mode, like `You are a helpful AI with a stutter.`:\n')
@@ -1154,11 +1157,12 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
         
         # Log the response and response time
         response_count += 1
-        full_log += f'({response_count}{"*" if temp_amnesia or persistent_amnesia else ""}.)' + prompt + '\n' + response_time_marker + response + '\n'
+        asterisk_for_amnesia = '*' if temp_amnesia or persistent_amnesia else ''
+        full_log += f'({response_count}{asterisk_for_amnesia}.)' + prompt + '\n' + response_time_marker + response + '\n'
         response_time_log += f'[#{response_count}, RT:{RT}, T:{completion_tokens}, E:{engine_marker}]'
 
         # Print the response and response time
-        print_adjusted(f'Response {response_count}: {response}\n\n')
+        print_adjusted(f'Response {response_count}{asterisk_for_amnesia}: {response}\n\n')
         print_adjusted(f'response time: {round(time_taken, 1)} seconds')
         session_total_tokens += completion_tokens
         
