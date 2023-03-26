@@ -74,7 +74,6 @@ DEFAULT_TEMPERATURE = 0.5 # Set close to 0 when you want the response to be more
 
 EMPTY_RESPONSE_DELIMITER = '.' # Replaces the response when blocked or empty
 
-MAX_CODEX = 4000 # max token limit for codex when using the -codex command
 MAX_TOKEN_LIMIT = 4000 # max allowable token limit (for safety, but maybe adjust?)
 MAX_SESSION_TOTAL_TOKENS = 5000 # This measures all tokens used in this session, used for a warning
 WARNING_HISTORY_COUNT = 3000 # History only includes the conversation currently in memory
@@ -101,13 +100,12 @@ CHAT_INIT_MAGIC = [{'role': 'system', 'content': '''A magic string is text forma
                     {'role': 'user', 'content': 'Lets say I wanted to download 300 of the top pictures from our/smashbros'}, 
                     {'role': 'assistant', 'content': 'r/smashbros 300'}]
 
-CHAT_INIT_JOKES = [{'role': 'system', 'content': 'Tell a clever joke about the given theme'}]
+CHAT_INIT_JOKES = [{'role': 'system', 'content': 'Use the prompt in a clever joke.'}]
 
 
 CMD_DICT = {
             'quit': 'Exit the chatbot. Alias -q',
             'config': 'Set engine and max_tokens using `config <engine> <max_tokens>`',
-            'codex': 'Generate a code completion from codex_prompt.txt',
             'debug': 'Toggle debug mode. Alias -d',
             'del': 'Delete the last exchange from memory',
             'forget': 'Forget the past conversation. Alias -f',
@@ -256,17 +254,6 @@ def read_prompt(filepath: str, filename: str) -> str:
     except FileNotFoundError:
         print_adjusted(f'No {filename} in this directory found')
 
-def read_codex_prompt() -> str:
-    '''
-    Returns contents of codex_prompt.txt
-    '''
-    filename = 'codex_prompt.txt'
-    text = read_prompt(filepath, filename)
-    if text:
-        return text
-    else:
-        print_adjusted('Could not read codex_prompt.txt')
-
 def read_text_prompt() -> str:
     '''
     Returns contents of text_prompt.txt
@@ -312,7 +299,7 @@ def generate_text(debug: bool, engine: str, max_tokens: int, temperature: float,
             prompt=prompt,
             # testing this 2000 thing for a sec
             max_tokens = max_tokens if 'davinci' in engine else min(2000, max_tokens),
-            temperature = 0 if 'code' in engine else temperature,
+            temperature = temperature,
             frequency_penalty = FREQUENCY_PENALTY_VAL,
             stop = STOP # Using this in conjunction with the custom preset seems smart. I'll add STOP into config_vars or smth later on
         )
@@ -406,6 +393,7 @@ def parse_args(args: list[str], engine: str, max_tokens: int) -> tuple[str, int]
             ask_engine = False # Don't ask for the engine again
             try:
                 test_toks = int(args[i+2]) # Get the max tokens value
+                temp_tok_limit = MAX_TOKEN_LIMIT # Set the max tokens limit to the normal limit
             except ValueError: # If the max tokens value is not an integer
                 print_adjusted('Integers only!') # Print an error message
                 ask_token = True # Ask for the max tokens again
@@ -416,11 +404,6 @@ def parse_args(args: list[str], engine: str, max_tokens: int) -> tuple[str, int]
                 ask_token = False # Do NOT Ask for the max tokens again
                 engine, max_tokens = configurate(ask_engine, ask_token, engine, max_tokens) # Configurate the engine and max tokens
                 break
-            if engine == 'code-davinci-002':
-                temp_tok_limit = MAX_CODEX # Set the max tokens limit to the codex limit
-            else:
-                temp_tok_limit = MAX_TOKEN_LIMIT # Set the max tokens limit to the normal limit
-
             if (test_toks > 0) and (test_toks <= temp_tok_limit):
                 max_tokens = test_toks # Set the max tokens to the new value
                 ask_token = False # Don't ask for the max tokens again
@@ -467,17 +450,9 @@ def engine_choice(engine_prompt: str, slow_status: bool = DISABLE_NERDS) -> str:
         else:
             engine = 'gpt-3.5-turbo'
             return engine
-    elif (engine_prompt == 'code-davinci-002') or ('codex'.startswith(engine_prompt)):
-        if slow_status == True:
-            print_adjusted('Codex unavailable, switching to curie.')
-            engine = 'text-curie-001'
-            return engine
-        else:
-            engine = 'code-davinci-002'
-            return engine
     elif (engine_prompt == 'text-davinci-003') or ('davinci'.startswith(engine_prompt)):
         if slow_status == True:
-            print_adjusted('Davinci unavailable, switching to curie.')
+            print_adjusted('davinci unavailable, switching to curie.')
             engine = 'text-curie-001'
             return engine
         else:
@@ -551,7 +526,7 @@ def configurate(ask_engine: bool, ask_token: bool, engine: str, max_tokens: int)
         while legal_answer == False:
             engine_prompt = ''
             try:
-                engine_prompt = input('Choose an engine: ada, babbage, curie, davinci, codex, turbo:\n')
+                engine_prompt = input('Choose an engine: ada, babbage, curie, davinci, turbo:\n')
                 check_quit(engine_prompt)
                 engine = engine_choice(engine_prompt)
                 legal_answer = True
@@ -612,10 +587,15 @@ def prompt_to_response(debug: bool, history: str, engine: str, max_tokens: int, 
 # This function needs proper re-structuring for readability!
 def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints = False, suppress_token_warnings = False) -> tuple[str, str, bool]:
     # Unpack config_vars
-    # config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature}
+    # config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature, 
+    #                'amnesia': persistent_amnesia, 'preset': preset, 'convo': conversation_in_memory}
     engine = config_vars['engine']
     max_tokens = config_vars['max_tokens']
     temperature = config_vars['temperature']
+    persistent_amnesia = config_vars['amnesia']
+    preset = config_vars['preset']
+    conversation_in_memory = config_vars['convo']
+   
     response_tokens, prompt_tokens, completion_tokens, session_total_tokens = (0, 0, 0, 0)
     prefix, suffix = ('', '')
     history  = ''
@@ -626,24 +606,26 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
     replace_input_text = ''
     
     temp_amnesia = False
-    persistent_amnesia = False
 
     cached_engine = None
     cached_history = None
     cached_tokens = None
     cached_prompt, cached_response = ('', '')
     
+    ### NEW CACHE SYSTEM
+    smp = False
+    cached_config = None
+
     config_info = config_msg(engine, max_tokens, session_total_tokens) + '\n'
     full_log += config_info
     print_adjusted(config_info)
     prompts_and_responses = []
-    conversation_in_memory = []
-    preset = 'default'
-    custom_preset = None
+    custom_preset = 'Be hilariously unhinged in a way that would amuse a young adult.'
     check_length = False
 
     response_count = 0
     chat_ongoing = True
+    
     while chat_ongoing:
         # temp_amnesia does not use conversation_in_memory, saving the current configuration / history for next prompt
         if temp_amnesia == False and persistent_amnesia == False:
@@ -756,6 +738,28 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 print_adjusted(msg + '\n')
                 full_log += msg + '\n'
             continue
+        elif user_input == '-read': # Responds to text_prompt.txt
+            # Amnesic reading
+            if os.path.isfile(os.path.join(filepath, 'text_prompt.txt')):
+                text_prompt = read_text_prompt()
+                if text_prompt:
+                    print_adjusted('Reading text_prompt.txt')
+                    replace_input = True
+                    replace_input_text = text_prompt
+                    cached_history = history
+                    history = ''
+
+                    temp_amnesia = True
+                    continue
+                else:
+                    print_adjusted('text_prompt.txt is empty. Try adding something!')
+                    continue
+            else:
+                print_adjusted('You have not written a text_prompt.txt file for me to read. I gotchu.')
+                with open(os.path.join(filepath, 'text_prompt.txt'), 'w') as file:
+                    file.write('Insert text prompt here')
+                print_adjusted('Try adding something!')
+            continue
         # Embedded clipboard reading. Example command:-r Define this word: # -r #
         elif (user_input != '-read') and user_input.startswith('-r'): # Amnesic
             args = user_input.split(' ')
@@ -798,7 +802,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             continue
             
         elif user_input == 'help': # Show list of commands
-            print_adjusted('For the full manual of commands and descriptions, type tan')
+            print_adjusted('For the full manual of commands and descriptions, type tan. This will be replaced with something more helpful in the future.')
             print_adjusted(list(CMD_DICT.keys()))
             continue
 
@@ -846,28 +850,6 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 print_adjusted(msg)
                 logging_on = True
             continue
-        elif user_input == '-read': # Responds to text_prompt.txt
-            # Amnesic reading
-            if os.path.isfile(os.path.join(filepath, 'text_prompt.txt')):
-                text_prompt = read_text_prompt()
-                if text_prompt:
-                    print_adjusted('Reading text_prompt.txt')
-                    replace_input = True
-                    replace_input_text = text_prompt
-                    cached_history = history
-                    history = ''
-
-                    temp_amnesia = True
-                    continue
-                else:
-                    print_adjusted('text_prompt.txt is empty. Try adding something!')
-                    continue
-            else:
-                print_adjusted('You have not written a text_prompt.txt file for me to read. I gotchu.')
-                with open(os.path.join(filepath, 'text_prompt.txt'), 'w') as file:
-                    file.write('Insert text prompt here')
-                print_adjusted('Try adding something!')
-            continue
         elif user_input == 'tok':
             default = max_tokens
             limit = MAX_TOKEN_LIMIT
@@ -888,52 +870,10 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             # -c is a NON-amnesic clipboard reader
             replace_input = True
             replace_input_text = (clipboard_paste()).strip()
-            print_adjusted('Responding to clipboard text...')
+            if check_length == False:
+                print_adjusted('Responding to clipboard text...')
             continue # No temp_amnesia, so it will use the current history.
             
-        elif user_input == 'codex':
-            # Amnesic command, will not affect current configuration or history
-            # Responds to codex_prompt.txt using codex engine
-            
-            # If file exists, read it. Else, write a template.
-            if os.path.isfile(os.path.join(filepath, 'codex_prompt.txt')):
-                print_adjusted(f'Reading codex!')
-            else:
-                print_adjusted('You have not written a codex_prompt.txt file for me to read. I gotchu.')
-                with open(os.path.join(filepath, 'codex_prompt.txt'), 'w') as file:
-                    file.write('# This Python3 function [What it does]:\ndef myFunc():\n\t#Do THIS')
-                    print_adjusted('Toss something in there before setting the tokens!')
-            
-            # Set tokens (persistent until valid chosen!)
-            default = None
-            limit = MAX_CODEX
-            try:
-                codex_tokens = set_max_tokens(default, limit)
-            except QuitAndSaveError:
-                replace_input, replace_input_text = True, 'quit'
-                continue
-            codex_text = read_codex_prompt()
-            
-            if codex_text:
-                # Replace user_input text with the text from codex_prompt.txt
-                replace_input = True
-                replace_input_text = codex_text
-
-                # Cache history to continue conversation afterwards
-                cached_history = history
-                cached_engine = engine
-                cached_tokens = max_tokens
-
-                # Configure for codex, Bypasses DISABLE_NERDS!
-                history = ''
-                engine = 'code-davinci-002' # Latest codex model
-                max_tokens = codex_tokens
-                
-                temp_amnesia = True
-                continue
-            else:
-                print_adjusted('No readable text in codex_prompt.txt')
-                continue
         elif user_input in ['tan']:
             
             text = '\nTanManual Opened! Available commands:\n\n' 
@@ -982,12 +922,19 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 print_adjusted('These settings are only available for the turbo GPT-3.5 engine. Try `config turbo`')
                 continue
             if conversation_in_memory:
-                ask_clear_input = input('Presets work best with a fresh start. Hit return to clear history, or anything else to cancel.')
+                ask_clear_input = input('**Existing conversation found**\nPresets work best with a fresh start. Hit return to clear history, or anything else to cancel.')
                 check_quit(ask_clear_input)
                 if ask_clear_input == '':
                     history = ''
                     conversation_in_memory = []
                     print_adjusted('History cleared.')
+                    # Save current config
+                    if smp == True:
+                        print_adjusted('You have a saved configuration. Type `back` to load it. Your current conversation will be discarded.')
+                    else:
+                        print_adjusted('Attempting to save current configuration...')
+                        replace_input = True
+                        replace_input_text = 'smp'
                 else:
                     print_adjusted('History retained. Cancelling preset.')
                     continue
@@ -1002,12 +949,13 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                         '5': 'magic', 'magic': 'magic',
                         '6': 'jokes', 'jokes': 'jokes'}
             preset = preset_map.get(mode_input, 'invalid mode')
-            if preset == 'invalid mode':
-                print_adjusted('Invalid mode. Setting config to default.')
+            if preset in ['default','invalid mode']:
+                print_adjusted('Setting config to default.')
                 preset = 'default'
                 engine = 'gpt-3.5-turbo'
                 max_tokens = DEFAULT_MAX_TOKENS
                 temperature = DEFAULT_TEMPERATURE
+                persistent_amnesia = False
                 print_adjusted(f'Amnesia: {persistent_amnesia}')
                 continue
             elif preset == 'custom':
@@ -1047,6 +995,28 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
         elif dev and user_input == '-len':
             check_length = True
             print_adjusted('Your next non-command input will now be scanned for length. It will not generate a response.')
+            continue
+        elif user_input == 'smp':
+            # Save my place
+            cached_config = (engine, max_tokens, temperature, persistent_amnesia, preset, conversation_in_memory + [])
+            print_adjusted('Saved your configuration and conversation history. Type `back` to return to this state.')
+            smp = True
+            continue
+        elif user_input == 'back':
+            if smp == False:
+                print_adjusted('No saved configuration to return to. Save one by typing `smp`')
+                continue
+            assert(cached_config is not None)
+            print_adjusted(f'{len(conversation_in_memory)} exchanges in memory.')
+            engine, max_tokens, temperature, persistent_amnesia, preset, conversation_in_memory = cached_config
+            print_adjusted(f'Convo!: {conversation_in_memory}')
+            if conversation_in_memory:
+                history = conversation_to_string(conversation_in_memory)
+            else:
+                history = ''
+            smp = False
+            cached_config = None
+            print_adjusted('Successfully set current state to saved config and conversation history.')
             continue
         # All valid non-command inputs pass through here.    
         else:
@@ -1133,10 +1103,10 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
         # Only if non-command, it has successfully passed through else clause.
         time_taken = time()-start_time
         if debug: print_adjusted('beep, we got a response!')
-
+        asterisk_for_amnesia = '*' if (temp_amnesia or persistent_amnesia) else ''
         # Record a savestate and append history
         if temp_amnesia == True: # If temp_amnesia (temporary) is True, don't add it to the conversation_in_memory
-            temp_amnesia == False
+            temp_amnesia = False
         else:
             if persistent_amnesia == False:
                 conversation_in_memory.append((prompt, response))
@@ -1157,7 +1127,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
         
         # Log the response and response time
         response_count += 1
-        asterisk_for_amnesia = '*' if temp_amnesia or persistent_amnesia else ''
+        #asterisk_for_amnesia = '*' if (temp_amnesia or persistent_amnesia) else ''
         full_log += f'({response_count}{asterisk_for_amnesia}.)' + prompt + '\n' + response_time_marker + response + '\n'
         response_time_log += f'[#{response_count}, RT:{RT}, T:{completion_tokens}, E:{engine_marker}]'
 
@@ -1182,14 +1152,17 @@ def get_config_from_CLI_args(args: list[str]) -> dict[str]:
 
     max_tokens = DEFAULT_MAX_TOKENS
     temperature = DEFAULT_TEMPERATURE
-
+    persistent_amnesia = False
+    conversation_in_memory = []
+    preset = 'default'
     arg_count = len(args)
     if arg_count > 1:
         try:
             engine, max_tokens = parse_args(args, engine, max_tokens)
         except QuitAndSaveError:
             raise QuitAndSaveError
-    config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature}
+    config_vars = {'engine': engine, 'max_tokens': max_tokens, 'temperature': temperature, 
+                   'amnesia': persistent_amnesia, 'preset': preset, 'convo': conversation_in_memory}
     return config_vars
 
 def run_chatbot(config_vars: dict[str], debug: bool, suppress_extra_prints = False, suppress_token_warnings = False) -> None:
@@ -1280,3 +1253,62 @@ if __name__ == '__main__':
     from sys import argv
     cli_arguments = argv
     main_from_args(cli_arguments)
+
+### Legacy CODEX clause
+"""
+def read_codex_prompt() -> str:
+    '''
+    Returns contents of codex_prompt.txt
+    '''
+    filename = 'codex_prompt.txt'
+    text = read_prompt(filepath, filename)
+    if text:
+        return text
+    else:
+        print_adjusted('Could not read codex_prompt.txt')
+
+
+elif user_input == 'codex':
+            # Amnesic command, will not affect current configuration or history
+            # Responds to codex_prompt.txt using codex engine
+            
+            # If file exists, read it. Else, write a template.
+            if os.path.isfile(os.path.join(filepath, 'codex_prompt.txt')):
+                print_adjusted(f'Reading codex!')
+            else:
+                print_adjusted('You have not written a codex_prompt.txt file for me to read. I gotchu.')
+                with open(os.path.join(filepath, 'codex_prompt.txt'), 'w') as file:
+                    file.write('# This Python3 function [What it does]:\ndef myFunc():\n\t#Do THIS')
+                    print_adjusted('Toss something in there before setting the tokens!')
+            
+            # Set tokens (persistent until valid chosen!)
+            default = None
+            limit = MAX_CODEX
+            try:
+                codex_tokens = set_max_tokens(default, limit)
+            except QuitAndSaveError:
+                replace_input, replace_input_text = True, 'quit'
+                continue
+            codex_text = read_codex_prompt()
+            
+            if codex_text:
+                # Replace user_input text with the text from codex_prompt.txt
+                replace_input = True
+                replace_input_text = codex_text
+
+                # Cache history to continue conversation afterwards
+                cached_history = history
+                cached_engine = engine
+                cached_tokens = max_tokens
+
+                # Configure for codex, Bypasses DISABLE_NERDS!
+                history = ''
+                engine = 'code-davinci-002' # Latest codex model
+                max_tokens = codex_tokens
+                
+                temp_amnesia = True
+                continue
+            else:
+                print_adjusted('No readable text in codex_prompt.txt')
+                continue
+"""
