@@ -1,5 +1,5 @@
 from config import dev, filepath, get_openai_api_key # These are from config.py
-import image_generation as ig
+from image_generation import generate_images_from_prompts as ig_from_prompts
 import openai
 import os
 from datetime import datetime
@@ -40,8 +40,6 @@ def print_adjusted(text) -> None:
 try:
     # Function for the -yt command to download a youtube video
     from pytube import YouTube
-    # CURRENTLY HAVING ISSUES -> Workaround requires editing one line of the source code in the pytube library
-    # Replace Line 411 in /site-packages/pytube/cipher.py to transform_plan_raw = js
     def download_video(url: str, filepath: str) -> None:
         '''
         Downloads a youtube video from the given url
@@ -85,6 +83,7 @@ CHAT_INIT_DEFAULT = [{'role': 'system', 'content': 'You are a helpful AI special
 CHAT_INIT_TROLL = [{'role': 'system', 'content': 'You are tasked with being hilariously unhelpful to the user.'}]
 CHAT_INIT_CRAZY = [{'role': 'system', 'content': 'You are tasked with being helpful, but as unhinged and witty as possible.'}]
 CHAT_INIT_HINDI = [{'role': 'system', 'content': 'Reply to user in Hinglish (Hindi/English as written by indians)'}]
+CHAT_INIT_CONCISE = [{'role': 'system', 'content': '"Reply least amount token. Speak like Neanderthal. No explain self. No provide adjective. Only answer. "'}]
 
 CHAT_INIT_CUSTOM = [{'role': 'system', 'content': 'Set your custom preset by typing the command -mode!'}]
 
@@ -133,6 +132,7 @@ CMD_DICT = {
                     'It works great to save your prompt and tinker using a different command\n' +
                     'Example: Type `Define the word:-p`, `tok 30`, then `-c`, maintaining the convo but keeping the response to clipboard short.',
             '-yt': 'Download the youtube video from the url in your clipboard.'
+            # Missing `smp` and `back`
             }
 
 def check_quit(text: str) -> None:
@@ -346,7 +346,7 @@ def generate_images_from_prompts(image_size: str, prompts: list[str] = None) -> 
     valid = False
     while valid == False:
         try:
-            ig.generate_images_from_prompts(os.path.join(filepath, 'DallE'), image_size, prompts)
+            ig_from_prompts(os.path.join(filepath, 'DallE'), image_size, prompts)
             valid = True
         except:
             print_adjusted('Image generation failed.')
@@ -661,20 +661,25 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
 
         # Quit Chat
         elif user_input in ['-q', 'quit']:
+            # If no tokens have been used, turn off logging
             if session_total_tokens == 0:
                 logging_on = False
+            # Modify log to include final token count
             else:
                 full_log += f'Tokens used: {session_total_tokens}'
-                #print_adjusted(prompts_and_responses)            
+                # The below line uses var prompts_and_responses which is currently not useful, but could be!
+                # print_adjusted(prompts_and_responses)            
             return full_log, response_time_log, logging_on
-
+        # If '-p' is at the end of the string, use the input as a prefix for the next input, rather than as a prompt
         elif user_input[-2:] == '-p':
             prefix = user_input[:-2]
             if prefix:
-                print_adjusted(f'Prefix: {prefix}')
+                # Should this fall under the extra prints suppression?
+                print_adjusted(f'Prefix added! Your next prompt will be appended to this.')
             continue 
-        # Need to organize the below commands
+        # Prints the current configuration
         elif user_input == 'stats':
+            # Change this to the values in cached_config, they're better. Just gotta format better
             config_info = config_msg(engine, max_tokens, session_total_tokens)
             print_adjusted(config_info)
             print_adjusted(f'Logging {logging_on} | Debug {debug} | Amnesia {persistent_amnesia}\n')
@@ -683,25 +688,30 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             except:
                 pass
             continue
+        # Toggle debug
         elif user_input in ['-d', 'debug']:
             debug = not(debug)
             print_adjusted(f'Debug mode: {debug}')
             continue
+        # Prompts the user to set a new engine and max_tokens value - probably gonna be legacy or need an overhaul
         elif user_input == 'config':
             args = ['config']
             try:
                 engine, max_tokens = parse_args(args, engine, max_tokens)
                 continue
             except QuitAndSaveError:
-                print_adjusted('Quitting...')
                 replace_input, replace_input_text = True, 'quit'
                 continue
+        # Uses a config string - check function parse_args for latest syntax
         elif user_input.startswith('config '):
-            args = user_input.split(' ')
-            if len(args) > 7:
+            # Too long to be a config command, I chose 50 arbitrarily until I make config strings sexier
+            if len(user_input) > 50: 
                 print_adjusted('Did you mean to type a config command? Format is: `config <engine> <max_tokens>')
                 continue
+            # Break the string into a list of arguments
+            args = user_input.split(' ')
             
+            # Flags (idk what to call them, but they're diff than the engine/token settings)
             if '-a' in args: # Toggle persistent_amnesia
                 persistent_amnesia = not persistent_amnesia
                 args.remove('-a')
@@ -714,35 +724,39 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 logging_on = not logging_on
                 args.remove('-l')
                 print_adjusted(f'Logging set to {logging_on}')
-            if '-sp' in args:
+            if '-sp' in args: # Toggle extra prints suppression
                 args.remove('-sp')
                 suppress_extra_prints = not(suppress_extra_prints)
                 print_adjusted(f'Print suppression {suppress_extra_prints}.')
-            if '-st' in args:
+            if '-st' in args: # Toggle token warning suppression
                 args.remove('-st')
                 suppress_token_warnings = not(suppress_token_warnings)
                 print_adjusted(f'Token warning suppression {suppress_token_warnings}.')
 
+            # If no value for engine/tokens, then no need to parse_args
             if args == ['config']:
                 continue
-
             args_count = len(args)
-            if args_count > 0:
-                try:
-                    engine, max_tokens = parse_args(args, engine, max_tokens)
-                except QuitAndSaveError:
-                    print_adjusted('Quitting...')
-                    replace_input, replace_input_text = True, 'quit'
-                    continue
-                msg = f'Engine set to: {engine}, {max_tokens} Max Tokens'
-                print_adjusted(msg + '\n')
-                full_log += msg + '\n'
+            # The below assertion has to hold right? Cuz only 'config ...' strings end up here
+            assert(args_count > 0)
+            # Set the engine and max_tokens
+            try:
+                engine, max_tokens = parse_args(args, engine, max_tokens)
+            except QuitAndSaveError:
+                replace_input, replace_input_text = True, 'quit'
+                continue
+            msg = f'Engine set to: {engine}, {max_tokens} Max Tokens'
+            print_adjusted(msg + '\n')
+            full_log += msg + '\n'
             continue
-        elif user_input == '-read': # Responds to text_prompt.txt
-            # Amnesic reading
+        # Responds to text_prompt.txt (amnesic, does not use past conversation or save to memory)
+        elif user_input == '-read': 
+            # Check if text_prompt.txt exists
             if os.path.isfile(os.path.join(filepath, 'text_prompt.txt')):
+                # Read the file
                 text_prompt = read_text_prompt()
                 if text_prompt:
+                    # Send the contents as the prompt
                     print_adjusted('Reading text_prompt.txt')
                     replace_input = True
                     replace_input_text = text_prompt
@@ -760,25 +774,22 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                     file.write('Insert text prompt here')
                 print_adjusted('Try adding something!')
             continue
-        # Embedded clipboard reading. Example command:-r Define this word: # -r #
-        elif (user_input != '-read') and user_input.startswith('-r'): # Amnesic
-            args = user_input.split(' ')
-            args_count = len(args)
-            
-            # Logic
-
+        # Embedded clipboard reading (amnesic). Example command:-r Define this word: # -r #
+        # I think I'm going to change `-r/-rs` and `-r ...` strings to separate clauses
+        elif (user_input in ['-r','-rs']) or (user_input.startswith('-r ')):
             # If -r used alone, no need to set prefix or suffix
             if user_input != '-r':
-                # If invalid formatting
+                args = user_input.split(' ')
+                args_count = len(args)
+                # If invalid formatting (I'm still tweaking the syntax)
                 if user_input[2] not in [' ', 's']:
                     print_adjusted('Check formatting. Type tan to check the documentation for clipboard commands.')
                     continue
                 else:
                     if user_input[2] == 's':
                         # clipboard summmary (previously -cs)
-                        prefix = 'Provide a brief summary of the following text:\n#'
+                        prefix = 'Provide a brief summary of the following text: #\n'
                         suffix = '\n#'
-
                     elif '-r' not in args[1:]: # single -r = suffix mode
                         suffix = user_input[2:]
                         print_adjusted(f'Suffix: {suffix}')
@@ -800,47 +811,51 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
 
             temp_amnesia = True
             continue
-            
-        elif user_input == 'help': # Show list of commands
+        
+        # Kinda dumb, ill try to make `help` more useful
+        elif user_input == 'help':
             print_adjusted('For the full manual of commands and descriptions, type tan. This will be replaced with something more helpful in the future.')
             print_adjusted(list(CMD_DICT.keys()))
             continue
-
-        elif user_input in ['his','history']: # Show convo history
+        # Print conversation history
+        elif user_input in ['his','history']:
             if conversation_in_memory:
-                conversation_string = ''
                 convo_length = len(conversation_in_memory)
-                res_count = 0
                 print_adjusted(f'{convo_length} exchanges in memory shown below:\n\n')
                 print_adjusted(formatted_conversation_to_string(conversation_in_memory))
             else:
                 print_adjusted('No conversation history in memory.')
             continue
-        elif user_input in ['-f','forget']: # Erase convo history
+        # Erase conversation history
+        elif user_input in ['-f','forget']:
+            if conversation_in_memory == []:
+                print_adjusted('No conversation stored in memory.')
+                continue
             conversation_in_memory = []
             history = ''
-            msg = '<History has been erased. Please continue the conversation fresh :)>\n'
+            msg = '<Conversation cleared>\n'
             print_adjusted(msg)
             full_log += msg
             continue
-        elif user_input == 'del': # Delete last exchange
+        # Delete last exchange (does the word exchange make sense? I mean a prompt/response pair)
+        elif user_input == 'del':
             if conversation_in_memory == []:
                 print_adjusted('No previous exchange to delete.')
                 continue
+            # Adjust both conversation_in_memory and history. I've made guardrails so updating history shouldn't be vital.
+            # I can ensure that history is never evaluated before conversation_in_memory, right?
+            conversation_in_memory.pop()
+            # For now, I will do a slightly expensive operation to redefine history
+            if conversation_in_memory:
+                history = conversation_to_string(conversation_in_memory)
             else:
-                # THIS DOES NOT EASILY ADJUST THE HISTORY VARIABLE. 
-                # I can also ensure that history is never used evaluated before conversation_in_memory, right?
-                conversation_in_memory.pop()
-                # For now, I will do a slightly expensive operation to redefine history
-                if conversation_in_memory:
-                    history = conversation_to_string(conversation_in_memory)
-                else:
-                    history = ''
-                msg = '<I have deleted the last exchange from my memory>\n'
-                print_adjusted(msg)
-                full_log += msg
-                continue
-        elif user_input == 'log': # Toggle logging
+                history = ''
+            msg = '<Scrubbed last prompt from memory>\n'
+            print_adjusted(msg)
+            full_log += msg
+            continue
+        # Toggle logging
+        elif user_input == 'log':
             if logging_on:
                 msg = '<Logging disabled> Conversation will not be stored.\n'
                 print_adjusted(msg)
@@ -850,6 +865,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 print_adjusted(msg)
                 logging_on = True
             continue
+        # Configure response length (max_tokens)
         elif user_input == 'tok':
             default = max_tokens
             limit = MAX_TOKEN_LIMIT
@@ -858,6 +874,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             except QuitAndSaveError:
                 replace_input, replace_input_text = True, 'quit'
             continue
+        # Configure temperature (0.0 - 1.0)
         elif user_input == 'temp':
             try:
                 temperature = set_temperature(temperature)
@@ -866,16 +883,16 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             except QuitAndSaveError:
                     replace_input, replace_input_text = True, 'quit'
             continue
+        # Use clipboard contents as prompt
         elif user_input == '-c': 
-            # -c is a NON-amnesic clipboard reader
+            # `-c` is a NON-amnesic clipboard reader
             replace_input = True
             replace_input_text = (clipboard_paste()).strip()
             if check_length == False:
                 print_adjusted('Responding to clipboard text...')
-            continue # No temp_amnesia, so it will use the current history.
-            
+            continue # No temp_amnesia, so it will use the conversation context, and continue it (unlike `-r``).
+        # Open the manual (I'm still working on this)
         elif user_input in ['tan']:
-            
             text = '\nTanManual Opened! Available commands:\n\n' 
             for i in range(len(CMD_DICT)):
                 text += f'{list(CMD_DICT.keys())[i]}: {list(CMD_DICT.values())[i]}\n'
@@ -888,10 +905,12 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 file.write(text)
             print_adjusted('Saved most recent exchange to response.txt!')
             continue
+        # Copy the most recent response to clipboard (works even when amnesic)
         elif user_input == '-sr':
             clipboard_copy(cached_response.strip())
             print_adjusted('Copied response to clipboard.')
             continue
+        # Copy the conversation in memory (history) to clipboard
         elif user_input == '-sh':
             if history:
                 convo_length = len(conversation_in_memory)
@@ -902,6 +921,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 msg = 'No history to copy.'
                 print_adjusted(msg)
             continue
+        # Image generation
         elif user_input == '-images':
             size_input = input('Sizes: s | SMALL, m | MED, l | LARGE, invalid | DEFAULT\nEnter your choice (s/m/l): ')
             check_quit(size_input)
@@ -917,6 +937,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             except Exception as e:
                 print_adjusted(f'Help me debug this! Error message: {e}')
             continue
+        # Set the mode (Use one of the presets or set a custom one.)
         elif user_input == '-mode':
             if 'turbo' not in engine:
                 print_adjusted('These settings are only available for the turbo GPT-3.5 engine. Try `config turbo`')
@@ -947,7 +968,8 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                         '3': 'crazy', 'crazy': 'crazy', 
                         '4': 'hindi', 'hindi': 'hindi',
                         '5': 'magic', 'magic': 'magic',
-                        '6': 'jokes', 'jokes': 'jokes'}
+                        '6': 'jokes', 'jokes': 'jokes',
+                        '7': 'concise', 'concise': 'concise'}
             preset = preset_map.get(mode_input, 'invalid mode')
             if preset in ['default','invalid mode']:
                 print_adjusted('Setting config to default.')
@@ -966,6 +988,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             print_adjusted(msg)
             full_log += msg + '\n'
             continue
+        # Download the youtube video in clipboard
         elif user_input == '-yt':
             clipboard_contents = clipboard_paste().strip()
             if clipboard_contents.count('youtu') != 1:
@@ -996,12 +1019,15 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             check_length = True
             print_adjusted('Your next non-command input will now be scanned for length. It will not generate a response.')
             continue
+        # Caches current configuration and convo. Return to this state with `back`
         elif user_input == 'smp':
-            # Save my place
-            cached_config = (engine, max_tokens, temperature, persistent_amnesia, preset, conversation_in_memory + [])
+            # Create a copy to prevent conversation from being aliased
+            convo_copy = conversation_in_memory[:]
+            cached_config = (engine, max_tokens, temperature, persistent_amnesia, preset, convo_copy)
             print_adjusted('Saved your configuration and conversation history. Type `back` to return to this state.')
             smp = True
             continue
+        # Returns to the last saved configuration and conversation (only valid after an `smp` savestate)
         elif user_input == 'back':
             if smp == False:
                 print_adjusted('No saved configuration to return to. Save one by typing `smp`')
@@ -1009,7 +1035,8 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             assert(cached_config is not None)
             print_adjusted(f'{len(conversation_in_memory)} exchanges in memory.')
             engine, max_tokens, temperature, persistent_amnesia, preset, conversation_in_memory = cached_config
-            print_adjusted(f'Convo!: {conversation_in_memory}')
+            convo_prompt_count = len(conversation_in_memory)
+            print_adjusted(f'Saved convo has {convo_prompt_count} prompts.')
             if conversation_in_memory:
                 history = conversation_to_string(conversation_in_memory)
             else:
@@ -1018,6 +1045,7 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
             cached_config = None
             print_adjusted('Successfully set current state to saved config and conversation history.')
             continue
+
         # All valid non-command inputs pass through here.    
         else:
             try:
@@ -1029,21 +1057,19 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                 if suffix:
                     prompt += suffix
                     suffix = ''
-                    
                 # Tokenize the prompt to check length
                 if dev and (check_length or (suppress_extra_prints == False)):
                     tokenized_text = tokenize(prompt)
                     token_count = len(tokenized_text)
                     # This 4000 is a hard cap for the full completion. I'll work it in better soon. 
-                    if token_count + max_tokens > 4000:
+                    if token_count + max_tokens > MAX_TOKEN_LIMIT:
                         print_adjusted('WARNING: prompt is too long. I will try to generate a response, but it may be truncated.')
-                        print_adjusted(f'max_tokens would need to be set to roughly {4000-token_count}')
+                        print_adjusted(f'max_tokens would need to be set to roughly {MAX_TOKEN_LIMIT-token_count}')
                     print_adjusted(f'prompt is {token_count} tokens')
                     if check_length:
                         check_length = False
                         print_adjusted('check_length is now False')
                         continue
-
                 if debug: print_adjusted('beep, about to try generating response')  
                 if 'turbo' in engine:
                     if preset == 'custom':
@@ -1058,6 +1084,8 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                         messages = CHAT_INIT_CRAZY
                     elif preset == 'hindi':
                         messages = CHAT_INIT_HINDI
+                    elif preset == 'concise':
+                        messages = CHAT_INIT_CONCISE
                     elif preset == 'magic':
                         temperature = 0
                         max_tokens = 20
@@ -1081,8 +1109,8 @@ def interactive_chat(config_vars: dict[str], debug: bool, suppress_extra_prints 
                                         {'role': 'assistant', 'content': r}]
 
                     context += [{'role': 'user', 'content': prompt}]
-                    if ( len(messages) == 1 ) and ( suppress_extra_prints == False ):
-                        print_adjusted(f'Using preset:{messages[0]["content"]}')
+                    if ( len(context) == 1 ) and ( suppress_extra_prints == False ):
+                        print_adjusted(f'Using preset:{preset}. Try `stats` to see the last system message used')
 
                     if debug: print_adjusted(messages + context)
                     response_string, response_tokens, prompt_tokens, completion_tokens = prompt_to_response(
@@ -1181,7 +1209,7 @@ def run_chatbot(config_vars: dict[str], debug: bool, suppress_extra_prints = Fal
     try:
         logs = interactive_chat(config_vars, debug, suppress_extra_prints, suppress_token_warnings)
     except KeyboardInterrupt:
-        print_adjusted('You have interrupted your session. It has been terminated, with no logfiles saved.')
+        print_adjusted('Type `quit` to exit this session.')
         return
     except EOFError:
         print_adjusted('You have interrupted your session. It has been terminated, with no logfiles saved.')
@@ -1246,6 +1274,7 @@ def main_from_args(args: list[str]) -> None:
         config_vars = get_config_from_CLI_args(args)
         run_chatbot(config_vars, debug, suppress_extra_prints, suppress_token_warnings)
     except QuitAndSaveError:
+        # Woah...Do I want this? I'll keep it for now, though I probs don't wanna end run_chatbot on an error ever
         print_adjusted('Pre-emptive quit. No logfiles saved.')
         
 # Default script execution from running chatbot.py in CLI, uses sys.argv
@@ -1253,62 +1282,3 @@ if __name__ == '__main__':
     from sys import argv
     cli_arguments = argv
     main_from_args(cli_arguments)
-
-### Legacy CODEX clause
-"""
-def read_codex_prompt() -> str:
-    '''
-    Returns contents of codex_prompt.txt
-    '''
-    filename = 'codex_prompt.txt'
-    text = read_prompt(filepath, filename)
-    if text:
-        return text
-    else:
-        print_adjusted('Could not read codex_prompt.txt')
-
-
-elif user_input == 'codex':
-            # Amnesic command, will not affect current configuration or history
-            # Responds to codex_prompt.txt using codex engine
-            
-            # If file exists, read it. Else, write a template.
-            if os.path.isfile(os.path.join(filepath, 'codex_prompt.txt')):
-                print_adjusted(f'Reading codex!')
-            else:
-                print_adjusted('You have not written a codex_prompt.txt file for me to read. I gotchu.')
-                with open(os.path.join(filepath, 'codex_prompt.txt'), 'w') as file:
-                    file.write('# This Python3 function [What it does]:\ndef myFunc():\n\t#Do THIS')
-                    print_adjusted('Toss something in there before setting the tokens!')
-            
-            # Set tokens (persistent until valid chosen!)
-            default = None
-            limit = MAX_CODEX
-            try:
-                codex_tokens = set_max_tokens(default, limit)
-            except QuitAndSaveError:
-                replace_input, replace_input_text = True, 'quit'
-                continue
-            codex_text = read_codex_prompt()
-            
-            if codex_text:
-                # Replace user_input text with the text from codex_prompt.txt
-                replace_input = True
-                replace_input_text = codex_text
-
-                # Cache history to continue conversation afterwards
-                cached_history = history
-                cached_engine = engine
-                cached_tokens = max_tokens
-
-                # Configure for codex, Bypasses DISABLE_NERDS!
-                history = ''
-                engine = 'code-davinci-002' # Latest codex model
-                max_tokens = codex_tokens
-                
-                temp_amnesia = True
-                continue
-            else:
-                print_adjusted('No readable text in codex_prompt.txt')
-                continue
-"""
